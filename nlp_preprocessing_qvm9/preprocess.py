@@ -228,15 +228,6 @@ def preprocess_names(
     clean_names[name_col] = clean_names[name_col].progress_apply(
         basic_preprocess_name)
 
-    # Saving figure of basic preprocessing names
-    syntax_plot(clean_names,
-                names,
-                name_col=name_col,
-                correct_col='Clean',
-                wrong_col='Preprocessed',
-                savefile=save_fig,
-                filepath=f'{fig_save_path}/Stats preprocessed names.png')
-
     # Count number of duplicate names & drop
     duplicated_mask = clean_names.duplicated(subset=[name_col])
     n_duplicate = clean_names[duplicated_mask].shape[0]

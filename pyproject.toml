@@ -20,7 +20,8 @@ dependencies = [
     "tqdm",
     "pandas",
     "numpy",
-    "regex"
+    "regex",
+    "pyarrow"
 ]
 requires-python = ">=3.6"
 
