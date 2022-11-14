@@ -1,0 +1,34 @@
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nlp-preprocessing-qvm9"
+version = "0.0.1"
+description = "Does simple text preprocessing in NLP"
+readme = "README.md"
+authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["nlp", "text", "preprocessing"]
+dependencies = [
+    "feedparser >= 5.2.0",
+    "html2text",
+    'tomli; python_version < "3.11"',
+    "unidecode",
+    "tqdm",
+    "pandas",
+    "numpy",
+    "regex"
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
+
+[project.scripts]
+realpython = "text.__main__:main"
