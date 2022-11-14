@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nlp-preprocessing-qvm9"
-version = "0.0.2"
+version = "0.0.4"
 description = "Fix the import error"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
@@ -16,8 +16,7 @@ classifiers = [
 ]
 keywords = ["nlp", "text", "preprocessing"]
 dependencies = [
-    'python_version < "3.11"',
-    "unidecode",
+    "Unidecode",
     "tqdm",
     "pandas",
     "numpy",

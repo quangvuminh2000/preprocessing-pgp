@@ -1,5 +1,5 @@
 # __init__.py
 
 # Version of the NLP preprocessing LIB
-__version__ = "0.0.2"
+__version__ = "0.0.4"
 __admin__ = "quangvm9"
