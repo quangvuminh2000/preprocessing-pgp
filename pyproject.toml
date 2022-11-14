@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nlp-preprocessing-qvm9"
-version = "0.0.1"
-description = "Does simple text preprocessing in NLP"
+version = "0.0.2"
+description = "Fix the import error"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
 license = { file = "LICENSE" }
@@ -25,7 +25,7 @@ dependencies = [
     "numpy",
     "regex"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.6"
 
 [project.optional-dependencies]
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
