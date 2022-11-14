@@ -4,7 +4,7 @@ import pandas as pd
 from unidecode import unidecode
 from tqdm import tqdm
 
-from const import NON_HUMAN_REG_LIST, REPLACE_HUMAN_REG_DICT
+from .const import NON_HUMAN_REG_LIST, REPLACE_HUMAN_REG_DICT
 
 tqdm.pandas()
 
