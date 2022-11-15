@@ -8,7 +8,7 @@ version = "0.0.4"
 description = "Fix the import error"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
-license = { file = "LICENSE" }
+license = { file = "LICENSE.txt" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
