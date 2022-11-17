@@ -9,10 +9,10 @@ from typing import Tuple
 import pandas as pd
 from tqdm import tqdm
 
-from .accent_typing_formatter import reformat_vi_sentence_accent
-from .unicode_converter import minimal_convert_unicode
-from .utils import remove_non_accent_names
-from .extract_human import replace_non_human_reg, remove_non_person_with_rule
+from preprocessing_pgp.accent_typing_formatter import reformat_vi_sentence_accent
+from preprocessing_pgp.unicode_converter import minimal_convert_unicode
+from preprocessing_pgp.utils import remove_non_accent_names
+from preprocessing_pgp.extract_human import replace_non_human_reg, remove_non_person_with_rule
 
 
 # Enable progress-bar with pandas operations

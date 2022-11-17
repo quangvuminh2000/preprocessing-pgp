@@ -5,14 +5,14 @@ import numpy as np
 from unidecode import unidecode
 from tqdm import tqdm
 
-from const import (
+from preprocessing_pgp.phone.const import (
     SUB_PHONE_10NUM,
     SUB_PHONE_11NUM,
     SUB_TELEPHONE_10NUM,
     SUB_TELEPHONE_11NUM,
 )
-from utils import basic_phone_preprocess
-from converter import convert_mobi_phone, convert_phone_region
+from preprocessing_pgp.phone.utils import basic_phone_preprocess
+from preprocessing_pgp.phone.converter import convert_mobi_phone, convert_phone_region
 
 # ? ENVIRONMENT SETUP
 tqdm.pandas()
@@ -49,7 +49,7 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     )
 
     print("Sample of non-clean phones:")
-    print(f_phones.query(f"clean_phone != {phone_col}").sample(10), end="\n\n\n")
+    print(f_phones.query(f"clean_phone != {phone_col}"), end="\n\n\n")
 
     # ? Calculate the phone length for further preprocessing
     f_phones["phone_length"] = f_phones["clean_phone"].progress_map(
@@ -101,11 +101,7 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     print(f"# OF OLD MOBI PHONE CONVERTED : {f_phones['phone_convert'].notna().sum()}")
 
     print("Sample of converted MOBI phone:", end="\n\n")
-    print(
-        f_phones.loc[
-            (mask_old_phone_format) & (f_phones["phone_convert"].notna())
-        ].sample(10)
-    )
+    print(f_phones.loc[(mask_old_phone_format) & (f_phones["phone_convert"].notna())])
 
     # ? Check for valid tele-phone (old/new)
     mask_valid_new_tele_phone = (f_phones["phone_length"] == 11) & (
@@ -149,7 +145,7 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     print(
         f_phones.loc[
             (mask_old_region_phone) & (f_phones["phone_convert"].notna())
-        ].sample(10)
+        ]
     )
 
     # ? Final preprocessing - Case not changing any head code
@@ -171,7 +167,7 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
 
     print("Sample of invalid phones:", end="\n\n")
 
-    f_phones.drop(phone_col, inplace=True)
+    f_phones.drop(phone_col, axis=1, inplace=True)
     f_phones.rename(columns={"clean_phone": phone_col})
     print(f_phones[~f_phones["is_phone_valid"]].head(10))
 

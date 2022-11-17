@@ -1,4 +1,4 @@
-from const import (
+from preprocessing_pgp.phone.const import (
     SUB_PHONE_11NUM,
     SUB_TELEPHONE_10NUM,
     DICT_4_SUB_PHONE,

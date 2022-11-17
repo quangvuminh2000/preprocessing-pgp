@@ -3,9 +3,9 @@ requires      = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nlp-preprocessing-qvm9"
-version = "0.0.4"
-description = "Fix the import error"
+name = "preprocessing-pgp"
+version = "0.1.0"
+description = "Initial Publish of preprocessing package from PGP-CADS-FTEL"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
 license = { file = "LICENSE.txt" }
@@ -26,7 +26,7 @@ dependencies = [
 requires-python = ">=3.6"
 
 [project.optional-dependencies]
-dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
+dev = ["black", "bumpver", "isort", "pip-tools", "pytest", "build", "twine", "autopep8"]
 
 [project.scripts]
-realpython = "text.__main__:main"
+realpython = "preprocessing_pgp.__main__:main"
