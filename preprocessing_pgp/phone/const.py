@@ -1,12 +1,13 @@
 import pandas as pd
 import os
 
-_dir = "/".join(os.path.split(os.getcwd()))
+sub_phone_path = os.path.join(os.path.dirname(__file__), os.pardir, 'data', 'mobi_head_code.parquet')
+sub_telephone_path = os.path.join(os.path.dirname(__file__), os.pardir, 'data', 'tele_head_code.parquet')
 
 ###? PHONE EXTRACTION
-sub_phone_full = pd.read_parquet(f"{_dir}/preprocessing_pgp/data/head_code/mobi_head_code.parquet")
+sub_phone_full = pd.read_parquet(sub_phone_path)
 
-sub_telephone_full = pd.read_parquet(f"{_dir}/preprocessing_pgp/data/head_code/tele_head_code.parquet")
+sub_telephone_full = pd.read_parquet(sub_telephone_path)
 
 SUB_PHONE_10NUM = sorted(sub_phone_full["NewSubPhone"].unique())
 SUB_PHONE_11NUM = [
