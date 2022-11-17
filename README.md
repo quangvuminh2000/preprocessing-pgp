@@ -11,7 +11,7 @@
 To install the current release:
 
 ```shell
-$pip install preprocessing-pgp
+pip install preprocessing-pgp
 ```
 
 ## Example
@@ -19,7 +19,7 @@ $pip install preprocessing-pgp
 ### 1. Preprocessing Name
 
 ```shell
-$python
+python
 ```
 
 ```python
@@ -31,7 +31,7 @@ Phan Thị Thúy Hằng
 ### 1. Extracting Phones
 
 ```shell
-$python
+python
 ```
 
 ```python
