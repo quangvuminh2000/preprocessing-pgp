@@ -59,43 +59,40 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     # ? Phone length validation: currently support phone number with length of 10 and 11.
     # ? Also, phone prefix has to be in the sub-phone dictionary.
 
-    # * Length 10
+    # * Length 10 - New
     mask_valid_new_sub_phone = (f_phones["phone_length"] == 10) & (
         f_phones["clean_phone"].str[:3].isin(SUB_PHONE_10NUM)
     )
     f_phones.loc[
         mask_valid_new_sub_phone,
-        "is_phone_valid",
+        ["is_phone_valid", "is_mobi", "is_new_mobi"],
     ] = True
 
     print(
-        f"# OF PHONE 10 NUM VALID : {mask_valid_new_sub_phone.sum()}",
+        f"# OF MOBI PHONE 10 NUM VALID : {mask_valid_new_sub_phone.sum()}",
         end="\n\n\n",
     )
 
-    # * Length 11
+    # * Length 11 - Old
     mask_valid_old_sub_phone = (f_phones["phone_length"] == 11) & (
         f_phones["clean_phone"].str[:4].isin(SUB_PHONE_11NUM)
     )
     f_phones.loc[
         mask_valid_old_sub_phone,
-        "is_phone_valid",
+        ["is_phone_valid", "is_mobi", "is_old_mobi"],
     ] = True
     print(
-        f"# OF PHONE 11 NUM VALID : {mask_valid_old_sub_phone.sum()}",
+        f"# OF MOBI PHONE 11 NUM VALID : {mask_valid_old_sub_phone.sum()}",
         end="\n\n\n",
     )
 
     f_phones = f_phones.reset_index(drop=True)
 
     # ? Correct phone numbers with old phone number format.
-    mask_old_phone_format = (f_phones["phone_length"] == 11) & (
-        f_phones["is_phone_valid"] == True
-    )
+    mask_old_phone_format = f_phones["is_old_mobi"] == True
 
-    f_phones.loc[mask_old_phone_format, "phone_convert",] = f_phones.loc[
-        mask_old_phone_format,
-        "clean_phone",
+    f_phones.loc[mask_old_phone_format, "phone_convert"] = f_phones.loc[
+        mask_old_phone_format, "clean_phone"
     ].progress_map(convert_mobi_phone)
 
     print(f"# OF OLD MOBI PHONE CONVERTED : {f_phones['phone_convert'].notna().sum()}")
@@ -104,36 +101,39 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     print(f_phones.loc[(mask_old_phone_format) & (f_phones["phone_convert"].notna())])
 
     # ? Check for valid tele-phone (old/new)
-    mask_valid_new_tele_phone = (f_phones["phone_length"] == 11) & (
-        (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_11NUM))
-        | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_11NUM))
+
+    # * Length 11 - NEW
+    mask_valid_new_tele_phone = (
+        (f_phones["phone_length"] == 11)
+        & (
+            (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_11NUM))
+            | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_11NUM))
+        )
+        & (f_phones["is_mobi"].isna())
     )
     f_phones.loc[
         mask_valid_new_tele_phone,
-        "is_phone_valid",
+        ["is_phone_valid", "is_new_landline"],
     ] = True
 
-    mask_valid_old_tele_phone = (f_phones["phone_length"] == 10) & (
-        (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_10NUM))
-        | (f_phones["clean_phone"].str[:2].isin(SUB_TELEPHONE_10NUM))
-        | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_10NUM))
-    )
-    f_phones.loc[
-        mask_valid_old_tele_phone,
-        "is_phone_valid",
-    ] = True
-
-    # ? Convert head phone of region from old to new
-
-    mask_old_region_phone = (
-        (f_phones["is_phone_valid"].notna())
-        & (f_phones["is_phone_valid"])
+    # * Length 10 - OLD
+    mask_valid_old_tele_phone = (
+        (f_phones["phone_length"] == 10)
         & (
             (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_10NUM))
             | (f_phones["clean_phone"].str[:2].isin(SUB_TELEPHONE_10NUM))
             | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_10NUM))
         )
+        & (f_phones["is_mobi"].isna())
     )
+    f_phones.loc[
+        mask_valid_old_tele_phone,
+        ["is_phone_valid", "is_old_landline"],
+    ] = True
+
+    # ? Convert head phone of region from old to new
+
+    mask_old_region_phone = f_phones["is_old_landline"] == True
 
     print(f"# OF OLD REGION PHONE : {mask_old_region_phone.sum()}")
 
@@ -142,15 +142,21 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     ].progress_map(convert_phone_region)
 
     print("Sample of converted telephone by region:", end="\n\n")
-    print(
-        f_phones.loc[
-            (mask_old_region_phone) & (f_phones["phone_convert"].notna())
-        ]
-    )
+    print(f_phones.loc[(mask_old_region_phone) & (f_phones["phone_convert"].notna())])
+
+    # ? Filling NaNs in indicator columns
+
+    fill_cols = [
+        "is_phone_valid",
+        "is_mobi",
+        "is_old_mobi",
+        "is_new_mobi",
+        "is_old_landline",
+        "is_new_landline",
+    ]
+    f_phones[fill_cols] = f_phones[fill_cols].fillna(False)
 
     # ? Final preprocessing - Case not changing any head code
-
-    f_phones["is_phone_valid"] = f_phones["is_phone_valid"].fillna(False)
     f_phones = f_phones.drop("phone_length", axis=1)
     f_phones.loc[
         f_phones["is_phone_valid"] & f_phones["phone_convert"].isna(), "phone_convert"
