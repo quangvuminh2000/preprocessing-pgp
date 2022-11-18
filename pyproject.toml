@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "preprocessing-pgp"
-version = "0.1.1"
-description = "Initial Publish of preprocessing package from PGP-CADS-FTEL"
+version = "0.1.2"
+description = "Fix phone converter mechanism and add new indicator columns"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
 license = { file = "LICENSE.txt" }
