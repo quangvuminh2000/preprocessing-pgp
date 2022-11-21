@@ -39,6 +39,7 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     """
     #! Prevent override the origin DF
     f_phones = phones.copy(deep=True)
+    origin_cols = f_phones.columns
 
     # ? Preprocess phone with basic phone string clean up
     f_phones["clean_phone"] = f_phones[phone_col].progress_apply(basic_phone_preprocess)
@@ -149,10 +150,10 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     fill_cols = [
         "is_phone_valid",
         "is_mobi",
-        "is_old_mobi",
         "is_new_mobi",
-        "is_old_landline",
+        "is_old_mobi",
         "is_new_landline",
+        "is_old_landline"
     ]
     f_phones[fill_cols] = f_phones[fill_cols].fillna(False)
 
@@ -174,7 +175,8 @@ def extract_valid_phone(phones: pd.DataFrame, phone_col: str = "phone") -> pd.Da
     print("Sample of invalid phones:", end="\n\n")
 
     f_phones.drop(phone_col, axis=1, inplace=True)
-    f_phones.rename(columns={"clean_phone": phone_col})
+    f_phones.rename(columns={"clean_phone": phone_col}, inplace=True)
+    f_phones = f_phones[[*origin_cols, *fill_cols, 'phone_convert']]
     print(f_phones[~f_phones["is_phone_valid"]].head(10))
 
     return f_phones
