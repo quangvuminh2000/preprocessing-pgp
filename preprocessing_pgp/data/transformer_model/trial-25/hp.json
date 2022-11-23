@@ -1,0 +1,26 @@
+{
+    "SEQUENCE_LENGTH": 8,
+    "EMBED_DIM": 32,
+    "NUM_HEADS": 2,
+    "DENSE_DIM": 64,
+    "VOCAB_SIZE": 15000,
+    "BATCH_SIZE": 32,
+    "LEARNING_RATE": 1e-3,
+    "EPOCHS": 50,
+    "DROPOUT_RATE": 0.5,
+    "DROPOUT_ENC": 0.42,
+    "DROPOUT_DEC": 0.42,
+    "EARLY_STOP": {
+        "MIN_DELTA": 1e-5,
+        "PATIENCE": 10,
+        "ENABLE": false
+    },
+    "LR_DECAY": {
+        "ENABLE": true,
+        "DECAY_RATE": 1e-3,
+        "LR_MIN": 1e-4,
+        "LR_MAX": 1e-3,
+        "EP_RAMP": 10,
+        "EP_SUS": 5
+    }
+}

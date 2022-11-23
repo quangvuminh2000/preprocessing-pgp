@@ -21,7 +21,8 @@ dependencies = [
     "pandas",
     "numpy",
     "regex",
-    "pyarrow"
+    "pyarrow",
+    "tensorflow>=2.8"
 ]
 requires-python = ">=3.6"
 
