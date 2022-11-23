@@ -49,7 +49,6 @@ class NameProcessor:
 
         n_names = predicted_name.shape[0]
 
-        print('\n\n')
         print("Filling diacritics to names...")
         start_time = time()
         predicted_name['predict'] = predicted_name[name_col].progress_apply(

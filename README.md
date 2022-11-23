@@ -3,18 +3,32 @@
 
 [![PyPI](https://shields.io/pypi/v/preprocessing-pgp)](https://pypi.org/project/nlp-preprocessing-qvm9/)
 [![Python](https://img.shields.io/pypi/pyversions/preprocessing-pgp.svg?style=plastic)](https://badge.fury.io/py/preprocessing-pgp)
+[![License](https://img.shields.io/github/license/quangvuminh2000/preprocessing-pgp)](https://raw.githubusercontent.com/quangvuminh2000/preprocessing-pgp/main/LICENSE.txt)
+[![Downloads](https://img.shields.io/pypi/dm/preprocessing-pgp?label=pypi%20downloads)](https://pepy.tech/project/preprocessing-pgp)
 
 **preprocessing_pgp** -- The Preprocessing library for any kind of data -- is a suit of *open source Python modules, preprocessing techniques* supporting research and development in Machine Learning. preprocessing_pgp requires Python version **3.6, 3.7, 3.8, 3.9, 3.10**
 
 ## Installation
 
-To install the current release:
+To install the **current release**:
 
 ```shell
 pip install preprocessing-pgp
 ```
 
-## Example
+To install the release with **specific version** (e.g. 0.1.3):
+
+```shell
+pip install preprocessing-pgp==0.1.3
+```
+
+To upgrade package to **latest version**:
+
+```shell
+pip install --upgrade preprocessing-pgp
+```
+
+## Examples
 
 ### 1. Preprocessing Name
 
@@ -28,7 +42,7 @@ python
 Phan Thị Thúy Hằng
 ```
 
-### 1. Extracting Phones
+### 2. Extracting Phones
 
 ```shell
 python
@@ -38,8 +52,8 @@ python
 >>> import pandas as pd
 >>> from preprocessing_pgp.phone.extractor import extract_valid_phone
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> extract_valid_phone(phones=data, phone_col='phone')
-# OF PHONE CLEAN : 0
+>>> extracted_data = extract_valid_phone(phones=data, phone_col='phone')
+# OF PHONE CLEANED : 0
 
 Sample of non-clean phones:
 Empty DataFrame
@@ -59,7 +73,7 @@ Index: []
 # OF OLD PHONE CONVERTED : ####
 
 
-# OF OLD REGION PHONE : ####
+# OF OLD LANDLINE PHONE : ####
 
 100%|██████████| ####/#### [00:00<00:00, ####it/s]
 
@@ -91,4 +105,44 @@ Sample of invalid phones:
 +------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
 | 2750 | ####### | 078######## | False            | False     | False         | False         | False             | False             |                 |
 +------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
+```
+
+### 3. Enrich Vietnamese Names (New Features)
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.name.enrich_name import process_enrich
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> enrich_data, _ = process_enrich(data, name_col='name')
+Basic pre-processing names...
+100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 19669.68it/s]
+
+
+
+--------------------
+0 names have been clean!
+--------------------
+
+
+
+
+Filling diacritics to names...
+100%|███████████████████████████████████████| 1000/1000 [01:29<00:00, 11.23it/s]
+
+AVG prediction time : 0.0890703010559082s
+
+
+
+Applying rule-based postprocess...
+100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 38292.26it/s]
+
+AVG rb time : 2.671933174133301e-05s
+
+
+>>> enrich_data.columns
+Index(['name', 'predict', 'final'], dtype='object')
 ```

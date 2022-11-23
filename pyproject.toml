@@ -4,14 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "preprocessing-pgp"
-version = "0.1.3"
-description = "Fix phone converter mechanism and add new indicator columns"
+version = "0.1.4"
+description = "Preprocessing required data for customer service purpose"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
-license = { file = "LICENSE.txt" }
+license = {text = "MIT License"}
 classifiers = [
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
 keywords = ["nlp", "text", "preprocessing"]
