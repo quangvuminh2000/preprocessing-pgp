@@ -107,7 +107,59 @@ Sample of invalid phones:
 +------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
 ```
 
-### 3. Enrich Vietnamese Names (New Features)
+### 3. Verify Card IDs
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.card.validation import verify_card
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> verified_data = verify_card(data, card_col='card_id')
+
+# NON CLEAN CARD ID: ####
+
+
+
+# OF VALID CARD LENGTH: ####
+
+
+
+# OF POSSIBLE CARD LENGTH: ####
+
+
+
+# OF INVALID CARD LENGTH: ####
+
+
+
+# CORRECT LENGTH CARD STATISTIC:
+True     #####
+False    #####
+Name: is_valid, dtype: int64
+
+
+
+# POSSIBLE LENGTH CARD STATISTIC:
+False    #####
+True     #####
+Name: is_valid, dtype: int64
+
+>>> verified_data.head(3)
++----+--------------+------------+---------------+-----------------+
+|    |      card_id | is_valid   |   card_length |   clean_card_id |
++====+==============+============+===============+=================+
+|  0 | 035092###### | True       |            12 |    035092###### |
++----+--------------+------------+---------------+-----------------+
+|  1 |    14226#### | True       |             9 |       14226#### |
++----+--------------+------------+---------------+-----------------+
+|  2 |    15153#### | True       |             9 |       15153#### |
++----+--------------+------------+---------------+-----------------+
+```
+
+### 4. Enrich Vietnamese Names (New Features)
 
 ```shell
 python
