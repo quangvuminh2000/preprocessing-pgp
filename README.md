@@ -1,7 +1,7 @@
 
 # preprocessing_pgp
 
-[![PyPI](https://shields.io/pypi/v/preprocessing-pgp)](https://pypi.org/project/nlp-preprocessing-qvm9/)
+[![PyPI](https://shields.io/pypi/v/preprocessing-pgp)](https://pypi.org/project/preprocessing-pgp)
 [![Python](https://img.shields.io/pypi/pyversions/preprocessing-pgp.svg?style=plastic)](https://badge.fury.io/py/preprocessing-pgp)
 [![License](https://img.shields.io/github/license/quangvuminh2000/preprocessing-pgp)](https://raw.githubusercontent.com/quangvuminh2000/preprocessing-pgp/main/LICENSE.txt)
 [![Downloads](https://img.shields.io/pypi/dm/preprocessing-pgp?label=pypi%20downloads)](https://pepy.tech/project/preprocessing-pgp)
