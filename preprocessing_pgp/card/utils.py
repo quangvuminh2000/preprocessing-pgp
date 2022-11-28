@@ -1,5 +1,5 @@
 from typing import Tuple
-from string import ascii_lowercase, punctuation
+from string import ascii_lowercase
 import re
 
 import pandas as pd
@@ -13,10 +13,51 @@ from preprocessing_pgp.card.const import (
 )
 
 
+def remove_spaces(sentence: str) -> str:
+    """
+    Function to remove all spaces in sentence
+
+    Parameters
+    ----------
+    sentence : str
+        The input sentence
+
+    Returns
+    -------
+    str
+        The output sentence without any spacing
+    """
+
+    # Remove spaces in between
+    sentence = re.sub(' +', '', sentence)
+    sentence = sentence.strip()
+
+    return sentence
+
+
+def check_contain_digit(
+    card_id: str
+) -> bool:
+    """
+    Simple function to check if the card_id contains all decimal
+
+    Parameters
+    ----------
+    card_id : str
+        The input card id
+
+    Returns
+    -------
+    bool
+        Whether the card id contains all decimal number
+    """
+    return card_id.isdecimal()
+
+
 def check_non_digit(
     card_df: pd.DataFrame,
     card_col: str
-    ) -> pd.Series:
+) -> pd.Series:
     """
     Check if card contains any non_digit or not
 

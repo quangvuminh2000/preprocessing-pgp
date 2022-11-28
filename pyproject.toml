@@ -28,5 +28,8 @@ requires-python = ">=3.6"
 [project.optional-dependencies]
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest", "build", "twine", "autopep8"]
 
+[project.urls]
+homepage = "https://github.com/quangvuminh2000/preprocessing-pgp"
+
 [project.scripts]
 realpython = "preprocessing_pgp.__main__:main"
