@@ -119,44 +119,66 @@ python
 >>> data = pd.read_parquet('/path/to/data.parquet')
 >>> verified_data = verify_card(data, card_col='card_id')
 
-# NON CLEAN CARD ID: ####
+##### CLEANSING #####
+
+
+# CARD ID CONTAINS NON-DIGIT CHARACTERS: 7398
+
+
+SAMPLE OF CARDS WITH NON-DIGIT CHARACTERS:
+              card_id splitted_card_id is_valid
+#######      B#######         b#######    False
+#######      C#######         c#######    False
+#######       G######          g######    False
+#######     A########        a########    False
+#######  ###########k     ###########k    False
+#######  ###########k     ###########k    False
+#######      C#######         c#######    False
+#######      B#######         b#######    False
+#######  PT AR#######      ptar#######    False
+#######     E########        e########    False
 
 
 
-# OF VALID CARD LENGTH: ####
+# CARD OF LENGTH 9 OR 12: 5684819
+STATISTIC:
+# VALID: 4332635
+# INVALID: 1352184
 
 
 
-# OF POSSIBLE CARD LENGTH: ####
+# CARD OF LENGTH 8 OR 11: 848
+STATISTIC:
+# VALID: 321
+# INVALID: 527
 
 
 
-# OF INVALID CARD LENGTH: ####
+# CARD WITH OTHER LENGTH: 8686
+# PASSPORT FOUND: 2546
+
+
+SAMPLE OF PASSPORT:
+          card_id splitted_card_id  is_valid  card_length clean_splitted_card_id  is_passport
+#######  B#######         b#######      True            8               B#######         True
+#######  C#######         c#######      True            8               C#######         True
+#######  C#######         c#######      True            8               C#######         True
+#######  B#######         b#######      True            8               B#######         True
+#######  B#######         b#######      True            8               B#######         True
+#######  B#######         b#######      True            8               B#######         True
+#######  C#######         c#######      True            8               C#######         True
+#######  B#######         b#######      True            8               B#######         True
+#######  B#######         b#######      True            8               B#######         True
+#######  B#######         b#######      True            8               B#######         True
 
 
 
-# CORRECT LENGTH CARD STATISTIC:
-True     #####
-False    #####
-Name: is_valid, dtype: int64
+##### GENERAL CARD ID REPORT #####
 
-
-
-# POSSIBLE LENGTH CARD STATISTIC:
-False    #####
-True     #####
-Name: is_valid, dtype: int64
-
->>> verified_data.head(3)
-+----+--------------+------------+---------------+-----------------+
-|    |      card_id | is_valid   |   card_length |   clean_card_id |
-+====+==============+============+===============+=================+
-|  0 | 035092###### | True       |            12 |    035092###### |
-+----+--------------+------------+---------------+-----------------+
-|  1 |    14226#### | True       |             9 |       14226#### |
-+----+--------------+------------+---------------+-----------------+
-|  2 |    15153#### | True       |             9 |       15153#### |
-+----+--------------+------------+---------------+-----------------+
+COHORT SIZE: 5694353
+VALID CARD: 4335502
+INVALID CARD: 1358851
+PASSPORT: 2546
 ```
 
 ### 4. Enrich Vietnamese Names (New Features)

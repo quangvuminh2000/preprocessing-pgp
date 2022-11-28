@@ -111,9 +111,6 @@ def check_card_length(
 
     correct_card_df = card_df[correct_length_mask].copy()
 
-    print(f"# OF VALID CARD LENGTH: {correct_length_mask.sum()}")
-    print("\n\n")
-
     # * Possibly correct card_id length
     possible_length_mask = (
         card_df["card_length"].isin([OLD_CODE_LENGTH - 1, NEW_CODE_LENGTH - 1])
@@ -124,17 +121,11 @@ def check_card_length(
 
     possible_card_df[f"clean_{card_col}"] = "0" + possible_card_df[card_col]
 
-    print(f"# OF POSSIBLE CARD LENGTH: {possible_length_mask.sum()}")
-    print("\n\n")
-
     # * Invalid card length
     invalid_length_mask = ~(correct_length_mask | possible_length_mask)
 
     invalid_card_df = card_df[invalid_length_mask].copy()
     invalid_card_df[valid_col] = False
-
-    print(f"# OF INVALID CARD LENGTH: {invalid_length_mask.sum()}")
-    print("\n\n")
 
     return (correct_card_df, possible_card_df, invalid_card_df)
 
