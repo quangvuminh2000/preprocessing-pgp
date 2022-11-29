@@ -185,3 +185,23 @@ def is_valid_card(card_id: str) -> bool:
         return is_valid_new_card(card_id)
 
     return False
+
+
+#TODO Continue to create code for validate driver license
+def is_valid_driver_license(card_id: str) -> bool:
+    """
+    Check if the id is valid driver license id
+
+    Parameters
+    ----------
+    card_id : str
+        The input card id
+
+    Returns
+    -------
+    bool
+        Whether the card id is the valid driver license
+    """
+    return True
+
+
