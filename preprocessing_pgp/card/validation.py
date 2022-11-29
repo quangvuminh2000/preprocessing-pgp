@@ -34,6 +34,10 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
         The final DF contains the columns that verify whether the card id is valid or not
     """
 
+    # * Removing na values
+    na_card_df = card_df[card_df[card_col].isna()].copy()
+    card_df = card_df.dropna(subset=[card_col]).copy()
+
     # * Unify card to lower
     card_df[card_col] = card_df[card_col].str.lower()
     # * Removing spare spaces
@@ -50,6 +54,8 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
 
     print()
     print(f"{'#'*5} CLEANSING {'#'*5}")
+    print("\n")
+    print(f"# NAN CARD ID: {na_card_df.shape[0]}")
     print("\n")
     print(
         f"# CARD ID CONTAINS NON-DIGIT CHARACTERS: {card_df['is_valid'].notna().sum()}")
@@ -146,6 +152,14 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     print("SAMPLE OF PASSPORT:")
     print(final_card_df[passport_mask].head(10))
     print("\n\n")
+
+    # ? Add NaN card to final_df
+    na_card_df['is_valid'] = False
+    na_card_df['card_length'] = 0
+    na_card_df['clean_card_id'] = None
+    na_card_df['is_passport'] = False
+
+    final_card_df = pd.concat([final_card_df, na_card_df])
 
     general_valid_statistic = final_card_df["is_valid"].value_counts()
     print(f"{'#'*5} GENERAL CARD ID REPORT {'#'*5}")
