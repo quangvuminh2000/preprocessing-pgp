@@ -79,8 +79,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
 
     print("STATISTIC:")
     stat_correct_length = correct_length_df["is_valid"].value_counts()
-    print(f"# VALID: {stat_correct_length[True]}")
-    print(f"# INVALID: {stat_correct_length[False]}")
+    print(stat_correct_length)
     print("\n\n")
 
     # ? LENGTH 8 OR 11
@@ -93,8 +92,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
 
     print("STATISTIC:")
     stat_possible_length = possible_length_df["is_valid"].value_counts()
-    print(f"# VALID: {stat_possible_length[True]}")
-    print(f"# INVALID: {stat_possible_length[False]}")
+    print(stat_possible_length)
     print("\n\n")
 
     # ? INVALID
@@ -153,8 +151,8 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     print(f"{'#'*5} GENERAL CARD ID REPORT {'#'*5}")
     print()
     print(f"COHORT SIZE: {final_card_df.shape[0]}")
-    print(f"VALID CARD: {general_valid_statistic[True]}")
-    print(f"INVALID CARD: {general_valid_statistic[False]}")
+    print("STATISTIC:")
+    print(general_valid_statistic)
     print(f"PASSPORT: {final_card_df.query('is_passport').shape[0]}")
     print()
 

@@ -126,31 +126,34 @@ python
 
 
 SAMPLE OF CARDS WITH NON-DIGIT CHARACTERS:
-              card_id splitted_card_id is_valid
-#######      B#######         b#######    False
-#######      C#######         c#######    False
-#######       G######          g######    False
-#######     A########        a########    False
-#######  ###########k     ###########k    False
-#######  ###########k     ###########k    False
-#######      C#######         c#######    False
-#######      B#######         b#######    False
-#######  PT AR#######      ptar#######    False
-#######     E########        e########    False
+              card_id  is_valid
+#######      B#######     False
+#######      C#######     False
+#######       G######     False
+#######     A########     False
+#######  ###########k     False
+#######  ###########k     False
+#######      C#######     False
+#######      B#######     False
+#######  PT AR#######     False
+#######     E########     False
 
 
 
 # CARD OF LENGTH 9 OR 12: #######
 STATISTIC:
-# VALID: #######
-# INVALID: #######
+True     ######
+False     #####
+Name: is_valid, dtype: int64
+
 
 
 
 # CARD OF LENGTH 8 OR 11: ###
 STATISTIC:
-# VALID: ###
-# INVALID: ###
+True     ######
+False     #####
+Name: is_valid, dtype: int64
 
 
 
@@ -159,25 +162,26 @@ STATISTIC:
 
 
 SAMPLE OF PASSPORT:
-          card_id splitted_card_id  is_valid  card_length clean_splitted_card_id  is_passport
-#######  B#######         b#######      True            8               B#######         True
-#######  C#######         c#######      True            8               C#######         True
-#######  C#######         c#######      True            8               C#######         True
-#######  B#######         b#######      True            8               B#######         True
-#######  B#######         b#######      True            8               B#######         True
-#######  B#######         b#######      True            8               B#######         True
-#######  C#######         c#######      True            8               C#######         True
-#######  B#######         b#######      True            8               B#######         True
-#######  B#######         b#######      True            8               B#######         True
-#######  B#######         b#######      True            8               B#######         True
+          card_id  is_valid  card_length clean_card_id  is_passport
+#######  B#######      True            8      B#######         True
+#######  C#######      True            8      C#######         True
+#######  C#######      True            8      C#######         True
+#######  B#######      True            8      B#######         True
+#######  B#######      True            8      B#######         True
+#######  B#######      True            8      B#######         True
+#######  C#######      True            8      C#######         True
+#######  B#######      True            8      B#######         True
+#######  B#######      True            8      B#######         True
+#######  B#######      True            8      B#######         True
 
 
 
 ##### GENERAL CARD ID REPORT #####
 
 COHORT SIZE: #######
-VALID CARD: #######
-INVALID CARD: #######
+STATISTIC:
+True     ######
+False     #####
 PASSPORT: ####
 ```
 
