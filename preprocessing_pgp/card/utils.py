@@ -5,11 +5,16 @@ import re
 import pandas as pd
 
 from preprocessing_pgp.card.const import (
+    # Personal ID
     OLD_CODE_LENGTH,
     NEW_CODE_LENGTH,
     POSSIBLE_GENDER_NUM,
     OLD_CODE_NUMS,
     NEW_CODE_NUMS,
+    # Driver License
+    DRIVER_LICENSE_LENGTH,
+    DRIVER_LICENSE_ID_REGION_CODES,
+    INVALID_DRIVER_LICENSE_PASSING_YEAR
 )
 
 
@@ -188,6 +193,19 @@ def is_valid_card(card_id: str) -> bool:
 
 
 #TODO Continue to create code for validate driver license
+
+def is_valid_driver_license_length(card_id: str) -> bool:
+    return len(card_id) == DRIVER_LICENSE_LENGTH
+
+def is_valid_driver_license_region_code(region_code: str) -> bool:
+    return region_code in DRIVER_LICENSE_ID_REGION_CODES
+
+def is_valid_gender(gender_code: str) -> bool:
+    return gender_code in POSSIBLE_GENDER_NUM
+
+def is_valid_license_passing_year(passing_year: str) -> bool:
+    return passing_year not in INVALID_DRIVER_LICENSE_PASSING_YEAR
+
 def is_valid_driver_license(card_id: str) -> bool:
     """
     Check if the id is valid driver license id
@@ -202,6 +220,18 @@ def is_valid_driver_license(card_id: str) -> bool:
     bool
         Whether the card id is the valid driver license
     """
-    return True
+
+    if not is_valid_driver_license_length(card_id):
+        return False
+
+    region_code = card_id[:2]
+    gender_code = card_id[2]
+    passing_year = card_id[3:5]
+
+    return (
+        is_valid_driver_license_region_code(region_code) and
+        is_valid_gender(gender_code) and
+        is_valid_license_passing_year(passing_year)
+    )
 
 
