@@ -122,21 +122,24 @@ python
 ##### CLEANSING #####
 
 
-# CARD ID CONTAINS NON-DIGIT CHARACTERS: 7398
+# NAN CARD ID: ####
+
+
+# CARD ID CONTAINS NON-DIGIT CHARACTERS: ####
 
 
 SAMPLE OF CARDS WITH NON-DIGIT CHARACTERS:
-              card_id  is_valid
-#######      B#######     False
-#######      C#######     False
-#######       G######     False
-#######     A########     False
-#######  ###########k     False
-#######  ###########k     False
-#######      C#######     False
-#######      B#######     False
-#######  PT AR#######     False
-#######     E########     False
+              card_id  is_valid  is_personal_id
+#######      B#######     False           False
+#######      C#######     False           False
+#######       G######     False           False
+#######     A########     False           False
+#######  ###########k     False           False
+#######  ###########k     False           False
+#######      C#######     False           False
+#######      B#######     False           False
+#######  PT AR#######     False           False
+#######     E########     False           False
 
 
 
@@ -176,6 +179,24 @@ SAMPLE OF PASSPORT:
 
 
 
+
+# DRIVER LICENSE FOUND: 41461
+
+
+SAMPLE OF DRIVER LICENSE:
+          card_id  is_valid  is_personal_id  ...  clean_card_id is_passport  is_driver_license
+47   0###########      True           False  ...   0###########       False               True
+74   0###########      True           False  ...   0###########       False               True
+170  0###########      True           False  ...   0###########       False               True
+179  0###########      True           False  ...   0###########       False               True
+206  0###########      True           False  ...   0###########       False               True
+282  0###########      True           False  ...   0###########       False               True
+295  0###########      True           False  ...   0###########       False               True
+616  0###########      True           False  ...   0###########       False               True
+663  0###########      True           False  ...   0###########       False               True
+671  0###########      True           False  ...   0###########       False               True
+
+
 ##### GENERAL CARD ID REPORT #####
 
 COHORT SIZE: #######
@@ -183,6 +204,7 @@ STATISTIC:
 True     ######
 False     #####
 PASSPORT: ####
+DRIVER LICENSE: ####
 ```
 
 ### 4. Enrich Vietnamese Names (New Features)
