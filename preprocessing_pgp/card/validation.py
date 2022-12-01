@@ -9,7 +9,7 @@ from preprocessing_pgp.card.utils import (
     check_non_digit,
     check_card_length,
     is_valid_card,
-    check_contain_digit,
+    check_contain_all_digit,
     remove_spaces,
     is_valid_driver_license,
     is_real_driver_license
@@ -48,7 +48,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     # * Check clean card
     with mp.Pool(PROCESSES) as pool:
         card_all_digit_mask = np.array(
-            pool.map(check_contain_digit, card_df[card_col]), dtype=np.bool8)
+            pool.map(check_contain_all_digit, card_df[card_col]), dtype=np.bool8)
 
     card_df.loc[~card_all_digit_mask,
                 ["is_valid", "is_personal_id"]] = False
@@ -149,6 +149,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
 
     final_card_df[fill_cols] = final_card_df[fill_cols].fillna(False)
 
+    # ? PASSPORT
     # * Check if passport is found
     final_card_df['is_passport'] = False
     passport_mask = (
@@ -205,7 +206,8 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
 
     # * Case where driver_license and personal_id is classified the same
     with mp.Pool(PROCESSES) as pool:
-        real_driver_license_mask = np.array(pool.map(is_real_driver_license, final_card_df[card_col]), dtype=np.bool8)
+        real_driver_license_mask = np.array(
+            pool.map(is_real_driver_license, final_card_df[card_col]), dtype=np.bool8)
 
     final_card_df.loc[
         (real_driver_license_mask) &
@@ -219,10 +221,12 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
         "is_driver_license"
     ] = False
 
-    print(f"# DRIVER LICENSE FOUND: {final_card_df['is_driver_license'].sum()}")
+    print(
+        f"# DRIVER LICENSE FOUND: {final_card_df['is_driver_license'].sum()}")
     print("\n")
     print("SAMPLE OF DRIVER LICENSE:")
-    print(final_card_df[(driver_license_mask & driver_license_check_mask)].head(10))
+    print(final_card_df[(driver_license_mask &
+          driver_license_check_mask)].head(10))
     print("\n\n")
 
     # ? Add NaN card to final_df

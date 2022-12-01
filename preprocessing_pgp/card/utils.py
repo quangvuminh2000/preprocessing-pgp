@@ -42,7 +42,7 @@ def remove_spaces(sentence: str) -> str:
     return sentence
 
 
-def check_contain_digit(
+def check_contain_all_digit(
     card_id: str
 ) -> bool:
     """
@@ -194,19 +194,23 @@ def is_valid_card(card_id: str) -> bool:
     return False
 
 
-#TODO Continue to create code for validate driver license
+# TODO Continue to create code for validate driver license
 
 def is_valid_driver_license_length(card_id: str) -> bool:
     return len(card_id) == DRIVER_LICENSE_LENGTH
 
+
 def is_valid_driver_license_region_code(region_code: str) -> bool:
     return region_code in DRIVER_LICENSE_ID_REGION_CODES
+
 
 def is_valid_gender(gender_code: str) -> bool:
     return gender_code in POSSIBLE_GENDER_NUM
 
+
 def is_valid_license_passing_year(passing_year: str) -> bool:
     return passing_year not in INVALID_DRIVER_LICENSE_PASSING_YEAR
+
 
 def is_valid_driver_license(card_id: str) -> bool:
     """
@@ -231,10 +235,12 @@ def is_valid_driver_license(card_id: str) -> bool:
     passing_year = card_id[3:5]
 
     return (
+        check_contain_all_digit(card_id) and
         is_valid_driver_license_region_code(region_code) and
         is_valid_gender(gender_code) and
         is_valid_license_passing_year(passing_year)
     )
+
 
 def is_real_driver_license(card_id: str) -> bool:
     if not is_valid_driver_license_length(card_id):
@@ -244,5 +250,3 @@ def is_real_driver_license(card_id: str) -> bool:
     last_year_char = card_id[4]
 
     return (first_year_char not in INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR) and (last_year_char in VALID_DRIVER_LICENSE_LAST_YEAR_CHAR)
-
-
