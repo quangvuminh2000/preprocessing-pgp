@@ -14,7 +14,9 @@ from preprocessing_pgp.card.const import (
     # Driver License
     DRIVER_LICENSE_LENGTH,
     DRIVER_LICENSE_ID_REGION_CODES,
-    INVALID_DRIVER_LICENSE_PASSING_YEAR
+    INVALID_DRIVER_LICENSE_PASSING_YEAR,
+    INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR,
+    VALID_DRIVER_LICENSE_LAST_YEAR_CHAR
 )
 
 
@@ -233,5 +235,14 @@ def is_valid_driver_license(card_id: str) -> bool:
         is_valid_gender(gender_code) and
         is_valid_license_passing_year(passing_year)
     )
+
+def is_real_driver_license(card_id: str) -> bool:
+    if not is_valid_driver_license_length(card_id):
+        return False
+
+    first_year_char = card_id[3]
+    last_year_char = card_id[4]
+
+    return (first_year_char not in INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR) and (last_year_char in VALID_DRIVER_LICENSE_LAST_YEAR_CHAR)
 
 

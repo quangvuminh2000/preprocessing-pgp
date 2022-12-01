@@ -11,7 +11,8 @@ from preprocessing_pgp.card.utils import (
     is_valid_card,
     check_contain_digit,
     remove_spaces,
-    is_valid_driver_license
+    is_valid_driver_license,
+    is_real_driver_license
 )
 
 tqdm.pandas()
@@ -202,7 +203,23 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     final_card_df['is_driver_license'] = final_card_df['is_driver_license'].fillna(
         False)
 
-    print(f"# DRIVER LICENSE FOUND: {driver_license_mask.sum()}")
+    # * Case where driver_license and personal_id is classified the same
+    with mp.Pool(PROCESSES) as pool:
+        real_driver_license_mask = np.array(pool.map(is_real_driver_license, final_card_df[card_col]), dtype=np.bool8)
+
+    final_card_df.loc[
+        (real_driver_license_mask) &
+        (final_card_df['is_driver_license']),
+        "is_personal_id"
+    ] = False
+
+    final_card_df.loc[
+        (final_card_df['is_driver_license']) &
+        (final_card_df['is_personal_id']),
+        "is_driver_license"
+    ] = False
+
+    print(f"# DRIVER LICENSE FOUND: {final_card_df['is_driver_license'].sum()}")
     print("\n")
     print("SAMPLE OF DRIVER LICENSE:")
     print(final_card_df[(driver_license_mask & driver_license_check_mask)].head(10))
@@ -228,6 +245,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     print(f"COHORT SIZE: {final_card_df.shape[0]}")
     print("STATISTIC:")
     print(general_valid_statistic)
+    print(f"PERSONAL ID: {final_card_df.query('is_personal_id').shape[0]}")
     print(f"PASSPORT: {final_card_df.query('is_passport').shape[0]}")
     print(
         f"DRIVER LICENSE: {final_card_df.query('is_driver_license').shape[0]}")
