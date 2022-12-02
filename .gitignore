@@ -162,4 +162,4 @@ cython_debug/
 
 #? Data
 secret_data/
-preprocessing_pgp/data/
+preprocessing_pgp/data/*
