@@ -151,12 +151,14 @@ def is_valid_gender(gender_code: str) -> bool:
 
 def is_valid_old_card(card_id: str) -> bool:
     if card_id[:2] in OLD_CODE_NUMS:
-        gender_code = card_id[2]
-        return is_valid_gender(gender_code)
+        return True
+        # gender_code = card_id[2]
+        # return is_valid_gender(gender_code)
 
     if card_id[:3] in OLD_CODE_NUMS:
-        gender_code = card_id[3]
-        return is_valid_gender(gender_code)
+        return True
+        # gender_code = card_id[3]
+        # return is_valid_gender(gender_code)
 
     return False
 
