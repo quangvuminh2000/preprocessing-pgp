@@ -1,5 +1,6 @@
 from typing import Tuple
 from string import ascii_lowercase
+from string import punctuation
 import re
 
 import pandas as pd
@@ -40,6 +41,26 @@ def remove_spaces(sentence: str) -> str:
     sentence = sentence.strip()
 
     return sentence
+
+
+def remove_special_characters(sentence: str) -> str:
+    """
+    Removing special characters in string
+
+    Parameters
+    ----------
+    sentence : str
+        The sentence to remove punctuation
+
+    Returns
+    -------
+    str
+        The clean sentence without any punctuation
+    """
+
+    translator = str.maketrans('', '', punctuation)
+
+    return sentence.translate(translator)
 
 
 def check_contain_all_digit(
@@ -204,10 +225,6 @@ def is_valid_driver_license_length(card_id: str) -> bool:
 
 def is_valid_driver_license_region_code(region_code: str) -> bool:
     return region_code in DRIVER_LICENSE_ID_REGION_CODES
-
-
-def is_valid_gender(gender_code: str) -> bool:
-    return gender_code in POSSIBLE_GENDER_NUM
 
 
 def is_valid_license_passing_year(passing_year: str) -> bool:

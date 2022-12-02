@@ -5,8 +5,11 @@
 [![Python](https://img.shields.io/pypi/pyversions/preprocessing-pgp.svg?style=plastic)](https://badge.fury.io/py/preprocessing-pgp)
 [![License](https://img.shields.io/github/license/quangvuminh2000/preprocessing-pgp)](https://raw.githubusercontent.com/quangvuminh2000/preprocessing-pgp/main/LICENSE.txt)
 [![Downloads](https://img.shields.io/pypi/dm/preprocessing-pgp?label=pypi%20downloads)](https://pepy.tech/project/preprocessing-pgp)
+[![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/PyCQA/pylint)
 
 **preprocessing_pgp** -- The Preprocessing library for any kind of data -- is a suit of *open source Python modules, preprocessing techniques* supporting research and development in Machine Learning. preprocessing_pgp requires Python version **3.6, 3.7, 3.8, 3.9, 3.10**
+
+---
 
 ## Installation
 
@@ -28,9 +31,13 @@ To upgrade package to **latest version**:
 pip install --upgrade preprocessing-pgp
 ```
 
-## Examples
+---
 
-### 1. Preprocessing Name
+## Features
+
+### 1. Vietnamese Naming Functions
+
+#### 1.1. Preprocessing Names
 
 ```shell
 python
@@ -42,7 +49,47 @@ python
 Phan Thị Thúy Hằng
 ```
 
-### 2. Extracting Phones
+#### 1.2. Enrich Vietnamese Names (New Features)
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.name.enrich_name import process_enrich
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> enrich_data, _ = process_enrich(data, name_col='name')
+Basic pre-processing names...
+100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 19669.68it/s]
+
+
+
+--------------------
+0 names have been clean!
+--------------------
+
+
+
+
+Filling diacritics to names...
+100%|███████████████████████████████████████| 1000/1000 [01:29<00:00, 11.23it/s]
+
+AVG prediction time : 0.0890703010559082s
+
+
+
+Applying rule-based postprocess...
+100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 38292.26it/s]
+
+AVG rb time : 2.671933174133301e-05s
+
+
+>>> enrich_data.columns
+Index(['name', 'predict', 'final'], dtype='object')
+```
+
+### 2. Extracting Vietnamese Phones
 
 ```shell
 python
@@ -107,7 +154,7 @@ Sample of invalid phones:
 +------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
 ```
 
-### 3. Verify Card IDs
+### 3. Verify Vietnamese Card IDs
 
 ```shell
 python
@@ -205,44 +252,4 @@ True     ######
 False     #####
 PASSPORT: ####
 DRIVER LICENSE: ####
-```
-
-### 4. Enrich Vietnamese Names (New Features)
-
-```shell
-python
-```
-
-```python
->>> import pandas as pd
->>> from preprocessing_pgp.name.enrich_name import process_enrich
->>> data = pd.read_parquet('/path/to/data.parquet')
->>> enrich_data, _ = process_enrich(data, name_col='name')
-Basic pre-processing names...
-100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 19669.68it/s]
-
-
-
---------------------
-0 names have been clean!
---------------------
-
-
-
-
-Filling diacritics to names...
-100%|███████████████████████████████████████| 1000/1000 [01:29<00:00, 11.23it/s]
-
-AVG prediction time : 0.0890703010559082s
-
-
-
-Applying rule-based postprocess...
-100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 38292.26it/s]
-
-AVG rb time : 2.671933174133301e-05s
-
-
->>> enrich_data.columns
-Index(['name', 'predict', 'final'], dtype='object')
 ```
