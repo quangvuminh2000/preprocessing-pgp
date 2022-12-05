@@ -6,8 +6,17 @@ from tqdm import tqdm
 
 tqdm.pandas()
 
+
 def sentence_length(sentence: str):
     return len(sentence.split())
+
+
+def sep_display(sep: str = "\n"):
+    """
+    Separator for output std
+    """
+    print(sep)
+
 
 def remove_non_accent_names(names_df: pd.DataFrame, name_col='name', remove_single_name=True) -> pd.DataFrame:
     """

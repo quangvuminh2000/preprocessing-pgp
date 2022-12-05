@@ -1,17 +1,24 @@
-from typing import Tuple
+"""Module provides utils functions for card validation"""
+
+import re
+import multiprocessing as mp
+from typing import Tuple, Callable, List, Union
 from string import ascii_lowercase
 from string import punctuation
-import re
 
 import pandas as pd
+import numpy as np
+from tqdm import tqdm
 
 from preprocessing_pgp.card.const import (
+    # Constant
+    N_PROCESSES,
     # Personal ID
-    OLD_CODE_LENGTH,
-    NEW_CODE_LENGTH,
+    OLD_PID_CODE_LENGTH,
+    NEW_PID_CODE_LENGTH,
     POSSIBLE_GENDER_NUM,
-    OLD_CODE_NUMS,
-    NEW_CODE_NUMS,
+    OLD_PID_REGION_CODE_NUMS,
+    NEW_PID_REGION_CODE_NUMS,
     # Driver License
     DRIVER_LICENSE_LENGTH,
     DRIVER_LICENSE_ID_REGION_CODES,
@@ -19,6 +26,78 @@ from preprocessing_pgp.card.const import (
     INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR,
     VALID_DRIVER_LICENSE_LAST_YEAR_CHAR
 )
+
+
+def apply_multi_process(
+    func: Callable,
+    series: Union[pd.Series, str, np.ndarray]
+) -> List:
+    """
+    Process multi-processing on every items of series with provided func
+
+    Parameters
+    ----------
+    func : Callable
+        Function to traverse through series, must have 1 input and 1 output
+    series : Optional[pd.Series]
+        Any series | np.Array() | list
+
+    Returns
+    -------
+    List
+        List of elements returned after apply the function
+    """
+
+    if isinstance(series, list):
+        total_elem = len(series)
+    else:
+        total_elem = series.shape[0]
+
+    with mp.Pool(N_PROCESSES) as pool:
+        output = tqdm(
+            pool.imap(func, series),
+            total=total_elem
+        )
+
+    return output
+
+
+def apply_progress_bar(
+    func: Callable,
+    series: pd.Series
+) -> List:
+    """
+    Process apply with progress bar on every items of series with provided func
+
+    Parameters
+    ----------
+    func : Callable
+        Function to traverse through series, must have 1 input and 1 output
+    series : pd.Series
+        Any series of type pandas Series
+
+    Returns
+    -------
+    List
+        List of elements returned after apply the function
+    """
+
+    tqdm.pandas()
+
+    return series.progress_apply(func)
+
+
+def is_checker_valid(*checkers) -> bool:
+    """
+    Check if any of the checker is valid
+
+    Returns
+    -------
+    bool
+        Whether any of the checker is valid
+    """
+
+    return any(checkers)
 
 
 def remove_spaces(sentence: str) -> str:
@@ -133,7 +212,7 @@ def check_card_length(
 
     # * Correct card_id length
     correct_length_mask = (
-        card_df["card_length"].isin([OLD_CODE_LENGTH, NEW_CODE_LENGTH])
+        card_df["card_length"].isin([OLD_PID_CODE_LENGTH, NEW_PID_CODE_LENGTH])
         & card_df["is_valid"].isna()
     )
 
@@ -141,7 +220,8 @@ def check_card_length(
 
     # * Possibly correct card_id length
     possible_length_mask = (
-        card_df["card_length"].isin([OLD_CODE_LENGTH - 1, NEW_CODE_LENGTH - 1])
+        card_df["card_length"].isin(
+            [OLD_PID_CODE_LENGTH - 1, NEW_PID_CODE_LENGTH - 1])
         & card_df["is_valid"].isna()
     )
 
@@ -159,11 +239,11 @@ def check_card_length(
 
 
 def is_old_card(card_id: str) -> bool:
-    return len(card_id) == OLD_CODE_LENGTH
+    return len(card_id) == OLD_PID_CODE_LENGTH
 
 
 def is_new_card(card_id: str) -> bool:
-    return len(card_id) == NEW_CODE_LENGTH
+    return len(card_id) == NEW_PID_CODE_LENGTH
 
 
 def is_valid_gender(gender_code: str) -> bool:
@@ -171,12 +251,12 @@ def is_valid_gender(gender_code: str) -> bool:
 
 
 def is_valid_old_card(card_id: str) -> bool:
-    if card_id[:2] in OLD_CODE_NUMS:
+    if card_id[:2] in OLD_PID_REGION_CODE_NUMS:
         return True
         # gender_code = card_id[2]
         # return is_valid_gender(gender_code)
 
-    if card_id[:3] in OLD_CODE_NUMS:
+    if card_id[:3] in OLD_PID_REGION_CODE_NUMS:
         return True
         # gender_code = card_id[3]
         # return is_valid_gender(gender_code)
@@ -185,7 +265,7 @@ def is_valid_old_card(card_id: str) -> bool:
 
 
 def is_valid_new_card(card_id: str) -> bool:
-    if card_id[:3] in NEW_CODE_NUMS:
+    if card_id[:3] in NEW_PID_REGION_CODE_NUMS:
         gender_code = card_id[3]
         return is_valid_gender(gender_code)
 
