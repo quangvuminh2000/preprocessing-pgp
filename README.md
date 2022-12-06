@@ -99,7 +99,7 @@ python
 >>> import pandas as pd
 >>> from preprocessing_pgp.phone.extractor import extract_valid_phone
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> extracted_data = extract_valid_phone(phones=data, phone_col='phone')
+>>> extracted_data = extract_valid_phone(phones=data, phone_col='phone', print_info=True)
 # OF PHONE CLEANED : 0
 
 Sample of non-clean phones:
@@ -164,7 +164,7 @@ python
 >>> import pandas as pd
 >>> from preprocessing_pgp.card.validation import verify_card
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> verified_data = verify_card(data, card_col='card_id')
+>>> verified_data = verify_card(data, card_col='card_id', print_info=True)
 
 ##### CLEANSING #####
 

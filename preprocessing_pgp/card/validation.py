@@ -313,7 +313,11 @@ class DriverLicenseValidator(CardValidator):
             and DriverLicenseValidator.is_real_driver_license(card_id)
 
 
-def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
+def verify_card(
+    card_df: pd.DataFrame,
+    card_col: str = "card_id",
+    print_info: bool = True
+) -> pd.DataFrame:
     """
     Verify whether the card ids are valid or not
 
@@ -321,8 +325,10 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     ----------
     card_df : pd.DataFrame
         The input DF containing card id
-    card_col : str
-        The column contain card id
+    card_col : str, optional
+        The column contain card id, by default "card_id"
+    print_info : bool, optional
+        Whether to print the information of the run, by default True
 
     Returns
     -------
@@ -332,9 +338,10 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     orig_cols = card_df.columns.values.tolist()
 
     # ? CLEAN CARD ID
-    sep_display()
-    print(f"{'#'*5} CLEANSING CARD ID {'#'*5}")
-    sep_display()
+    if print_info:
+        sep_display()
+        print(f"{'#'*5} CLEANSING CARD ID {'#'*5}")
+        sep_display()
 
     # * Removing na values
     clean_card_df, na_card_df = extract_null_values(card_df, card_col)
@@ -342,13 +349,14 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     # * Basic cleaning card_id
     clean_card_df = clean_card_data(clean_card_df, card_col)
 
-    print(f"# NAN CARD ID: {na_card_df.shape[0]}")
-    sep_display()
+    if print_info:
+        print(f"# NAN CARD ID: {na_card_df.shape[0]}")
+        sep_display()
+
+        print(f"{'#'*5} VALIDATING CARD ID {'#'*5}")
+        sep_display()
 
     # ? VALIDATE CARD ID
-    print(f"{'#'*5} VALIDATING CARD ID {'#'*5}")
-    sep_display()
-
     print("Validating personal card id...")
     # * Check for valid personal card id
     clean_card_df['is_personal_id'] =\
@@ -357,8 +365,9 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
             clean_card_df[f"clean_{card_col}"]
     )
 
-    print(f"# PERSONAL ID FOUND: {clean_card_df['is_personal_id'].sum()}")
-    sep_display()
+    if print_info:
+        print(f"# PERSONAL ID FOUND: {clean_card_df['is_personal_id'].sum()}")
+        sep_display()
 
     # * Check for valid passport id
     print("Validating passport id...")
@@ -368,8 +377,9 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
             clean_card_df[f"clean_{card_col}"]
     )
 
-    print(f"# PASSPORT FOUND: {clean_card_df['is_passport'].sum()}")
-    sep_display()
+    if print_info:
+        print(f"# PASSPORT FOUND: {clean_card_df['is_passport'].sum()}")
+        sep_display()
 
     # * Check for valid driver license id
     print("Validating driver license id...")
@@ -379,9 +389,10 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
             clean_card_df[f"clean_{card_col}"]
     )
 
-    print(
-        f"# DRIVER LICENSE FOUND: {clean_card_df['is_driver_license'].sum()}")
-    sep_display()
+    if print_info:
+        print(
+            f"# DRIVER LICENSE FOUND: {clean_card_df['is_driver_license'].sum()}")
+        sep_display()
 
     # * Make a general is_valid column to verify whether the card is generally valid
 
