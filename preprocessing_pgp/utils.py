@@ -1,7 +1,18 @@
+from typing import (
+    Callable,
+    List,
+    Union
+)
+import multiprocessing as mp
+
 import pandas as pd
 import numpy as np
 from unidecode import unidecode
 from tqdm import tqdm
+
+from preprocessing_pgp.card.const import (
+    N_PROCESSES
+)
 
 
 tqdm.pandas()
@@ -16,6 +27,58 @@ def sep_display(sep: str = "\n"):
     Separator for output std
     """
     print(sep)
+
+
+def apply_multi_process(
+    func: Callable,
+    series: Union[pd.Series, str, np.ndarray]
+) -> List:
+    """
+    Process multi-processing on every items of series with provided func
+
+    Parameters
+    ----------
+    func : Callable
+        Function to traverse through series, must have 1 input and 1 output
+    series : Optional[pd.Series]
+        Any series | np.Array() | list
+
+    Returns
+    -------
+    List
+        List of elements returned after apply the function
+    """
+
+    with mp.Pool(N_PROCESSES) as pool:
+        output = tqdm(
+            pool.imap(func, series),
+            total=series.shape[0]
+        )
+
+    return output
+
+
+def apply_progress_bar(
+    func: Callable,
+    series: pd.Series
+) -> List:
+    """
+    Process apply with progress bar on every items of series with provided func
+
+    Parameters
+    ----------
+    func : Callable
+        Function to traverse through series, must have 1 input and 1 output
+    series : pd.Series
+        Any series of type pandas Series
+
+    Returns
+    -------
+    List
+        List of elements returned after apply the function
+    """
+
+    return series.progress_apply(func)
 
 
 def remove_non_accent_names(names_df: pd.DataFrame, name_col='name', remove_single_name=True) -> pd.DataFrame:
