@@ -354,7 +354,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     clean_card_df['is_personal_id'] =\
         apply_progress_bar(
             PersonalIDValidator.is_valid_card,
-            clean_card_df[card_col]
+            clean_card_df[f"clean_{card_col}"]
     )
 
     print(f"# PERSONAL ID FOUND: {clean_card_df['is_personal_id'].sum()}")
@@ -365,7 +365,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     clean_card_df['is_passport'] =\
         apply_progress_bar(
             PassportValidator.is_valid_card,
-            clean_card_df[card_col]
+            clean_card_df[f"clean_{card_col}"]
     )
 
     print(f"# PASSPORT FOUND: {clean_card_df['is_passport'].sum()}")
@@ -376,7 +376,7 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     clean_card_df['is_driver_license'] =\
         apply_progress_bar(
             DriverLicenseValidator.is_valid_card,
-            clean_card_df[card_col]
+            clean_card_df[f"clean_{card_col}"]
     )
 
     print(
@@ -395,8 +395,11 @@ def verify_card(card_df: pd.DataFrame, card_col: str) -> pd.DataFrame:
     )
 
     # ? CONCAT ALL SEP CARD IDS
-    new_cols = ['is_valid', 'is_personal_id',
-                'is_passport', 'is_driver_license']
+    new_cols = [
+        f'clean_{card_col}',
+        'is_valid', 'is_personal_id',
+        'is_passport', 'is_driver_license'
+    ]
 
     final_card_df = pd.concat([clean_card_df, na_card_df])
 

@@ -36,10 +36,10 @@ class CardIDCleaner:
         """
 
         # Remove spaces in between
-        card_id = re.sub(' +', '', card_id)
-        card_id = card_id.strip()
+        clean_card_id = re.sub(' +', '', card_id)
+        clean_card_id = clean_card_id.strip()
 
-        return card_id
+        return clean_card_id
 
     def __remove_special_characters(self, card_id: str) -> str:
         """
@@ -56,11 +56,13 @@ class CardIDCleaner:
             The output card_id without any punctuation
         """
 
-        translator = str.maketrans('', '', punctuation)
+        # translator = str.maketrans('', '', punctuation)
 
-        card_id = card_id.translate(translator)
+        # clean_card_id = card_id.translate(translator)
 
-        return card_id
+        clean_card_id = re.sub(r'\W+', '', card_id)
+
+        return clean_card_id
 
     def clean_card(self, card_id: str) -> str:
         """
@@ -76,11 +78,11 @@ class CardIDCleaner:
         str
             The clean card without any special characters or spaces
         """
-        card_id = card_id.lower()
-        card_id = self.__remove_spaces(card_id)
-        card_id = self.__remove_special_characters(card_id)
+        clean_card_id = card_id.lower()
+        clean_card_id = self.__remove_spaces(clean_card_id)
+        clean_card_id = self.__remove_special_characters(clean_card_id)
 
-        return card_id
+        return clean_card_id
 
 
 def extract_null_values(
