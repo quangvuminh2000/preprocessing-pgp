@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from preprocessing_pgp.card.utils import (
+from preprocessing_pgp.utils import (
     # apply_multi_process,
     apply_progress_bar
 )
