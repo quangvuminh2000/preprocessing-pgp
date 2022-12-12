@@ -17,8 +17,6 @@ from preprocessing_pgp.phone.converter import convert_mobi_phone, convert_phone_
 # ? ENVIRONMENT SETUP
 tqdm.pandas()
 
-N_PROCESSES = 20
-
 
 # ? CHECK & EXTRACT FOR VALID PHONE
 def extract_valid_phone(
@@ -113,7 +111,7 @@ def extract_valid_phone(
 
         print("Sample of converted MOBI phone:", end="\n\n")
         print(f_phones.loc[(mask_old_phone_format) &
-            (f_phones["phone_convert"].notna())])
+                           (f_phones["phone_convert"].notna())])
 
     # ? Check for valid tele-phone (old/new)
 
@@ -160,7 +158,7 @@ def extract_valid_phone(
     if print_info:
         print("Sample of converted telephone by region:", end="\n\n")
         print(f_phones.loc[(mask_old_region_phone) &
-            (f_phones["phone_convert"].notna())])
+                           (f_phones["phone_convert"].notna())])
 
     # ? Filling NaNs in indicator columns
 
