@@ -1,16 +1,17 @@
+import multiprocessing as mp
+from functools import partial
 from typing import (
     Callable,
     List,
     Union
 )
-import multiprocessing as mp
 
 import pandas as pd
 import numpy as np
 from unidecode import unidecode
 from tqdm import tqdm
 
-from preprocessing_pgp.card.const import (
+from preprocessing_pgp.const import (
     N_PROCESSES
 )
 
@@ -18,15 +19,25 @@ from preprocessing_pgp.card.const import (
 tqdm.pandas()
 
 
-def sentence_length(sentence: str):
+def sentence_length(sentence: str) -> int:
+    """
+    Return the number of words in the sentence
+    """
     return len(sentence.split())
 
 
-def sep_display(sep: str = "\n"):
+def sep_display(sep: str = "\n") -> None:
     """
     Separator for output std
     """
     print(sep)
+
+
+def is_empty_dataframe(data: pd.DataFrame) -> bool:
+    """
+    Check whether the dataframe is empty or not
+    """
+    return data.shape[0] == 0
 
 
 def apply_multi_process(
@@ -39,7 +50,8 @@ def apply_multi_process(
     Parameters
     ----------
     func : Callable
-        Function to traverse through series, must have 1 input and 1 output
+        Function to traverse through series,
+        must have 1 input and 1 output
     series : Optional[pd.Series]
         Any series | np.Array() | list
 
@@ -50,18 +62,49 @@ def apply_multi_process(
     """
 
     with mp.Pool(N_PROCESSES) as pool:
-        output = tqdm(
+        output = list(tqdm(
             pool.imap(func, series),
             total=series.shape[0]
-        )
+        ))
 
     return output
+
+
+def parallelize_dataframe(
+    data: pd.DataFrame,
+    func: Callable,
+    **kwargs
+) -> pd.DataFrame:
+    """
+    Multi-processing on dataframe with provided function and additional function arguments
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Any dataframe
+    func : Callable
+        Function to traverse through separate part of dataframe,
+        input must contains the `dataframe` as the required argument
+    **kwargs
+        Additional arguments for the function
+
+    Returns
+    -------
+    pd.DataFrame
+        Fully processed dataframe
+    """
+    sub_data = np.array_split(data.copy(), N_PROCESSES)
+
+    with mp.Pool(N_PROCESSES) as pool:
+        final_data = pd.concat(pool.map(partial(func, **kwargs), sub_data))
+
+    return final_data
 
 
 def apply_progress_bar(
     func: Callable,
     series: pd.Series
-) -> List:
+) -> pd.Series:
     """
     Process apply with progress bar on every items of series with provided func
 
@@ -74,14 +117,18 @@ def apply_progress_bar(
 
     Returns
     -------
-    List
-        List of elements returned after apply the function
+    pd.Series
+        Series of elements returned after apply the function
     """
 
     return series.progress_apply(func)
 
 
-def remove_non_accent_names(names_df: pd.DataFrame, name_col='name', remove_single_name=True) -> pd.DataFrame:
+def remove_non_accent_names(
+    names_df: pd.DataFrame,
+    name_col='name',
+    remove_single_name=True
+) -> pd.DataFrame:
     """
     Remove non accent names inside the DF
 

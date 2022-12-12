@@ -1,3 +1,6 @@
+import os
+
+N_PROCESSES = os.cpu_count() // 2
 
 NON_HUMAN_REG_LIST = [
     # Companies
