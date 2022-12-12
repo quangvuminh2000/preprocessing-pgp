@@ -24,6 +24,8 @@ from preprocessing_pgp.card.const import (
     POSSIBLE_GENDER_NUM,
     OLD_PID_REGION_CODE_NUMS,
     NEW_PID_REGION_CODE_NUMS,
+    GENDER_NUM_TO_CENTURY,
+    VALID_PID_21_CENTURY_DOB,
     # Passport
     PASSPORT_LENGTH,
     PASSPORT_PATTERN,
@@ -129,14 +131,20 @@ class PersonalIDValidator(CardValidator):
     @staticmethod
     def is_valid_new_card(card_id: str) -> bool:
         """
-        Helper function to check if the card_id is of old card type
+        Helper function to check if the card_id is of new card type
+
+        New card type contains:
+        1.
         """
         if not PersonalIDValidator.is_new_card(card_id):
             return False
 
         if card_id[:3] in NEW_PID_REGION_CODE_NUMS:
             gender_code = card_id[3]
-            return CardValidator.is_valid_gender(gender_code)
+            return (
+                CardValidator.is_valid_gender(gender_code)
+                and PersonalIDValidator.is_valid_range_birth(card_id)
+            )
 
         return False
 
@@ -166,9 +174,25 @@ class PersonalIDValidator(CardValidator):
             or PersonalIDValidator.is_valid_new_card(modified_card_id)
 
     @staticmethod
+    def is_valid_range_birth(card_id: str) -> bool:
+        """
+        Helper to check whether the dob in new card_id is in valid range or not
+        """
+        gender_code = card_id[3]
+        birth_year = card_id[4:6]
+
+        # Century 21
+        if gender_code in GENDER_NUM_TO_CENTURY['21']:
+            return birth_year in VALID_PID_21_CENTURY_DOB
+
+        return True
+
+    @staticmethod
     def is_valid_card(card_id: str) -> bool:
         """
         Check if the card is valid by personal id syntax or not
+
+        The valid card must be `all digit` and `valid syntax` of old or new card
 
         Parameters
         ----------
@@ -396,11 +420,15 @@ def verify_card(
 
     # * Make a general is_valid column to verify whether the card is generally valid
 
-    clean_card_df['is_valid'] = clean_card_df.apply(
+    print("Generating valid tag...")
+    clean_card_df['is_valid'] =\
+        clean_card_df.progress_apply(
         lambda row: is_checker_valid(
-            row['is_personal_id'],
-            row['is_passport'],
-            row['is_driver_license']
+            [
+                row['is_personal_id'],
+                row['is_passport'],
+                row['is_driver_license']
+            ]
         ),
         axis=1
     )

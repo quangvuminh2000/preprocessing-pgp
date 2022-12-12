@@ -10,13 +10,31 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-from preprocessing_pgp.card.const import (
-    # Constant
-    N_PROCESSES,
-)
+
+def digit_to_year_string(digit: int) -> str:
+    """
+    Convert digit in range (0, 99) to 2 digits birth string
+
+    Parameters
+    ----------
+    digit : int
+        The digit representing dob, must be in range `0-99` else will be thrown error
+
+    Returns
+    -------
+    str
+        The string representing the birth year
+    """
+
+    if not 0 <= digit <= 99:
+        raise AttributeError("DOB Digit must be in range 0 to 99!")
+
+    birth_str = f'0{digit}' if digit < 10 else str(digit)
+
+    return birth_str
 
 
-def is_checker_valid(*checkers) -> bool:
+def is_checker_valid(checkers: List) -> bool:
     """
     Check if any of the checker is valid
 

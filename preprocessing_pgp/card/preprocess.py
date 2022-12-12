@@ -1,7 +1,6 @@
 """This module meant for preprocessing the card id before validation"""
 
 import re
-from string import punctuation
 from typing import Tuple
 from dataclasses import dataclass
 
