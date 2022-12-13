@@ -38,7 +38,18 @@ METHOD_REFER_DICT = {
 __LOCATION_ENRICH_PATH = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
+    os.pardir,
     "data",
     "location_dict_enrich_address.parquet"
 )
 LOCATION_ENRICH_DICT = pd.read_parquet(__LOCATION_ENRICH_PATH)
+
+# ? LOCATION CODE DICTIONARY
+__LOCATION_CODE_PATH = os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    os.pardir,
+    "data",
+    "location_dict_code.parquet"
+)
+LOCATION_CODE_DICT = pd.read_parquet(__LOCATION_CODE_PATH)

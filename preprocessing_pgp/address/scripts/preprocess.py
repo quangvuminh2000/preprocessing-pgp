@@ -7,8 +7,6 @@ from typing import Dict
 from copy import deepcopy
 
 import pandas as pd
-from tqdm import tqdm
-from flashtext import KeywordProcessor
 from unidecode import unidecode
 
 from preprocessing_pgp.address.scripts.utils import (
@@ -17,6 +15,9 @@ from preprocessing_pgp.address.scripts.utils import (
 from preprocessing_pgp.address.scripts.const import (
     DICT_NORM_ABBREV_REGEX_KW,
     DICT_NORM_CITY_DASH_REGEX
+)
+from preprocessing_pgp.utils import (
+    apply_multi_process
 )
 
 
@@ -206,22 +207,33 @@ class VietnameseAddressCleaner:
         return cleaned_address
 
 
-def clean_vietnamese_address(address: str) -> str:
+def clean_vi_address(
+    data: pd.DataFrame,
+    address_col: str
+) -> pd.DataFrame:
     """
-    Function to clean and unify vietnamese address
+    Function to clean and unify vietnamese address in data
 
     Parameters
     ----------
-    address : str
-        The raw address that need cleansing and unifying
+    data : pd.DataFrame
+        Raw data containing the address
+    address_col : str
+        The raw address column that need cleansing and unifying
 
     Returns
     -------
-    str
-        Final unified and cleansed address
+    pd.DataFrame
+        Final unified and cleansed data with new column named `cleaned_<address_col>`
     """
     cleaner = VietnameseAddressCleaner()
 
-    cleaned_address = cleaner.clean_address(address)
+    cleaned_data = data.copy()
 
-    return cleaned_address
+    cleaned_data[f'cleaned_{address_col}'] =\
+        apply_multi_process(
+            cleaner.clean_address,
+            cleaned_data[address_col]
+    )
+
+    return cleaned_data

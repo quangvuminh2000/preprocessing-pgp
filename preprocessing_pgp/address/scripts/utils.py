@@ -1,4 +1,5 @@
 import re
+from typing import List
 
 
 def number_pad_replace(match: re.Match) -> str:
@@ -20,6 +21,16 @@ def number_pad_replace(match: re.Match) -> str:
 
     return format(number, '01d')
 
+
+def flatten_list(lst: List) -> List:
+    """
+    Helper function to flatten the list of list into simpler list
+    """
+    flat_list = [item for sublist in lst for item in sublist]
+
+    return flat_list
+
+
 def remove_substr(string: str, substr: str) -> str:
     """
     Remove sub-string from original `string` and return the modified string
@@ -38,6 +49,9 @@ def remove_substr(string: str, substr: str) -> str:
         if not having any sub-str found or substring is empty
         return the origin string
     """
+    if None in [string, substr]:
+        return None
+
     start_sub_idx = string.rfind(substr)
 
     if start_sub_idx == -1 or len(substr) == 0:  # * Failure if s
