@@ -164,3 +164,6 @@ cython_debug/
 secret_data/
 preprocessing_pgp/data/*
 preprocessing_pgp/data/*.parquet
+
+#? Secret Code
+preprocessing_pgp/address/scripts/*

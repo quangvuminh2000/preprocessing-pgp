@@ -20,6 +20,7 @@ dependencies = [
     "pandas",
     "numpy",
     "regex",
+    "flashtext",
     "pyarrow",
     "tensorflow>=2.8",
 ]
@@ -45,4 +46,4 @@ homepage = "https://github.com/quangvuminh2000/preprocessing-pgp"
 realpython = "preprocessing_pgp.__main__:main"
 
 [tool.setuptools.packages.find]
-exclude = ["preprocessing_pgp.address*"]
+exclude = ["preprocessing_pgp.address.scripts*"]
