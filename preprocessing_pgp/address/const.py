@@ -51,3 +51,16 @@ __LOCATION_CODE_PATH = os.path.join(
     "location_dict_code.parquet"
 )
 LOCATION_CODE_DICT = pd.read_parquet(__LOCATION_CODE_PATH)
+
+LEVEL_VI_COLUMN_DICT = {
+    1: 'city_vi',
+    2: 'district_vi',
+    3: 'ward_vi'
+}
+LEVEL_CODE_COLUMN_DICT = {
+    1: 'city_id',
+    2: 'district_id',
+    3: 'ward_id'
+}
+
+AVAIL_LEVELS = LEVEL_VI_COLUMN_DICT.keys()

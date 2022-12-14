@@ -22,6 +22,30 @@ def number_pad_replace(match: re.Match) -> str:
     return format(number, '01d')
 
 
+def is_empty_string(string: str) -> bool:
+    """
+    Check if the string is empty or not
+    """
+    return string == ''
+
+
+def create_dependent_query(*dependents) -> str:
+    """
+    Make a `pd.DataFrame` query to match all dependents
+
+    * `dependents` should be strings of comparison query
+    """
+    query = ''
+    if len(dependents) > 0:
+        for dep in dependents:
+            if len(dep) > 0:
+                query = f'{query} & {dep}'\
+                    if query != ''\
+                    else dep
+
+    return query
+
+
 def flatten_list(lst: List) -> List:
     """
     Helper function to flatten the list of list into simpler list

@@ -7,6 +7,7 @@ from copy import deepcopy
 
 import pandas as pd
 from flashtext import KeywordProcessor
+from halo import Halo
 
 from preprocessing_pgp.address.const import (
     METHOD_REFER_DICT,
@@ -15,7 +16,8 @@ from preprocessing_pgp.address.const import (
 
 from preprocessing_pgp.address.utils import (
     flatten_list,
-    remove_substr
+    remove_substr,
+    create_dependent_query
 )
 from preprocessing_pgp.utils import apply_progress_bar
 
@@ -188,13 +190,15 @@ class LevelExtractor:
         Helper to make search query from dependents
         """
         query = ''
+        # Making dependent queries
         if len(dependents) > 0:
+            dependent_queries = []
             for d_term, d_method in dependents:
                 if d_term is not None:
                     term_query = f'{d_method} == "{d_term}"'
-                    query = f'{term_query} & {query}'\
-                        if query != ''\
-                        else term_query
+                    dependent_queries.append(term_query)
+
+            query = create_dependent_query(*dependent_queries)
 
         return query
 
@@ -325,89 +329,13 @@ class LevelExtractor:
 
         return found_terms[0]
 
-    # def _trace_best_format_level(
-    #     self,
-    #     term: str,
-    #     level_method: str,
-    #     *dependents
-    # ) -> str:
-    #     """
-    #     Trace back the best term for the specific level found
-    #     if it is `unique` else `None` is returned
 
-    #     Parameters
-    #     ----------
-    #     term : str
-    #         The level term that need to trace back
-    #     level_method : str
-    #         The method used to get the term
-
-    #     Returns
-    #     -------
-    #     str
-    #         Best format term or `None` if found too many
-    #     """
-    #     best_term = None
-
-    #     best_term = self._trace_best_format_method(
-    #         term,
-    #         level_method,
-    #         *dependents
-    #     )
-
-    #     return best_term
-
-    # def _trace_best_format_method(
-    #     self,
-    #     term: str,
-    #     method: str,
-    #     *dependents
-    # ) -> str:
-    #     """
-    #     Trace back the best term for the specific method
-    #     if it is `unique` else `None` is returned
-
-    #     Parameters
-    #     ----------
-    #     term : str
-    #         The level term that need to trace back
-    #     method : int
-    #         The method to trace from
-
-    #     Returns
-    #     -------
-    #     str
-    #         Best format term
-    #         or `None` if found too many or not found
-    #     """
-    #     best_term = None
-
-    #     level_col = method[:3]
-
-    #     query_str = f'{method} == "{term}"'
-    #     if len(dependents) > 0:
-    #         try:
-    #             for d_term, d_method in dependents:
-    #                 if d_term is not None:
-    #                     query_str = f'{d_method} == "{d_term}" & {query_str}'
-    #         except:
-    #             print(len(dependents))
-    #             print(dependents)
-
-    #     found_terms =\
-    #         LOCATION_ENRICH_DICT.query(
-    #             query_str
-    #         )[level_col].unique()
-
-    #     n_found = found_terms.shape[0]
-    #     if n_found == 0 or n_found > 1:
-    #         return best_term
-
-    #     best_term = found_terms[0]
-
-    #     return best_term
-
-
+@Halo(
+    text='Extracting address',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def extract_vi_address_by_level(
     data:  pd.DataFrame,
     address_col: str
@@ -438,9 +366,8 @@ def extract_vi_address_by_level(
     extracted_data = data.copy()
 
     extracted_results =\
-        apply_progress_bar(
-            extractor.extract_all_levels,
-            extracted_data[address_col]
+        extracted_data[address_col].apply(
+            extractor.extract_all_levels
         )
 
     for level in extractor.avail_levels:

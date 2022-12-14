@@ -8,6 +8,7 @@ from copy import deepcopy
 
 import pandas as pd
 from unidecode import unidecode
+from halo import Halo
 
 from preprocessing_pgp.address.utils import (
     number_pad_replace
@@ -207,6 +208,12 @@ class VietnameseAddressCleaner:
         return cleaned_address
 
 
+@Halo(
+    text='Cleansing address',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def clean_vi_address(
     data: pd.DataFrame,
     address_col: str
@@ -231,9 +238,8 @@ def clean_vi_address(
     cleaned_data = data.copy()
 
     cleaned_data[f'cleaned_{address_col}'] =\
-        apply_multi_process(
-            cleaner.clean_address,
-            cleaned_data[address_col]
-    )
+        cleaned_data[address_col].apply(
+            cleaner.clean_address
+        )
 
     return cleaned_data
