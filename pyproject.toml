@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "preprocessing-pgp"
-version = "0.1.15"
+version = "0.1.16"
 description = "Preprocessing required data for customer service purpose"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
@@ -22,6 +22,7 @@ dependencies = [
     "regex",
     "flashtext",
     "pyarrow",
+    "halo",
     "tensorflow>=2.8",
 ]
 requires-python = ">=3.6"

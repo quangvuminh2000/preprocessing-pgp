@@ -253,3 +253,45 @@ False     #####
 PASSPORT: ####
 DRIVER LICENSE: ####
 ```
+
+### 4. Extract Information in Vietnamese Address
+
+> All the region codes traced are retrieve from [Đơn Vị Hành Chính Việt Nam](http://tongdieutradanso.vn/don-vi-hanh-chinh-viet-nam.html)
+
+Apart from original columns of **dataframe**, we also generate columns with specific meanings:
+
+* **cleaned_*<address_col>*** : The *cleaned address* retrieve from the raw address column
+* **level 1** : The raw city extracted from the *cleaned address*
+* **best level 1** : The *beautified city* traced from extracted raw city
+* **level 1 code** : The generated *city code*
+* **level 2** : The raw district extracted from the *cleaned address*
+* **best level 2** : The *beautified district* traced from extracted raw district
+* **level 2 code** : The generated *district code*
+* **level 3** : The raw ward extracted from the *cleaned address*
+* **best level 3** : The *beautified ward* traced from extracted raw ward
+* **level 3 code** : The generated *ward code*
+* **remained address** : The *remaining address* not being extracted
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.address.extractor import extract_vi_address
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> extracted_data = extract_vi_address(data, address_col='address')
+Cleansing takes 0m0s
+
+
+Extracting takes 0m22s
+
+
+Code generation takes 0m3s
+
+>>> extracted_data.columns
+Index(['address', 'cleaned_address', 'level 1', 'best level 1', 'level 2',
+       'best level 2', 'level 3', 'best level 3', 'remained address',
+       'level 1 code', 'level 2 code', 'level 3 code'],
+      dtype='object')
+```
