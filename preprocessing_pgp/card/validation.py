@@ -8,14 +8,14 @@ import multiprocessing as mp
 from tqdm import tqdm
 
 from preprocessing_pgp.card.preprocess import (
-    clean_card_data,
-    extract_null_values
+    clean_card_data
 )
 from preprocessing_pgp.card.utils import is_checker_valid
 from preprocessing_pgp.utils import (
     sep_display,
     # apply_multi_process,
-    apply_progress_bar
+    apply_progress_bar,
+    extract_null_values
 )
 from preprocessing_pgp.card.const import (
     # Personal ID

@@ -3,7 +3,8 @@ from functools import partial
 from typing import (
     Callable,
     List,
-    Union
+    Union,
+    Tuple
 )
 
 import pandas as pd
@@ -38,6 +39,33 @@ def is_empty_dataframe(data: pd.DataFrame) -> bool:
     Check whether the dataframe is empty or not
     """
     return data.shape[0] == 0
+
+
+def extract_null_values(
+    data: pd.DataFrame,
+    by_col: str
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Extracting NULL values from specific DataFrame
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Basic DataFrame
+    by_col : str
+        Column to separate Null values
+
+    Returns
+    -------
+    Tuple[pd.DataFrame, pd.DataFrame]
+        Tuple of Non-Null DataFrame and Null DataFrame
+    """
+
+    null_data = data[data[by_col].isna()].copy()
+
+    non_null_data = data.dropna(subset=[by_col]).copy()
+
+    return non_null_data, null_data
 
 
 def apply_multi_process(

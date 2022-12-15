@@ -12,7 +12,11 @@ import pandas as pd
 from preprocessing_pgp.address.loc_process import generate_loc_code
 from preprocessing_pgp.address.level_extractor import extract_vi_address_by_level
 from preprocessing_pgp.address.preprocess import clean_vi_address
-from preprocessing_pgp.utils import sep_display, parallelize_dataframe
+from preprocessing_pgp.utils import (
+    sep_display,
+    parallelize_dataframe,
+    extract_null_values
+)
 from preprocessing_pgp.address.const import AVAIL_LEVELS
 
 
@@ -39,9 +43,16 @@ def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
         * `remained address`: the remaining in the address
     """
 
+    # * Removing na addresses
+    clean_address_df, na_address_df =\
+        extract_null_values(
+            data,
+            by_col=address_col
+        )
+
     # * Cleanse the address
     start_time = time()
-    cleaned_data = clean_vi_address(data, address_col)
+    cleaned_data = clean_vi_address(clean_address_df, address_col)
     clean_time = time() - start_time
     print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
@@ -68,4 +79,7 @@ def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
     print(
         f"Code genration takes {int(code_gen_time)//60}m{int(code_gen_time)%60}s")
 
-    return generated_data
+    # * Concat to original data
+    final_address_df = pd.concat([generated_data, na_address_df])
+
+    return final_address_df
