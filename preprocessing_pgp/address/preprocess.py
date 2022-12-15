@@ -48,7 +48,7 @@ class VietnameseAddressCleaner:
         replaced_address = deepcopy(address)
 
         for replace_txt, target_subs in keywords.items():
-            reg_target = '|'.join(target_subs)
+            reg_target = re.compile('|'.join(map(re.escape, target_subs)))
             replaced_address = re.sub(reg_target,
                                       replace_txt,
                                       replaced_address)
@@ -240,6 +240,6 @@ def clean_vi_address(
     cleaned_data[f'cleaned_{address_col}'] =\
         cleaned_data[address_col].apply(
             cleaner.clean_address
-        )
+    )
 
     return cleaned_data

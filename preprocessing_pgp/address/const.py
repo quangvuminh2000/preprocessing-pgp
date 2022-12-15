@@ -9,19 +9,20 @@ import pandas as pd
 
 # ? REGEX FOR ADDRESS
 DICT_NORM_ABBREV_REGEX_KW = {
-    'tp ': [r'\btp\.\b', r'\btp:\b'],
-    'tt ': [r'\btt\.\b', r'\btt:\b'],
-    'q ': [r'\bq\.\b', r'\bq:\b'],
-    'h ': [r'\bh\.\b', r'\bh:\b'],
-    'x ': [r'\bx\.\b', r'\bx:\b'],
-    'p ': [r'\bp\.\b', r'\bp:\b']
+    'tp ': ['tp.', 'tp:'],
+    'tt ': ['tt.', 'tt:'],
+    'q ': ['q.', 'q:'],
+    'h ': ['h.', 'h:'],
+    'x ': ['x.', 'x:'],
+    'p ': ['p.', 'p:']
 }
 
 DICT_NORM_CITY_DASH_REGEX = {
-    'ba ria - vung tau': ['\bba ria vung tau\b'],
-    'br-vt': ['\bbrvt\b'],
-    'phan rang - thap cham': ['\bphan rang thap cham\b'],
-    'pr-tc': ['\bprtc\b']
+    'ba ria - vung tau': ['ba ria vung tau'],
+    'br-vt': ['brvt'],
+    'phan rang - thap cham': ['phan rang thap cham'],
+    'pr-tc': ['prtc'],
+    'thua thien hue': ['thua thien - hue']
 }
 
 # ? LEVEL METHODS
