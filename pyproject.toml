@@ -47,4 +47,4 @@ homepage = "https://github.com/quangvuminh2000/preprocessing-pgp"
 realpython = "preprocessing_pgp.__main__:main"
 
 [tool.setuptools.packages.find]
-exclude = ["preprocessing_pgp.address.scripts*"]
+exclude = ["preprocessing_pgp.address.scripts*", "tests*"]
