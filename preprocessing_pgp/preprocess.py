@@ -8,6 +8,7 @@ from typing import Tuple
 
 import pandas as pd
 from tqdm import tqdm
+from halo import Halo
 
 from preprocessing_pgp.accent_typing_formatter import reformat_vi_sentence_accent
 from preprocessing_pgp.unicode_converter import minimal_convert_unicode
@@ -130,6 +131,12 @@ def clean_name_cdp(name: str) -> str:
     return clean_name
 
 
+@Halo(
+    text='Preprocessing Names',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def preprocess_df(
     df: pd.DataFrame,
     # human_extractor: HumanNameExtractor,
@@ -139,17 +146,17 @@ def preprocess_df(
     # n_cpu: int = None
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Basic Preprocessing data
-    print("Basic pre-processing names...")
+    # print("Basic pre-processing names...")
     basic_clean_names = df.copy()
-    basic_clean_names[f'clean_{name_col}'] = basic_clean_names[name_col].progress_apply(
+    basic_clean_names[f'clean_{name_col}'] = basic_clean_names[name_col].apply(
         basic_preprocess_name)
 
-    clean_name_mask = basic_clean_names[f'clean_{name_col}'] != basic_clean_names[name_col]
-    print('\n\n')
-    print('-'*20)
-    print(f'{clean_name_mask.sum()} names have been clean!')
-    print('-'*20)
-    print('\n\n')
+    # clean_name_mask = basic_clean_names[f'clean_{name_col}'] != basic_clean_names[name_col]
+    # print('\n\n')
+    # print('-'*20)
+    # print(f'{clean_name_mask.sum()} names have been clean!')
+    # print('-'*20)
+    # print('\n\n')
 
     basic_clean_names = basic_clean_names.drop(columns=[name_col])
     basic_clean_names = basic_clean_names.rename(columns={

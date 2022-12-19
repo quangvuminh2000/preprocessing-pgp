@@ -59,31 +59,13 @@ python
 >>> import pandas as pd
 >>> from preprocessing_pgp.name.enrich_name import process_enrich
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> enrich_data, _ = process_enrich(data, name_col='name')
-Basic pre-processing names...
-100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 19669.68it/s]
+>>> enrich_data = process_enrich(data, name_col='name')
 
 
-
---------------------
-0 names have been clean!
---------------------
+Cleansing Takes 0m0s
 
 
-
-
-Filling diacritics to names...
-100%|███████████████████████████████████████| 1000/1000 [01:29<00:00, 11.23it/s]
-
-AVG prediction time : 0.0890703010559082s
-
-
-
-Applying rule-based postprocess...
-100%|████████████████████████████████████| 1000/1000 [00:00<00:00, 38292.26it/s]
-
-AVG rb time : 2.671933174133301e-05s
-
+Enrich names takes 5m10s
 
 >>> enrich_data.columns
 Index(['name', 'predict', 'final'], dtype='object')

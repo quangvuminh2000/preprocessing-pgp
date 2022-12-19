@@ -47,30 +47,30 @@ class NameProcessor:
                     ):
         predicted_name = name_df.copy(deep=True)
 
-        n_names = predicted_name.shape[0]
+        # n_names = predicted_name.shape[0]
 
-        print("Filling diacritics to names...")
-        start_time = time()
-        predicted_name['predict'] = predicted_name[name_col].progress_apply(
+        # print("Filling diacritics to names...")
+        # start_time = time()
+        predicted_name['predict'] = predicted_name[name_col].apply(
             self.predict_non_accent)
-        mean_predict_time = (time() - start_time) / n_names
+        # mean_predict_time = (time() - start_time) / n_names
 
-        print(f"\nAVG prediction time : {mean_predict_time}s")
+        # print(f"\nAVG prediction time : {mean_predict_time}s")
 
-        print('\n\n')
+        # print('\n\n')
 
-        print("Applying rule-based postprocess...")
-        start_time = time()
-        predicted_name['final'] = predicted_name.progress_apply(
+        # print("Applying rule-based postprocess...")
+        # start_time = time()
+        predicted_name['final'] = predicted_name.apply(
             lambda row: rule_base_name(
                 row['predict'], unidecode(row[name_col]), self.name_dicts),
             axis=1
         )
-        mean_rb_time = (time() - start_time) / n_names
+        # mean_rb_time = (time() - start_time) / n_names
 
-        print(f"\nAVG rb time : {mean_rb_time}s")
+        # print(f"\nAVG rb time : {mean_rb_time}s")
 
-        print('\n\n')
+        # print('\n\n')
 
         return predicted_name
 
@@ -87,4 +87,3 @@ class NameProcessor:
         )
 
         return best_name_df[[key_col, name_col, 'best_name', 'similarity_score', *keep_cols]]
-

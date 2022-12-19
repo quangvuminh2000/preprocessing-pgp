@@ -3,10 +3,13 @@ import argparse
 import json
 from time import time
 from typing import List, Tuple
+import warnings
+import logging
 
 import pandas as pd
 from tensorflow import keras
 from tqdm import tqdm
+from halo import Halo
 
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.model.transformers import TransformerModel
@@ -16,8 +19,15 @@ from preprocessing_pgp.name.const import (
     MODEL_PATH,
     RULE_BASED_PATH
 )
+from preprocessing_pgp.utils import (
+    sep_display,
+    parallelize_dataframe
+)
 
 tqdm.pandas()
+warnings.filterwarnings("ignore")
+logger = logging.getLogger()
+logger.setLevel(logging.CRITICAL)
 
 
 class EnrichName:
@@ -49,6 +59,7 @@ class EnrichName:
             self.lname_rb,
             split_data_path
         )
+        # Timing
         self.total_load_time = time() - start_time
 
     def load_model(
@@ -88,44 +99,36 @@ class EnrichName:
     ) -> pd.DataFrame:
         return self.name_processor.fill_accent(name_df, name_col)
 
-    def enrich(
-        self,
-        raw_df: pd.DataFrame,
-        name_col: str,
-    ) -> pd.DataFrame:
-
-        # ? Preprocess & Remove all non_human names
-        # *-- Don't use Multi-processing cause without progress bar
-        start_time = time()
-        clean_names = preprocess_df(
-            raw_df,
-            name_col=name_col
-        )
-        self.preprocess_time = time() - start_time
-
-        # ? Performing enrich names & filling accent
-        # * Out df with columns: ['id_group', 'raw_name', 'enrich_name', 'final_name', 'similarity_score', 'is_human']
-        start_time = time()
-        # Apply filling accent
-        predict_df = self.refill_accent(clean_names, name_col)
-
-        self.enrich_time = time() - start_time
-
-        return predict_df
-
     def get_time_report(self) -> pd.DataFrame:
         return pd.DataFrame({
             'model load time': [self.model_load_time],
             'total load time': [self.total_load_time],
-            'preprocess time': [self.preprocess_time],
-            'enrich time': [self.enrich_time]
         })
 
 
-def process_enrich(
-    raw_df: pd.DataFrame,
+def enrich_clean_data(
+    clean_df: pd.DataFrame,
     name_col: str,
-) -> Tuple[pd.DataFrame, EnrichName]:
+) -> pd.DataFrame:
+    """
+    Applying the model of filling accent to cleaned Vietnamese names
+
+    Parameters
+    ----------
+    clean_df : pd.DataFrame
+        The dataframe containing cleaned names
+    name_col : str
+        The column name that holds the raw names
+
+    Returns
+    -------
+    pd.DataFrame
+        The final dataframe that contains:
+
+        * `name_col`: raw names -- input name column
+        * `predict`: predicted names using model only
+        * `final`: beautified version of prediction with additional rule-based approach
+    """
     model_weight_path = f'{MODEL_PATH}/best_transformer_model.h5'
     vectorization_paths = (
         f'{MODEL_PATH}/vecs/source_vectorization_layer.pkl',
@@ -141,9 +144,65 @@ def process_enrich(
         name_rb_pth=RULE_BASED_PATH
     )
 
-    final_df = enricher.enrich(
-        raw_df,
+    final_df = enricher.refill_accent(
+        clean_df,
         name_col
     )
 
-    return final_df, enricher
+    return final_df
+
+
+@Halo(
+    text='Enriching Names',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
+def process_enrich(
+    raw_df: pd.DataFrame,
+    name_col: str
+) -> pd.DataFrame:
+    """
+    Applying the model of filling accent to non-accent Vietnamese names
+    received from the `raw_df` at `name_col` column.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        The dataframe containing raw names
+    name_col : str
+        The column name that holds the raw names
+
+    Returns
+    -------
+    pd.DataFrame
+        The final dataframe that contains:
+
+        * `name_col`: raw names -- input name column
+        * `predict`: predicted names using model only
+        * `final`: beautified version of prediction with additional rule-based approach
+    """
+    sep_display()
+
+    # Clean names
+    start_time = time()
+    cleaned_data = parallelize_dataframe(
+        raw_df,
+        preprocess_df,
+        name_col=name_col
+    )
+    clean_time = time() - start_time
+    print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
+    sep_display()
+
+    # Enrich names
+    start_time = time()
+    enriched_data = parallelize_dataframe(
+        cleaned_data,
+        enrich_clean_data,
+        name_col=name_col
+    )
+    enrich_time = time() - start_time
+    print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
+
+    return enriched_data
