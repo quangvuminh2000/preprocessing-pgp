@@ -25,6 +25,8 @@ DICT_NORM_CITY_DASH_REGEX = {
     'thua thien hue': ['thua thien - hue']
 }
 
+ADDRESS_PUNCTUATIONS = ['-', '/']
+
 # ? LEVEL METHODS
 LV1_METHODS = ['lv1_norm', 'lv1_abbrev', 'lv1_prefix_im', 'lv1_nprefix_im']
 LV2_METHODS = ['lv2_norm', 'lv2_abbrev', 'lv2_prefix_im', 'lv2_nprefix_im']

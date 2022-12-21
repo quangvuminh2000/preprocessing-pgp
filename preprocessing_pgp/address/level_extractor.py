@@ -9,17 +9,15 @@ import pandas as pd
 from flashtext import KeywordProcessor
 from halo import Halo
 
-from preprocessing_pgp.address.const import (
-    METHOD_REFER_DICT,
-    LOCATION_ENRICH_DICT
-)
-
 from preprocessing_pgp.address.utils import (
     flatten_list,
     remove_substr,
     create_dependent_query
 )
-from preprocessing_pgp.utils import apply_progress_bar
+from preprocessing_pgp.address.const import (
+    METHOD_REFER_DICT,
+    LOCATION_ENRICH_DICT
+)
 
 
 class LevelExtractor:

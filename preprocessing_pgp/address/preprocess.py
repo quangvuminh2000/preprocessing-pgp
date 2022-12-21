@@ -5,6 +5,7 @@ This module meant for preprocessing (cleansing and unifying) the address before 
 import re
 from typing import Dict
 from copy import deepcopy
+from string import punctuation
 
 import pandas as pd
 from unidecode import unidecode
@@ -13,12 +14,13 @@ from halo import Halo
 from preprocessing_pgp.address.utils import (
     number_pad_replace
 )
+from preprocessing_pgp.preprocess import (
+    remove_spare_spaces,
+)
 from preprocessing_pgp.address.const import (
     DICT_NORM_ABBREV_REGEX_KW,
-    DICT_NORM_CITY_DASH_REGEX
-)
-from preprocessing_pgp.utils import (
-    apply_multi_process
+    DICT_NORM_CITY_DASH_REGEX,
+    ADDRESS_PUNCTUATIONS
 )
 
 
@@ -26,6 +28,8 @@ class VietnameseAddressCleaner:
     """
     Class support cleansing function for Vietnamese Addresses
     """
+    non_address_punctuation = ''.join([pun for pun in punctuation
+                                       if pun not in ADDRESS_PUNCTUATIONS])
 
     # * PRIVATE
     def __replace_with_keywords(self, address: str, keywords: Dict) -> str:
@@ -178,6 +182,27 @@ class VietnameseAddressCleaner:
         """
         return self.__replace_with_keywords(address, DICT_NORM_ABBREV_REGEX_KW)
 
+    def _clean_full_address(self, address: str) -> str:
+        """
+        Method for cleansing full address removing special characters
+
+        Parameters
+        ----------
+        address : str
+            The remained address to be cleaned
+
+        Returns
+        -------
+        str
+            The cleaned address
+        """
+        clean_address =\
+            address.translate(str.maketrans('', '', self.non_address_punctuation))
+
+        clean_address = remove_spare_spaces(clean_address)
+
+        return clean_address
+
     # * PUBLIC
     def clean_address(self, address: str) -> str:
         """
@@ -204,6 +229,8 @@ class VietnameseAddressCleaner:
         cleaned_address = self._clean_digit_address(cleaned_address)
 
         cleaned_address = self._clean_dash_address(cleaned_address)
+
+        cleaned_address = self._clean_full_address(cleaned_address)
 
         return cleaned_address
 
