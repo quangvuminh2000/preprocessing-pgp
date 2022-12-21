@@ -20,7 +20,11 @@ from preprocessing_pgp.utils import (
 from preprocessing_pgp.address.const import AVAIL_LEVELS
 
 
-def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
+def extract_vi_address(
+    data: pd.DataFrame,
+    address_col: str,
+    n_cores: int = 1
+) -> pd.DataFrame:
     """
     Extract Vietnamese address by pattern to find 3 levels of address
 
@@ -30,6 +34,8 @@ def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
         The input raw data with address column
     address_col : str
         The name of the column containing addresses
+    n_cores : int
+        The number of cores used to run parallel, by default 1 core will be used
 
     Returns
     -------
@@ -62,6 +68,7 @@ def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
     extracted_data = parallelize_dataframe(
         cleaned_data,
         extract_vi_address_by_level,
+        n_cores=n_cores,
         address_col=f'cleaned_{address_col}'
     )
     extract_time = time() - start_time
@@ -73,6 +80,7 @@ def extract_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
     generated_data = parallelize_dataframe(
         extracted_data,
         generate_loc_code,
+        n_cores=n_cores,
         best_lvl_cols=[f'best level {i}' for i in AVAIL_LEVELS]
     )
     code_gen_time = time() - start_time

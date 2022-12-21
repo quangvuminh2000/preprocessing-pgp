@@ -101,6 +101,7 @@ def apply_multi_process(
 def parallelize_dataframe(
     data: pd.DataFrame,
     func: Callable,
+    n_cores: int = N_PROCESSES,
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -113,6 +114,8 @@ def parallelize_dataframe(
     func : Callable
         Function to traverse through separate part of dataframe,
         input must contains the `dataframe` as the required argument
+    n_cores : int
+        The number of cores used to run parallel, by default half the cores will be used
     **kwargs
         Additional arguments for the function
 
@@ -121,9 +124,9 @@ def parallelize_dataframe(
     pd.DataFrame
         Fully processed dataframe
     """
-    sub_data = np.array_split(data.copy(), N_PROCESSES)
+    sub_data = np.array_split(data.copy(), n_cores)
 
-    with mp.Pool(N_PROCESSES) as pool:
+    with mp.Pool(n_cores) as pool:
         final_data = pd.concat(pool.map(partial(func, **kwargs), sub_data))
 
     return final_data

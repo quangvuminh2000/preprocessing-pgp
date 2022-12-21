@@ -106,6 +106,12 @@ class EnrichName:
         })
 
 
+@Halo(
+    text='Enriching Names',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def enrich_clean_data(
     clean_df: pd.DataFrame,
     name_col: str,
@@ -152,15 +158,10 @@ def enrich_clean_data(
     return final_df
 
 
-@Halo(
-    text='Enriching Names',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def process_enrich(
     raw_df: pd.DataFrame,
-    name_col: str
+    name_col: str,
+    n_cores: int = 1
 ) -> pd.DataFrame:
     """
     Applying the model of filling accent to non-accent Vietnamese names
@@ -172,6 +173,8 @@ def process_enrich(
         The dataframe containing raw names
     name_col : str
         The column name that holds the raw names
+    n_cores : int
+        The number of cores used to run parallel, by default 1 core is used
 
     Returns
     -------
@@ -189,6 +192,7 @@ def process_enrich(
     cleaned_data = parallelize_dataframe(
         raw_df,
         preprocess_df,
+        n_cores=n_cores,
         name_col=name_col
     )
     clean_time = time() - start_time
@@ -200,6 +204,7 @@ def process_enrich(
     enriched_data = parallelize_dataframe(
         cleaned_data,
         enrich_clean_data,
+        n_cores=n_cores,
         name_col=name_col
     )
     enrich_time = time() - start_time
