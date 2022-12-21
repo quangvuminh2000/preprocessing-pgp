@@ -152,7 +152,8 @@ class TestLevelExtraction:
         _, remained_address, _ = self.extractor.extract_all_levels(
             cleaned_addr)
 
-        assert remained_address.find('658/11 truong cong dinh') != -1
+        # assert remained_address.find('658/11 truong cong dinh') != -1
+        assert remained_address == '658/11 truong cong dinh'
 
     def test_non_accented_remained_addr_extraction(self):
         """
