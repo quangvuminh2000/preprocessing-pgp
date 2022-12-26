@@ -1,0 +1,6 @@
+include LICENSE.txt
+include requirements.txt
+include preprocessing_pgp/data/*
+prune */__pycache__
+prune tests
+global-exclude *.o *.so *.dylib *.a .git *.pyc *.swp

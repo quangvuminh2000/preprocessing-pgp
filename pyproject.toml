@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "preprocessing-pgp"
-version = "0.1.18"
+version = "0.1.19"
 description = "Preprocessing required data for customer service purpose"
 readme = "README.md"
 authors = [{ name = "quangvm9", email = "quangvm9@fpt.com.vn" }]
@@ -47,4 +47,4 @@ homepage = "https://github.com/quangvuminh2000/preprocessing-pgp"
 realpython = "preprocessing_pgp.__main__:main"
 
 [tool.setuptools.packages.find]
-exclude = ["preprocessing_pgp.address.scripts*", "tests*"]
+exclude = ["preprocessing_pgp.address.scripts*"]
