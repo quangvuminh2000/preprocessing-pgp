@@ -33,3 +33,11 @@ DICT_4_SUB_TELEPHONE = (
     .set_index("ma_vung_cu")
     .to_dict()["ma_vung_moi"]
 )
+
+###? PHONE LENGTH
+PHONE_LENGTH = {
+    "old_mobi": 11,
+    "new_mobi": 10,
+    "old_landline": 10,
+    "new_landline": 11
+}

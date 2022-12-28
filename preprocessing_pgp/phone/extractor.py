@@ -55,8 +55,8 @@ def extract_valid_phone(
             end="\n\n",
         )
 
-        print("Sample of non-clean phones:")
-        print(f_phones.query(f"clean_phone != {phone_col}"), end="\n\n\n")
+        # print("Sample of non-clean phones:")
+        # print(f_phones.query(f"clean_phone != {phone_col}"), end="\n\n\n")
 
     # ? Calculate the phone length for further preprocessing
     f_phones["phone_length"] = f_phones["clean_phone"].progress_map(
@@ -109,9 +109,9 @@ def extract_valid_phone(
         print(
             f"# OF OLD MOBI PHONE CONVERTED : {f_phones['phone_convert'].notna().sum()}")
 
-        print("Sample of converted MOBI phone:", end="\n\n")
-        print(f_phones.loc[(mask_old_phone_format) &
-                           (f_phones["phone_convert"].notna())])
+        # print("Sample of converted MOBI phone:", end="\n\n")
+        # print(f_phones.loc[(mask_old_phone_format) &
+        #                    (f_phones["phone_convert"].notna())])
 
     # ? Check for valid tele-phone (old/new)
 
@@ -155,10 +155,10 @@ def extract_valid_phone(
         mask_old_region_phone, "clean_phone"
     ].progress_map(convert_phone_region)
 
-    if print_info:
-        print("Sample of converted telephone by region:", end="\n\n")
-        print(f_phones.loc[(mask_old_region_phone) &
-                           (f_phones["phone_convert"].notna())])
+    # if print_info:
+    #     print("Sample of converted telephone by region:", end="\n\n")
+    #     print(f_phones.loc[(mask_old_region_phone) &
+    #                        (f_phones["phone_convert"].notna())])
 
     # ? Filling NaNs in indicator columns
 
@@ -189,12 +189,12 @@ def extract_valid_phone(
             end="\n\n",
         )
 
-        print("Sample of invalid phones:", end="\n\n")
+        # print("Sample of invalid phones:", end="\n\n")
 
     f_phones.drop(phone_col, axis=1, inplace=True)
     f_phones.rename(columns={"clean_phone": phone_col}, inplace=True)
     f_phones = f_phones[[*origin_cols, *fill_cols, 'phone_convert']]
-    if print_info:
-        print(f_phones[~f_phones["is_phone_valid"]].head(10))
+    # if print_info:
+    #     print(f_phones[~f_phones["is_phone_valid"]].head(10))
 
     return f_phones

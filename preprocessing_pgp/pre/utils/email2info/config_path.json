@@ -1,0 +1,33 @@
+{
+    "ref_dir": [
+        {
+            "name": "lastname_json",
+            "dir": "/bigdata/fdp/user/khanhhb3/rundeck/email/dict/vn_name_db.json"
+        },
+        {
+            "name": "boy_name_db",
+            "dir": "/bigdata/fdp/user/khanhhb3/rundeck/email/dict/bnames_db.txt"
+        },
+        {
+            "name": "girl_name_db",
+            "dir": "/bigdata/fdp/user/khanhhb3/rundeck/email/dict/gnames_db.txt"
+        },
+        {
+            "name": "loc_vn_dict",
+            "dir": "/bigdata/fdp/user/khanhhb3/rundeck/email/dict/dvhc_dict.parquet"
+        },
+        {
+            "name": "wordname_df",
+            "dir": "/bigdata/fdp/bk/fo/ad-hoc/gender_dectection/dataset/staging/word_name.parquet.gzip"
+        },
+        {
+            "name": "gpred_model",
+            "dir": "/bigdata/fdp/user/namdp11/name2gender/not_accented/logistic_pipeline.pkl"
+        },
+        {
+            "name": "group_dict",
+            "dir": "/bigdata/fdp/user/khanhhb3/adhoc/2021/email_adhoc_2021-09/email_group_dict_2021-11-30.parquet"
+        }
+    ]
+    
+}

@@ -20,6 +20,6 @@ def basic_phone_preprocess(phone: str) -> str:
     """
 
     clean_phone = re.sub(r"[^0-9]", "", phone)
-    clean_phone = re.sub("\s+", "", phone)
+    clean_phone = re.sub(r"\s+", "", phone)
 
     return clean_phone
