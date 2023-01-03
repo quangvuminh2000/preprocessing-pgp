@@ -158,7 +158,7 @@ def enrich_clean_data(
 
 def process_enrich(
     raw_df: pd.DataFrame,
-    name_col: str,
+    name_col: str = 'name',
     n_cores: int = 1
 ) -> pd.DataFrame:
     """
@@ -170,7 +170,7 @@ def process_enrich(
     raw_df : pd.DataFrame
         The dataframe containing raw names
     name_col : str
-        The column name that holds the raw names
+        The column name that holds the raw names, by default 'name'
     n_cores : int
         The number of cores used to run parallel, by default 1 core is used
 

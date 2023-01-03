@@ -73,7 +73,7 @@ def rule_base_middlename(middlename: str,
         return base_middlename
 
     # All track are visited
-    if track_idx == []:
+    if not track_idx:
         return ' '.join(final_middle_words)
 
     # Some word in base is not visited
@@ -102,7 +102,7 @@ def rule_base_word(word: str, word_base: str, name_dict_df: pd.DataFrame) -> str
         The best name found in the dictionary
     """
     de_word = unidecode(word)
-    if (de_word != word_base):
+    if de_word != word_base:
         return find_match_word(word_base, name_dict_df)
     return word
 
@@ -129,15 +129,15 @@ def rule_base_name(name: str, base_name: str, name_dicts: Tuple) -> str:
     firstname_dict_df, middlename_dict_df, lastname_dict_df = name_dicts
 
     # split first, middle, last name
-    try:
-        firstname = name.split()[-1]
-        base_firstname = base_name.split()[-1]
-        middlename = ' '.join(name.split()[1:-1])
-        base_middlename = ' '.join(base_name.split()[1:-1])
-        lastname = name.split()[0]
-        base_lastname = base_name.split()[0]
-    except:
+    if base_name is None:
         return base_name
+
+    firstname = name.split()[-1]
+    base_firstname = base_name.split()[-1]
+    middlename = ' '.join(name.split()[1:-1])
+    base_middlename = ' '.join(base_name.split()[1:-1])
+    lastname = name.split()[0]
+    base_lastname = base_name.split()[0]
 
     # take firstname when 1 word
     if firstname == lastname and base_firstname == base_lastname and len(name.split()) == 1:

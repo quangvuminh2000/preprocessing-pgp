@@ -70,7 +70,8 @@ def extract_null_values(
 
 def apply_multi_process(
     func: Callable,
-    series: Union[pd.Series, str, np.ndarray]
+    series: Union[pd.Series, str, np.ndarray],
+    n_cores: int = N_PROCESSES
 ) -> List:
     """
     Process multi-processing on every items of series with provided func
@@ -82,6 +83,8 @@ def apply_multi_process(
         must have 1 input and 1 output
     series : Optional[pd.Series]
         Any series | np.Array() | list
+    n_cores : int
+        The number of cores used to run parallel, by default half the cores will be used
 
     Returns
     -------
@@ -89,11 +92,8 @@ def apply_multi_process(
         List of elements returned after apply the function
     """
 
-    with mp.Pool(N_PROCESSES) as pool:
-        output = list(tqdm(
-            pool.imap(func, series),
-            total=series.shape[0]
-        ))
+    with mp.Pool(n_cores) as pool:
+        output = list(pool.imap(func, series))
 
     return output
 

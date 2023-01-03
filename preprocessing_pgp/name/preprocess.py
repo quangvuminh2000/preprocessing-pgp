@@ -132,7 +132,7 @@ def clean_name_cdp(name: str) -> str:
     str
         The clean name of the customer
     """
-    if name == None:
+    if name is None:
         return None
     clean_name = basic_preprocess_name(name)
     clean_name = replace_non_human_reg(name)
@@ -152,7 +152,7 @@ def preprocess_df(
     # extract_human: bool = False,
     # multiprocessing: bool = False,
     # n_cpu: int = None
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> pd.DataFrame:
     """
     Perform basic preprocessing to names in the input data
 
@@ -165,7 +165,7 @@ def preprocess_df(
 
     Returns
     -------
-    Tuple[pd.DataFrame, pd.DataFrame]
+    pd.DataFrame
         The finalized data with clean names
     """
     basic_clean_names = data.copy()

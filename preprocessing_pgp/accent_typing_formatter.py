@@ -131,7 +131,7 @@ def reformat_vi_sentence_accent(sentence):
     return ' '.join(words)
 
 
-def remove_accent_typing(sentence):
+def remove_accent_typing(sentence: str) -> str:
     """
     Remove the accent typing of Vietnamese sentence
 
@@ -140,6 +140,9 @@ def remove_accent_typing(sentence):
     sentence : str
         Input sentence to be reformatted
     """
+
+    if sentence is None:
+        return None
 
     return decode.unidecode(sentence)
 
