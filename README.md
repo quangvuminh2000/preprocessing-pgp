@@ -44,8 +44,8 @@ python
 ```
 
 ```python
->>> import preprocessing_pgp as pgp
->>> pgp.preprocess.basic_preprocess_name('Phan Thị    Thúy    Hằng *$%!@#')
+>>> import preprocessing_pgp.name.preprocess import basic_preprocess_name
+>>> basic_preprocess_name('Phan Thị    Thúy    Hằng *$%!@#')
 Phan Thị Thúy Hằng
 ```
 

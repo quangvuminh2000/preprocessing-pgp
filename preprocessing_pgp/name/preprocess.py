@@ -1,6 +1,5 @@
 import string
 import re
-import argparse
 import os
 import sys
 from string import punctuation
@@ -11,12 +10,8 @@ from tqdm import tqdm
 from halo import Halo
 
 from preprocessing_pgp.accent_typing_formatter import reformat_vi_sentence_accent
-from preprocessing_pgp.unicode_converter import minimal_convert_unicode
-from preprocessing_pgp.extract_human import replace_non_human_reg
-
-
-# Enable progress-bar with pandas operations
-tqdm.pandas()
+from preprocessing_pgp.name.unicode_converter import minimal_convert_unicode
+from preprocessing_pgp.name.extract_human import replace_non_human_reg
 
 _dir = "/".join(os.path.split(os.getcwd()))
 if _dir not in sys.path:
@@ -124,6 +119,19 @@ def basic_preprocess_name(name: str) -> str:
 
 
 def clean_name_cdp(name: str) -> str:
+    """
+    Specific function to clean name from customer profile
+
+    Parameters
+    ----------
+    name : str
+        The name of the customer
+
+    Returns
+    -------
+    str
+        The clean name of the customer
+    """
     if name == None:
         return None
     clean_name = basic_preprocess_name(name)
@@ -138,25 +146,31 @@ def clean_name_cdp(name: str) -> str:
     text_color='magenta'
 )
 def preprocess_df(
-    df: pd.DataFrame,
+    data: pd.DataFrame,
     # human_extractor: HumanNameExtractor,
-    name_col: str = 'Name',
+    name_col: str = 'name',
     # extract_human: bool = False,
     # multiprocessing: bool = False,
     # n_cpu: int = None
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    # Basic Preprocessing data
-    # print("Basic pre-processing names...")
-    basic_clean_names = df.copy()
+    """
+    Perform basic preprocessing to names in the input data
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The input data containing the columns with name records
+    name_col : str, optional
+        The column contains the name records, by default 'name'
+
+    Returns
+    -------
+    Tuple[pd.DataFrame, pd.DataFrame]
+        The finalized data with clean names
+    """
+    basic_clean_names = data.copy()
     basic_clean_names[f'clean_{name_col}'] = basic_clean_names[name_col].apply(
         basic_preprocess_name)
-
-    # clean_name_mask = basic_clean_names[f'clean_{name_col}'] != basic_clean_names[name_col]
-    # print('\n\n')
-    # print('-'*20)
-    # print(f'{clean_name_mask.sum()} names have been clean!')
-    # print('-'*20)
-    # print('\n\n')
 
     basic_clean_names = basic_clean_names.drop(columns=[name_col])
     basic_clean_names = basic_clean_names.rename(columns={

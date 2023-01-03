@@ -11,7 +11,7 @@ from halo import Halo
 
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.model.transformers import TransformerModel
-from preprocessing_pgp.preprocess import preprocess_df
+from preprocessing_pgp.name.preprocess import preprocess_df
 from preprocessing_pgp.name.const import (
     NAME_SPLIT_PATH,
     MODEL_PATH,
