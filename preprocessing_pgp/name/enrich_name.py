@@ -157,7 +157,7 @@ def enrich_clean_data(
 
 
 def process_enrich(
-    raw_df: pd.DataFrame,
+    data: pd.DataFrame,
     name_col: str = 'name',
     n_cores: int = 1
 ) -> pd.DataFrame:
@@ -167,7 +167,7 @@ def process_enrich(
 
     Parameters
     ----------
-    raw_df : pd.DataFrame
+    data : pd.DataFrame
         The dataframe containing raw names
     name_col : str
         The column name that holds the raw names, by default 'name'
@@ -185,10 +185,14 @@ def process_enrich(
     """
     sep_display()
 
+    # * Na names
+    na_data = data[data[name_col].isna()].copy(deep=True)
+    cleaned_data = data[data[name_col].notna()].copy(deep=True)
+
     # Clean names
     start_time = time()
     cleaned_data = parallelize_dataframe(
-        raw_df,
+        cleaned_data,
         preprocess_df,
         n_cores=n_cores,
         name_col=name_col
@@ -208,4 +212,7 @@ def process_enrich(
     enrich_time = time() - start_time
     print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
 
-    return enriched_data
+    # * Concat na data
+    final_data = pd.concat([enriched_data, na_data])
+
+    return final_data

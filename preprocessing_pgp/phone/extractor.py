@@ -29,7 +29,7 @@ def extract_valid_phone(
 
     Parameters
     ----------
-    f_phones : pd.DataFrame
+    phones : pd.DataFrame
         The DataFrame contains the phones
     phone_col : str, optional
         The columns which direct to the phones, by default "phone"
@@ -41,8 +41,10 @@ def extract_valid_phone(
     pd.DataFrame
         The DataFrame with converted phone column and check if valid or not
     """
+    # * Split na phone
+    na_phones = phones[phones[phone_col].isna()].copy(deep=True)
     #! Prevent override the origin DF
-    f_phones = phones.copy(deep=True)
+    f_phones = phones[phones[phone_col].notna()].copy(deep=True)
     origin_cols = f_phones.columns
 
     # ? Preprocess phone with basic phone string clean up
@@ -197,4 +199,6 @@ def extract_valid_phone(
     # if print_info:
     #     print(f_phones[~f_phones["is_phone_valid"]].head(10))
 
-    return f_phones
+    final_phones = pd.concat([f_phones, na_phones])
+
+    return final_phones

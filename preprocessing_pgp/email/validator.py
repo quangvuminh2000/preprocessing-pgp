@@ -106,7 +106,6 @@ class EmailValidator:
             return self._is_valid_email_name(email_name)
         return False
 
-
     def is_student_email(
         self,
         email: str
@@ -238,10 +237,14 @@ def process_validate_email(
         * `is_email_valid`: indicator for whether the email is valid or not
     """
 
+    # * Separate na data
+    na_data = data[data[email_col].isna()].copy(deep=True)
+    cleaned_data = data[data[email_col].notna()].copy(deep=True)
+
     # * Cleansing email
     start_time = time()
     cleaned_data = parallelize_dataframe(
-        data,
+        cleaned_data,
         clean_email,
         n_cores=n_cores,
         email_col=email_col
@@ -260,7 +263,11 @@ def process_validate_email(
     )
     validated_data = validated_data.drop(columns=[f'cleaned_{email_col}'])
     validate_time = time() - start_time
-    print(f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
+    print(
+        f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
     sep_display()
 
-    return validated_data
+    # * Concat with the nan data
+    final_data = pd.concat([cleaned_data, na_data])
+
+    return final_data

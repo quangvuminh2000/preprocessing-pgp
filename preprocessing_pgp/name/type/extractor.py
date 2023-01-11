@@ -225,6 +225,6 @@ def process_extract_type(
     sep_display()
 
     # ? Combined with Na data
-    final_data = pd.concat([na_data, extracted_data])
+    final_data = pd.concat([extracted_data, na_data])
 
     return final_data
