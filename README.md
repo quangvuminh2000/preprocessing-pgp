@@ -277,3 +277,31 @@ Index(['address', 'cleaned_address', 'level 1', 'best level 1', 'level 2',
        'level 1 code', 'level 2 code', 'level 3 code'],
       dtype='object')
 ```
+
+### 5. Validate email address
+
+A valid email is consist of:
+
+1. Large company email's address (@gmail, @yahoo, @outlook, etc.)
+2. Common email address (contains at least a alphabet character in email's name)
+3. Education email (can start with a number)
+4. Not auto-email
+
+Apart from original columns of **dataframe**, we also generate columns with specific meanings:
+
+* **is_email_valid** : indicator of whether the email is valid or not
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.email.validator import process_validate_email
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> validated_data = process_validate_email(data, email_col='email')
+Cleansing email takes 0m0s
+
+
+Validating email takes 0m22s
+```

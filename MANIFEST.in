@@ -3,3 +3,4 @@ include requirements.txt
 include preprocessing_pgp/data/*
 include preprocessing_pgp/data/transformer_model/trial-25/vecs/*
 prune tests
+prune preprocessing_pgp/pre

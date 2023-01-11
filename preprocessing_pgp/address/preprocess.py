@@ -197,7 +197,8 @@ class VietnameseAddressCleaner:
             The cleaned address
         """
         clean_address =\
-            address.translate(str.maketrans('', '', self.non_address_punctuation))
+            address.translate(str.maketrans(
+                '', '', self.non_address_punctuation))
 
         clean_address = remove_spare_spaces(clean_address)
 

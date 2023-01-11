@@ -34,7 +34,7 @@ def extract_vi_address(
         The input raw data with address column
     address_col : str
         The name of the column containing addresses
-    n_cores : int
+    n_cores : int, optional
         The number of cores used to run parallel, by default 1 core will be used
 
     Returns
