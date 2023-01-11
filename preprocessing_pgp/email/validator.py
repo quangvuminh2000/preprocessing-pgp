@@ -88,7 +88,8 @@ class EmailValidator:
             Whether the email if valid large company email
         """
         for email_service in self.email_services:
-            if email in email_service['domains']:
+            _, email_group = split_email(email)
+            if email_group in email_service['domains']:
                 return bool(re.match(email_service['regex'], email))
 
         return False
@@ -268,6 +269,6 @@ def process_validate_email(
     sep_display()
 
     # * Concat with the nan data
-    final_data = pd.concat([cleaned_data, na_data])
+    final_data = pd.concat([validated_data, na_data])
 
     return final_data
