@@ -239,8 +239,8 @@ def process_validate_email(
     """
 
     # * Separate na data
-    na_data = data[data[email_col].isna()].copy(deep=True)
-    cleaned_data = data[data[email_col].notna()].copy(deep=True)
+    na_data = data[data[email_col].isna()]
+    cleaned_data = data[data[email_col].notna()]
 
     # * Cleansing email
     start_time = time()

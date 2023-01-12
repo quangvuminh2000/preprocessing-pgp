@@ -76,7 +76,7 @@ def clean_email(
 
     cleaner = EmailCleaner()
 
-    cleaned_data = data.copy()
+    cleaned_data = data
 
     cleaned_data[f'cleaned_{email_col}'] =\
         cleaned_data[email_col].apply(
