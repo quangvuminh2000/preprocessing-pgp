@@ -200,5 +200,6 @@ def extract_valid_phone(
     #     print(f_phones[~f_phones["is_phone_valid"]].head(10))
 
     final_phones = pd.concat([f_phones, na_phones])
+    final_phones[fill_cols] = final_phones[fill_cols].fillna(False)
 
     return final_phones
