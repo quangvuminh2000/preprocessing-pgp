@@ -434,15 +434,18 @@ def verify_card(
     )
 
     # ? CONCAT ALL SEP CARD IDS
-    new_cols = [
-        f'clean_{card_col}',
+    validator_cols = [
         'is_valid', 'is_personal_id',
         'is_passport', 'is_driver_license'
+    ]
+    new_cols = [
+        f'clean_{card_col}',
+        *validator_cols
     ]
 
     final_card_df = pd.concat([clean_card_df, na_card_df])
 
-    final_card_df[new_cols] = final_card_df[new_cols].fillna(False)
+    final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
 
     final_card_df = final_card_df[orig_cols + new_cols]
 
