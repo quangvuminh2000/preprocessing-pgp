@@ -129,7 +129,7 @@ def rule_base_name(name: str, base_name: str, name_dicts: Tuple) -> str:
     firstname_dict_df, middlename_dict_df, lastname_dict_df = name_dicts
 
     # split first, middle, last name
-    if base_name is None:
+    if base_name is None or len(base_name.split()) == 0:
         return base_name
 
     firstname = name.split()[-1]
