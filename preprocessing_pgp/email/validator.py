@@ -271,4 +271,7 @@ def process_validate_email(
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])
 
+    # * Filling na data to invalid email
+    final_data['is_email_valid'].fillna(False, inplace=True)
+
     return final_data
