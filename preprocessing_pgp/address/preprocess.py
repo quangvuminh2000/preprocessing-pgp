@@ -14,7 +14,7 @@ from halo import Halo
 from preprocessing_pgp.address.utils import (
     number_pad_replace
 )
-from preprocessing_pgp.preprocess import (
+from preprocessing_pgp.name.preprocess import (
     remove_spare_spaces,
 )
 from preprocessing_pgp.address.const import (
