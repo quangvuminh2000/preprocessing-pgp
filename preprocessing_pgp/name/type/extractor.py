@@ -195,16 +195,22 @@ def process_extract_type(
         * `customer_type` contains type of customer extracted from `name` column
     """
     na_data = data[data[name_col].isna()].copy(deep=True)
-    formatted_data = data[data[name_col].notna()].copy(deep=True)
+    cleaned_data = data[data[name_col].notna()].copy(deep=True)
 
     # ? Format name
     start_time = time()
-    formatted_data = parallelize_dataframe(
-        formatted_data,
-        format_names,
-        n_cores=n_cores,
-        name_col=name_col
-    )
+    if n_cores == 1:
+        formatted_data = format_names(
+            cleaned_data,
+            name_col=name_col
+        )
+    else:
+        formatted_data = parallelize_dataframe(
+            cleaned_data,
+            format_names,
+            n_cores=n_cores,
+            name_col=name_col
+        )
     format_time = time() - start_time
     print(
         f"Formatting names takes {int(format_time)//60}m{int(format_time)%60}s")
@@ -212,17 +218,27 @@ def process_extract_type(
 
     # ? Extract name type
     start_time = time()
-    extracted_data = parallelize_dataframe(
-        formatted_data,
-        extract_ctype,
-        n_cores=n_cores,
-        level=level,
-        name_col=f'de_{name_col}',
-    )
+    if n_cores == 1:
+        extracted_data = extract_ctype(
+            formatted_data,
+            name_col=f'de_{name_col}',
+            level=level
+        )
+    else:
+        extracted_data = parallelize_dataframe(
+            formatted_data,
+            extract_ctype,
+            n_cores=n_cores,
+            level=level,
+            name_col=f'de_{name_col}',
+        )
     extract_time = time() - start_time
     print(
         f"Extracting customer's type takes {int(extract_time)//60}m{int(extract_time)%60}s")
     sep_display()
+
+    # ? Drop clean_name column
+    extracted_data = extracted_data.drop(columns=[f'de_{name_col}'])
 
     # ? Combined with Na data
     final_data = pd.concat([extracted_data, na_data])

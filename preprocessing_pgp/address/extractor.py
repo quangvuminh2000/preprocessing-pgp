@@ -65,27 +65,40 @@ def extract_vi_address(
 
     # * Feed the cleansed address to extract the level
     start_time = time()
-    extracted_data = parallelize_dataframe(
-        cleaned_data,
-        extract_vi_address_by_level,
-        n_cores=n_cores,
-        address_col=f'cleaned_{address_col}'
-    )
+    if n_cores == 1: # Not using multi-processing
+        extracted_data = extract_vi_address_by_level(
+            cleaned_data,
+            address_col=f'cleaned_{address_col}'
+        )
+    else:
+        extracted_data = parallelize_dataframe(
+            cleaned_data,
+            extract_vi_address_by_level,
+            n_cores=n_cores,
+            address_col=f'cleaned_{address_col}'
+        )
     extract_time = time() - start_time
     print(f"Extracting takes {int(extract_time)//60}m{int(extract_time)%60}s")
     sep_display()
 
     # * Generate location code for best level found
     start_time = time()
-    generated_data = parallelize_dataframe(
-        extracted_data,
-        generate_loc_code,
-        n_cores=n_cores,
-        best_lvl_cols=[f'best level {i}' for i in AVAIL_LEVELS]
-    )
+    best_lvl_cols = [f'best level {i}' for i in AVAIL_LEVELS]
+    if n_cores == 1:
+        generated_data = generate_loc_code(
+            extracted_data,
+            best_lvl_cols=best_lvl_cols
+        )
+    else:
+        generated_data = parallelize_dataframe(
+            extracted_data,
+            generate_loc_code,
+            n_cores=n_cores,
+            best_lvl_cols=best_lvl_cols
+        )
     code_gen_time = time() - start_time
     print(
-        f"Code genration takes {int(code_gen_time)//60}m{int(code_gen_time)%60}s")
+        f"Code generation takes {int(code_gen_time)//60}m{int(code_gen_time)%60}s")
 
     # * Concat to original data
     final_address_df = pd.concat([generated_data, na_address_df])

@@ -191,24 +191,36 @@ def process_enrich(
 
     # Clean names
     start_time = time()
-    cleaned_data = parallelize_dataframe(
-        cleaned_data,
-        preprocess_df,
-        n_cores=n_cores,
-        name_col=name_col
-    )
+    if n_cores == 1:
+        cleaned_data = preprocess_df(
+            cleaned_data,
+            name_col=name_col
+        )
+    else:
+        cleaned_data = parallelize_dataframe(
+            cleaned_data,
+            preprocess_df,
+            n_cores=n_cores,
+            name_col=name_col
+        )
     clean_time = time() - start_time
     print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
 
     # Enrich names
     start_time = time()
-    enriched_data = parallelize_dataframe(
-        cleaned_data,
-        enrich_clean_data,
-        n_cores=n_cores,
-        name_col=name_col
-    )
+    if n_cores == 1:
+        enriched_data = enrich_clean_data(
+            cleaned_data,
+            name_col=name_col
+        )
+    else:
+        enriched_data = parallelize_dataframe(
+            cleaned_data,
+            enrich_clean_data,
+            n_cores=n_cores,
+            name_col=name_col
+        )
     enrich_time = time() - start_time
     print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
 

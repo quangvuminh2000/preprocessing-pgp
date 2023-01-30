@@ -244,24 +244,36 @@ def process_validate_email(
 
     # * Cleansing email
     start_time = time()
-    cleaned_data = parallelize_dataframe(
-        cleaned_data,
-        clean_email,
-        n_cores=n_cores,
-        email_col=email_col
-    )
+    if n_cores == 1:
+        cleaned_data = clean_email(
+            cleaned_data,
+            email_col=email_col
+        )
+    else:
+        cleaned_data = parallelize_dataframe(
+            cleaned_data,
+            clean_email,
+            n_cores=n_cores,
+            email_col=email_col
+        )
     clean_time = time() - start_time
     print(f"Cleansing email takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
 
     # * Validating email
     start_time = time()
-    validated_data = parallelize_dataframe(
-        cleaned_data,
-        validate_clean_email,
-        n_cores=n_cores,
-        email_col=f'cleaned_{email_col}'
-    )
+    if n_cores == 1:
+        validated_data = validate_clean_email(
+            cleaned_data,
+            email_col=f'cleaned_{email_col}'
+        )
+    else:
+        validated_data = parallelize_dataframe(
+            cleaned_data,
+            validate_clean_email,
+            n_cores=n_cores,
+            email_col=f'cleaned_{email_col}'
+        )
     validated_data = validated_data.drop(columns=[f'cleaned_{email_col}'])
     validate_time = time() - start_time
     print(
