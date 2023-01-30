@@ -1,6 +1,5 @@
 include LICENSE.txt
 include requirements.txt
-include preprocessing_pgp/data/*
-include preprocessing_pgp/data/transformer_model/trial-25/vecs/*
+recursive-include preprocessing_pgp/data *
 prune tests
 prune preprocessing_pgp/pre
