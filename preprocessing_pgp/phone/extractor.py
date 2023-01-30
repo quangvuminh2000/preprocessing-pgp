@@ -12,7 +12,12 @@ from preprocessing_pgp.phone.const import (
     SUB_TELEPHONE_11NUM,
 )
 from preprocessing_pgp.phone.utils import basic_phone_preprocess
-from preprocessing_pgp.phone.converter import convert_mobi_phone, convert_phone_region
+from preprocessing_pgp.phone.converter import (
+    convert_mobi_phone,
+    convert_phone_region,
+    convert_mobi_phone_vendor,
+    convert_tele_phone_vendor
+)
 
 # ? ENVIRONMENT SETUP
 tqdm.pandas()
@@ -201,5 +206,26 @@ def extract_valid_phone(
 
     final_phones = pd.concat([f_phones, na_phones])
     final_phones[fill_cols] = final_phones[fill_cols].fillna(False)
+
+    # ? Add Vendor
+    valid_mobi_phone_mask = (final_phones['is_phone_valid'] &
+                             final_phones['is_mobi'])
+    final_phones.loc[
+        valid_mobi_phone_mask,
+        'phone_vendor'
+    ] = final_phones.loc[
+        valid_mobi_phone_mask,
+        'phone_convert'
+    ].apply(convert_mobi_phone_vendor)
+
+    valid_tele_phone_mask = (final_phones['is_phone_valid'] &
+                             ~final_phones['is_mobi'])
+    final_phones.loc[
+        valid_tele_phone_mask,
+        'phone_vendor'
+    ] = final_phones.loc[
+        valid_tele_phone_mask,
+        'phone_convert'
+    ].apply(convert_tele_phone_vendor)
 
     return final_phones

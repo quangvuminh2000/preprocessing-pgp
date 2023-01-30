@@ -3,6 +3,8 @@ from preprocessing_pgp.phone.const import (
     SUB_TELEPHONE_10NUM,
     DICT_4_SUB_PHONE,
     DICT_4_SUB_TELEPHONE,
+    DICT_NEW_MOBI_PHONE_VENDOR,
+    DICT_NEW_TELEPHONE_VENDOR
 )
 
 
@@ -42,9 +44,54 @@ def convert_phone_region(old_region: str) -> str:
     """
     if old_region[:2] in SUB_TELEPHONE_10NUM:
         return DICT_4_SUB_TELEPHONE[old_region[:2]] + old_region[2:]
-    elif old_region[:3] in SUB_TELEPHONE_10NUM:
+
+    if old_region[:3] in SUB_TELEPHONE_10NUM:
         return DICT_4_SUB_TELEPHONE[old_region[:3]] + old_region[3:]
-    elif old_region[:4] in SUB_TELEPHONE_10NUM:
+
+    if old_region[:4] in SUB_TELEPHONE_10NUM:
         return DICT_4_SUB_TELEPHONE[old_region[:4]] + old_region[4:]
-    else:
-        return None
+
+    return None
+
+
+def convert_mobi_phone_vendor(phone: str) -> str:
+    """
+    Convert valid mobi phone to its vendor
+
+    Parameters
+    ----------
+    phone : str
+        Valid mobi phone
+
+    Returns
+    -------
+    str
+        Mobi phone vendor
+    """
+
+    if phone[:3] in DICT_NEW_MOBI_PHONE_VENDOR.keys():
+        return DICT_NEW_MOBI_PHONE_VENDOR[phone[:3]]
+
+    return None
+
+def convert_tele_phone_vendor(phone: str) -> str:
+    """
+    Convert valid tele phone to its vendor
+
+    Parameters
+    ----------
+    phone : str
+        Valid tele phone
+
+    Returns
+    -------
+    str
+        Tele phone vendor
+    """
+    if phone[:4] in DICT_NEW_TELEPHONE_VENDOR.keys():
+        return DICT_NEW_TELEPHONE_VENDOR[phone[:4]]
+
+    if phone[:3] in DICT_NEW_TELEPHONE_VENDOR.keys():
+        return DICT_NEW_TELEPHONE_VENDOR[phone[:3]]
+
+    return None
