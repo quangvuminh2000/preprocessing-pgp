@@ -2,6 +2,9 @@
 Module contains constants for email processing
 """
 
+# ? NONE TYPE EMAIL DICT
+NAN_EMAIL_LIST = ['nan', 'none', '']
+
 # ? EMAIL REGEX
 
 AT_LEAST_ONE_CHAR_REGEX = r'(?=.*[a-z])'

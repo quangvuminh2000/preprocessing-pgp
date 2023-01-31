@@ -28,7 +28,7 @@ def split_email(email: str) -> List[str]:
     if len(split_result) == 2:
         return split_result
 
-    return split_result + [None]
+    return [*split_result, None]
 
 def is_name_accented(name: str) -> bool:
     """

@@ -238,20 +238,16 @@ def process_validate_email(
         * `is_email_valid`: indicator for whether the email is valid or not
     """
 
-    # * Separate na data
-    na_data = data[data[email_col].isna()]
-    cleaned_data = data[data[email_col].notna()]
-
     # * Cleansing email
     start_time = time()
     if n_cores == 1:
         cleaned_data = clean_email(
-            cleaned_data,
+            data,
             email_col=email_col
         )
     else:
         cleaned_data = parallelize_dataframe(
-            cleaned_data,
+            data,
             clean_email,
             n_cores=n_cores,
             email_col=email_col
@@ -260,21 +256,24 @@ def process_validate_email(
     print(f"Cleansing email takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
 
+    # * Separate na data
+    na_data = cleaned_data[cleaned_data[f'cleaned_{email_col}'].isna()]
+    non_na_data = cleaned_data[cleaned_data[f'cleaned_{email_col}'].notna()]
+
     # * Validating email
     start_time = time()
     if n_cores == 1:
         validated_data = validate_clean_email(
-            cleaned_data,
+            non_na_data,
             email_col=f'cleaned_{email_col}'
         )
     else:
         validated_data = parallelize_dataframe(
-            cleaned_data,
+            non_na_data,
             validate_clean_email,
             n_cores=n_cores,
             email_col=f'cleaned_{email_col}'
         )
-    validated_data = validated_data.drop(columns=[f'cleaned_{email_col}'])
     validate_time = time() - start_time
     print(
         f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
@@ -282,6 +281,7 @@ def process_validate_email(
 
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])
+    final_data = final_data.drop(columns=[f'cleaned_{email_col}'])
 
     # * Filling na data to invalid email
     final_data['is_email_valid'].fillna(False, inplace=True)

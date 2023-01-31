@@ -5,6 +5,7 @@ Module to preprocess email before proceed more
 import re
 import pandas as pd
 from halo import Halo
+from preprocessing_pgp.email.const import NAN_EMAIL_LIST
 
 
 class EmailCleaner:
@@ -31,7 +32,12 @@ class EmailCleaner:
             Cleaned email without any spaces
         """
 
-        cleaned_email = self._remove_spaces(email)
+        # Case NaN email
+        if email is None or email in NAN_EMAIL_LIST:
+            return None
+
+        cleaned_email = email.lower()
+        cleaned_email = self._remove_spaces(cleaned_email)
 
         return cleaned_email
 
