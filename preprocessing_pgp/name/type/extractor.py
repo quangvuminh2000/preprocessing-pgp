@@ -15,7 +15,7 @@ from preprocessing_pgp.utils import (
     sep_display
 )
 from preprocessing_pgp.name.type.const import (
-    NAME_TYPE_DATA
+    NAME_TYPE_REGEX_DATA
 )
 
 
@@ -25,7 +25,7 @@ class TypeExtractor:
     """
 
     def __init__(self) -> None:
-        self.available_levels = NAME_TYPE_DATA.keys()
+        self.available_levels = NAME_TYPE_REGEX_DATA.keys()
         self.__generate_type_kws()
 
     def __generate_type_kws(self):
@@ -34,31 +34,11 @@ class TypeExtractor:
         self.type_kws = {}
         for level in self.available_levels:
             level_kws = KeywordProcessor(case_sensitive=True)
-            level_types = self.__get_available_types_by_level(level)
 
             level_kws.add_keywords_from_dict(
-                dict(zip(
-                    level_types,
-                    [self.__get_unique_terms_in_ctype(ctype, level)
-                     for ctype in level_types]
-                ))
+                NAME_TYPE_REGEX_DATA[level]
             )
             self.type_kws[level] = level_kws
-
-    def __get_available_types_by_level(
-        self,
-        level: str = 'lv1'
-    ):
-        return NAME_TYPE_DATA[level]['ctype'].unique().tolist()
-
-    def __get_unique_terms_in_ctype(
-        self,
-        ctype: str = 'company',
-        level: str = 'lv1',
-    ):
-        return NAME_TYPE_DATA[level]\
-            .query(f'ctype == "{ctype}"')['term']\
-            .unique().tolist()
 
     def extract_type(
         self,
@@ -136,7 +116,7 @@ def format_names(
 def extract_ctype(
     data: pd.DataFrame,
     name_col: str = 'de_name',
-    level:str = 'lv1'
+    level: str = 'lv1'
 ) -> pd.DataFrame:
     """
     Perform name-type extraction from formatted name col
@@ -157,17 +137,34 @@ def extract_ctype(
 
         * `customer_type` contains the type of customer extracted from name
     """
-    type_extractor = TypeExtractor()
     extracted_data = data.copy()
-    extracted_data['customer_type'] = extracted_data[name_col]\
-        .apply(lambda name:
-            type_extractor.extract_type(name, level)
-        )
+    # # ? KWS
+    # type_extractor = TypeExtractor()
+    # extracted_data['customer_type'] = extracted_data[name_col]\
+    #     .apply(
+    #         lambda name: type_extractor.extract_type(name, level)
+    # )
+
+    # ? Regex
+    extracted_data.loc[
+        extracted_data[name_col].notna(),
+        'customer_type'
+    ] = 'customer'
+    level_name_type_regex = NAME_TYPE_REGEX_DATA[level]
+    for ctype in level_name_type_regex.keys():
+        regex_ctype = '|'.join(level_name_type_regex[ctype])
+        # Only work with the non-predict type
+        ctype_mask = (extracted_data[name_col].str.contains(regex_ctype)) &\
+            (extracted_data['customer_type'] == 'customer')
+        extracted_data.loc[
+            ctype_mask,
+            'customer_type'
+        ] = ctype
 
     return extracted_data
 
 
-def process_extract_type(
+def process_extract_name_type(
     data: pd.DataFrame,
     name_col: str = 'name',
     level: str = 'lv1',
@@ -216,7 +213,7 @@ def process_extract_type(
         f"Formatting names takes {int(format_time)//60}m{int(format_time)%60}s")
     sep_display()
 
-    # ? Extract name type
+    # ? Extract name type by kws
     start_time = time()
     if n_cores == 1:
         extracted_data = extract_ctype(
