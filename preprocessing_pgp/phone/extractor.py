@@ -14,9 +14,12 @@ from preprocessing_pgp.phone.const import (
 from preprocessing_pgp.phone.utils import basic_phone_preprocess
 from preprocessing_pgp.phone.converter import (
     convert_mobi_phone,
-    convert_phone_region,
-    convert_mobi_phone_vendor,
-    convert_tele_phone_vendor
+    convert_phone_region
+)
+from preprocessing_pgp.phone.detector import (
+    detect_mobi_phone_vendor,
+    detect_tele_phone_vendor,
+    detect_meaningful_phone
 )
 
 # ? ENVIRONMENT SETUP
@@ -216,7 +219,7 @@ def extract_valid_phone(
     ] = final_phones.loc[
         valid_mobi_phone_mask,
         'phone_convert'
-    ].apply(convert_mobi_phone_vendor)
+    ].apply(detect_mobi_phone_vendor)
 
     valid_tele_phone_mask = (final_phones['is_phone_valid'] &
                              ~final_phones['is_mobi'])
@@ -226,6 +229,15 @@ def extract_valid_phone(
     ] = final_phones.loc[
         valid_tele_phone_mask,
         'phone_convert'
-    ].apply(convert_tele_phone_vendor)
+    ].apply(detect_tele_phone_vendor)
+
+    # ? Detect meaningful phone
+    final_phones.loc[
+        final_phones['is_phone_valid'],
+        'tail_phone_type'
+    ] = final_phones.loc[
+        final_phones['is_phone_valid'],
+        'phone_convert'
+    ].apply(detect_meaningful_phone)
 
     return final_phones

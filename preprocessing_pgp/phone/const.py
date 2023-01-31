@@ -63,3 +63,20 @@ PHONE_LENGTH = {
     "old_landline": 10,
     "new_landline": 11
 }
+
+# ? MEANINGFUL PHONE
+# TODO Change to syntax detection for meaningful phone
+DICT_MEANINGFUL_PHONE = {
+    'Lục Quý': ['000000', '111111', '222222', '333333', '444444', '555555', '666666', '777777', '888888', '999999'],
+    'Ngũ Quý': ['00000', '11111', '22222', '33333', '44444', '55555', '66666', '77777', '88888', '99999'],
+    'Tứ Quý': ['0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999'],
+    'Tam Hoa': ['000', '111', '222', '333', '444', '555', '666', '777', '888', '999'],
+    'Số Tiến': ['0123', '1234', '2345', '3456', '4567', '5678', '6789'],
+    'Số Lùi': ['3210', '4321', '5432', '6543', '7654', '8765', '9876'], # Low in money
+    'Lộc Phát': ['6868', '6886', '8686', '8668', '886', '866']
+}
+
+DICT_PHONE_TAIL_TYPE = {}
+for phone_type, tail_formats in DICT_MEANINGFUL_PHONE.items():
+    for fm in tail_formats:
+        DICT_PHONE_TAIL_TYPE[fm] = phone_type
