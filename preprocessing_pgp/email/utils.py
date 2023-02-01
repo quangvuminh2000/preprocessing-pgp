@@ -45,3 +45,22 @@ def is_name_accented(name: str) -> bool:
         Whether the name is accented
     """
     return unidecode(name) != name
+
+def clean_email_name(name: str) -> str:
+    """
+    Process cleaning email name -- removing '.' and other processing
+
+    Parameters
+    ----------
+    name : str
+        The input email's name
+
+    Returns
+    -------
+    str
+        Cleaned email name
+    """
+    cleaned_name = name.replace('.', '')
+    cleaned_name = cleaned_name.lower()
+
+    return cleaned_name
