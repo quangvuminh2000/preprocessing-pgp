@@ -85,7 +85,8 @@ class NameProcess:
         self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(
             base_path)
         self.__generate_brief_keywords()
-        self.brief_name_terms = list(self.brief_name_kws.get_all_keywords().keys())
+        self.brief_name_terms = list(
+            self.brief_name_kws.get_all_keywords().keys())
 
     def __generate_brief_keywords(self):
         if hasattr(self, 'brief_name_kws'):
@@ -113,8 +114,6 @@ class NameProcess:
 
             # name containing brief 1 word and brief name
             brief_score = np.sum(np.in1d(word_text, self.brief_name_terms))
-
-            print(f'{text}, {intersect_score}, {brief_score}')
 
             return intersect_score + brief_score
 

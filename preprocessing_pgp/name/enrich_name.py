@@ -195,7 +195,7 @@ def process_enrich(
     # * Extracting customer type -- Only enrich 'customer' type
     cleaned_data = process_extract_name_type(
         cleaned_data,
-        'name',
+        name_col,
         n_cores=n_cores
     )
     customer_data = cleaned_data.query('customer_type == "customer"')

@@ -99,7 +99,7 @@ def format_names(
 
         * `de_<name_col>` contains decoded & lowered name derived from `name`
     """
-    clean_data = preprocess_df(data, name_col)
+    clean_data = data
     clean_data[f'de_{name_col}'] = clean_data[name_col].apply(
         remove_accent_typing)
     clean_data[f'de_{name_col}'] = clean_data[f'de_{name_col}'].str.lower()
@@ -193,6 +193,12 @@ def process_extract_name_type(
     """
     na_data = data[data[name_col].isna()]
     cleaned_data = data[data[name_col].notna()]
+
+    # ? Preprocess data
+    cleaned_data = preprocess_df(
+        cleaned_data,
+        name_col=name_col
+    )
 
     # ? Format name
     start_time = time()
