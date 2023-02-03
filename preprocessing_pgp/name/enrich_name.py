@@ -12,6 +12,7 @@ from halo import Halo
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.preprocess import preprocess_df
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.const import (
     NAME_SPLIT_PATH,
     MODEL_PATH,
@@ -19,13 +20,15 @@ from preprocessing_pgp.name.const import (
 )
 from preprocessing_pgp.utils import (
     sep_display,
-    parallelize_dataframe
+    parallelize_dataframe,
+    tensorflow_suppress_log
 )
 
 tqdm.pandas()
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
 logger.setLevel(logging.CRITICAL)
+tensorflow_suppress_log()
 
 
 class EnrichName:
@@ -186,19 +189,28 @@ def process_enrich(
     sep_display()
 
     # * Na names
-    na_data = data[data[name_col].isna()].copy(deep=True)
-    cleaned_data = data[data[name_col].notna()].copy(deep=True)
+    na_data = data[data[name_col].isna()]
+    cleaned_data = data[data[name_col].notna()]
+
+    # * Extracting customer type -- Only enrich 'customer' type
+    cleaned_data = process_extract_name_type(
+        cleaned_data,
+        'name',
+        n_cores=n_cores
+    )
+    customer_data = cleaned_data.query('customer_type == "customer"')
+    non_customer_data = cleaned_data.query('customer_type != "customer"')
 
     # Clean names
     start_time = time()
     if n_cores == 1:
-        cleaned_data = preprocess_df(
-            cleaned_data,
+        customer_data = preprocess_df(
+            customer_data,
             name_col=name_col
         )
     else:
-        cleaned_data = parallelize_dataframe(
-            cleaned_data,
+        customer_data = parallelize_dataframe(
+            customer_data,
             preprocess_df,
             n_cores=n_cores,
             name_col=name_col
@@ -211,12 +223,12 @@ def process_enrich(
     start_time = time()
     if n_cores == 1:
         enriched_data = enrich_clean_data(
-            cleaned_data,
+            customer_data,
             name_col=name_col
         )
     else:
         enriched_data = parallelize_dataframe(
-            cleaned_data,
+            customer_data,
             enrich_clean_data,
             n_cores=n_cores,
             name_col=name_col
@@ -225,6 +237,10 @@ def process_enrich(
     print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
 
     # * Concat na data
-    final_data = pd.concat([enriched_data, na_data])
+    final_data = pd.concat([
+        enriched_data,
+        non_customer_data,
+        na_data
+    ])
 
     return final_data

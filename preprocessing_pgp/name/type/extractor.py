@@ -191,8 +191,8 @@ def process_extract_name_type(
 
         * `customer_type` contains type of customer extracted from `name` column
     """
-    na_data = data[data[name_col].isna()].copy(deep=True)
-    cleaned_data = data[data[name_col].notna()].copy(deep=True)
+    na_data = data[data[name_col].isna()]
+    cleaned_data = data[data[name_col].notna()]
 
     # ? Format name
     start_time = time()

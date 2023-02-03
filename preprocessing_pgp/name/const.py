@@ -1,6 +1,11 @@
+"""
+Module for essential constants in enrich name
+"""
 import os
 
-#? MODEL PATHS
+import pandas as pd
+
+# ? MODEL PATHS
 NAME_SPLIT_PATH = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
@@ -24,7 +29,12 @@ RULE_BASED_PATH = os.path.join(
     'students'
 )
 
-#? PREPROCESS CONSTANTS
+NICKNAME_PATH = os.path.join(
+    os.path.dirname(__file__),
+    '../data/name_split/nicknames.parquet'
+)
+
+# ? PREPROCESS CONSTANTS
 NON_HUMAN_REG_LIST = [
     # Companies
     'Cong Ty', 'Co Phan', 'Co Phieu', 'Bds', 'Bat Dong San', 'Tnhh', 'Thuong Nghiep', 'Huu Hang',
@@ -103,3 +113,16 @@ REPLACE_HUMAN_REG_DICT = {
     'Bs': '',
     'Ng.': 'Nguyễn'
 }
+
+BRIEF_NAME_DICT = {
+    'nguyen': ['ng.', 'ng', 'n.', 'n'],
+    'do': ['d.', 'd'],
+    'pham': ['p.', 'p']
+}
+
+# * NICKNAMES
+NICKNAMES = pd.read_parquet(NICKNAME_PATH)
+NICKNAME_REGEX = '|'.join(
+    [*NICKNAMES['name'].to_list(),
+     *NICKNAMES['de_name'].to_list()]
+)

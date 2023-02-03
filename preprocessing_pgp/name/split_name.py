@@ -1,12 +1,14 @@
 import re
 from time import time
 
-from unidecode import unidecode
 import numpy as np
-
 import pandas as pd
 import multiprocessing as mp
+from unidecode import unidecode
+from flashtext import KeywordProcessor
 from tqdm import tqdm
+
+from preprocessing_pgp.name.const import BRIEF_NAME_DICT
 
 tqdm.pandas()
 
@@ -82,9 +84,17 @@ class NameProcess:
         self.word_name = np.array(list(BuildWordName(base_path)))
         self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(
             base_path)
-        self.brief_name = {
-            'ng': 'nguyen'
-        }
+        self.__generate_brief_keywords()
+        self.brief_name_terms = list(self.brief_name_kws.get_all_keywords().keys())
+
+    def __generate_brief_keywords(self):
+        if hasattr(self, 'brief_name_kws'):
+            return
+
+        kws = KeywordProcessor(case_sensitive=True)
+        kws.add_keywords_from_dict(BRIEF_NAME_DICT)
+
+        self.brief_name_kws = kws
 
     def CountNameVN(self, text):
         try:
@@ -102,10 +112,9 @@ class NameProcess:
             intersect_score = np.sum(intersect_bool)
 
             # name containing brief 1 word and brief name
-            brief_score = 0
-            for word in word_text:
-                if len(word) == 1 or word in self.brief_name.keys():
-                    brief_score += 1
+            brief_score = np.sum(np.in1d(word_text, self.brief_name_terms))
+
+            print(f'{text}, {intersect_score}, {brief_score}')
 
             return intersect_score + brief_score
 
@@ -172,6 +181,11 @@ class NameProcess:
                                     (len(process_name.split(' ')) > 6)
                                     ) else process_name
             # print(f'check VN char: {process_name}')
+
+            # * Replace brief terms
+            if process_name is not None:
+                process_name = self.brief_name_kws.replace_keywords(
+                    process_name)
 
             # title
             process_name = process_name.title()
@@ -309,7 +323,7 @@ class NameProcess:
         if name is None:
             return 'NONE'
         return unidecode(name)
-    
+
     def CoreBestName(self, raw_names_n, name_col='name', key_col='phone'):
         start_time = time()
         raw_names_n = raw_names_n[raw_names_n[name_col].notna()]
@@ -345,14 +359,15 @@ class NameProcess:
                      'unidecode_last_name'] = names_df.loc[names_df['last_name'].notna(), 'last_name'].apply(unidecode)
         names_df['num_last_name'] = names_df.groupby(
             by=['group_id'])['unidecode_last_name'].transform('nunique')
-        names_df['mode_last_name'] = names_df.groupby(by=['group_id'])['unidecode_last_name'].progress_transform(lambda x: x.mode())
+        names_df['mode_last_name'] = names_df.groupby(
+            by=['group_id'])['unidecode_last_name'].progress_transform(lambda x: x.mode())
 #         names_df['type'] = names_df.groupby(by=['group_id'])['mode_last_name'].transform(lambda x: x.apply(lambda y:  if y==None))
         info_name_columns = ['group_id', 'raw_name',
                              'last_name', 'middle_name', 'first_name']
         # In TESTING PROGRESS
         n_lastname_mask = (names_df['num_last_name'] >= 2) \
-                              & (names_df['mode_last_name'] != names_df['unidecode_last_name']) \
-                              & (names_df['unidecode_last_name'] != None)
+            & (names_df['mode_last_name'] != names_df['unidecode_last_name']) \
+            & (names_df['unidecode_last_name'] != None)
         names_n_df = names_df[n_lastname_mask][info_name_columns].copy()
         names_1_df = names_df[~n_lastname_mask][info_name_columns].copy()
 #         return names_n_df, names_1_df
@@ -410,7 +425,7 @@ class NameProcess:
                         'num_char',
                         'num_word',
                         'num_overall'], ascending=False)
-            else: # For middlename we choose the longest name then accent latter
+            else:  # For middlename we choose the longest name then accent latter
                 map_element_name = map_element_name.sort_values(
                     by=['group_id',
                         'num_word',
@@ -431,10 +446,10 @@ class NameProcess:
         dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
                       'none': None, 'Null': None, 'null': None, "''": None}
         columns = ['best_last_name', 'best_middle_name', 'best_first_name']
-        ### BIG BUG WHEN NO ENTRY
+        # BIG BUG WHEN NO ENTRY
         map_names_1_df['best_name'] = map_names_1_df[columns].fillna('').agg(' '.join, axis=1).str.replace(
             '(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
-        ### END BUG
+        # END BUG
         map_names_1_df['best_name'] = map_names_1_df['best_name'].str.strip().replace(
             dict_trash)
         map_names_1_df.loc[map_names_1_df['best_name'].isna(),
@@ -501,10 +516,10 @@ class NameProcess:
                         'similarity_score'] = 1
         # Return
         pre_names_n = pre_names_n.rename(columns={'raw_name': name_col})
-        
+
         unify_time = time()-start_time
         print(f"Unify runs in {unify_time/60} mins")
-        
+
         return pre_names_n
 
 

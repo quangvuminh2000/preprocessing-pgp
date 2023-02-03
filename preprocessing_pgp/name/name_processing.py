@@ -14,6 +14,8 @@ from tensorflow import keras
 from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
+from preprocessing_pgp.name.const import NICKNAME_REGEX
+from preprocessing_pgp.name.utils import remove_nicknames
 
 tqdm.pandas()
 
@@ -31,6 +33,8 @@ class NameProcessor:
         self.name_process = NameProcess(base_path)
 
     def predict_non_accent(self, name: str):
+        if name is None:
+            return None
         de_name = unidecode(name)
 
         # Keep case already have accent
@@ -46,12 +50,21 @@ class NameProcessor:
                     #                     nprocess: int, # number of processes to multi-inference
                     ):
         predicted_name = name_df.copy(deep=True)
+        orig_cols = predicted_name.columns
 
         # n_names = predicted_name.shape[0]
+        # * Clean name before processing
+        predicted_name[f'clean_{name_col}'] =\
+            predicted_name[name_col].apply(self.name_process.CleanName)
+
+        predicted_name = remove_nicknames(
+            predicted_name,
+            name_col=f'clean_{name_col}'
+        )
 
         # print("Filling diacritics to names...")
         # start_time = time()
-        predicted_name['predict'] = predicted_name[name_col].apply(
+        predicted_name['predict'] = predicted_name[f'clean_{name_col}'].apply(
             self.predict_non_accent)
         # mean_predict_time = (time() - start_time) / n_names
 
@@ -63,16 +76,17 @@ class NameProcessor:
         # start_time = time()
         predicted_name['final'] = predicted_name.apply(
             lambda row: rule_base_name(
-                row['predict'], unidecode(row[name_col]), self.name_dicts),
+                row['predict'], row[f'clean_{name_col}'], self.name_dicts),
             axis=1
         )
+
         # mean_rb_time = (time() - start_time) / n_names
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
 
         # print('\n\n')
 
-        return predicted_name
+        return predicted_name[[*orig_cols, 'final', 'predict']]
 
     def unify_name(self,
                    name_df: pd.DataFrame,
