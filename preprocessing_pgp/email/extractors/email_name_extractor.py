@@ -4,12 +4,17 @@ Module to extract name from email using rule-based
 import math
 import re
 from string import digits
+from typing import Tuple
 
 import pandas as pd
 from unidecode import unidecode
 
 from preprocessing_pgp.email.extractors.const import FULLNAME_DICT
-from preprocessing_pgp.email.utils import clean_email_name
+from preprocessing_pgp.email.utils import (
+    clean_email_name,
+    sort_series_by_appearance,
+    extract_sub_string
+)
 
 
 class ZipfName:
@@ -92,6 +97,7 @@ class EmailNameExtractor:
         self.__generate_name_dict()
         self.zipf_name = ZipfName(self.name_norm_unique)
 
+    # ? SETTING UP CLASS VARIABLES
     def __normalize_name(self, name):
         # Unidecode, lower and remove spacing
         de_name = unidecode(name)
@@ -104,13 +110,11 @@ class EmailNameExtractor:
             return
 
         lname_series = FULLNAME_DICT['last_name']
-        lname_series = lname_series.reindex(
-            lname_series.str.len().sort_values(ascending=False).index
-        )
-        self.lname_unique = lname_series.unique().tolist()
+        lname_series = sort_series_by_appearance(lname_series)
+        self.lname_unique = lname_series.tolist()
         self.lname_norm_unique = lname_series\
             .apply(self.__normalize_name)\
-            .unique().tolist()
+            .tolist()
         self.lname_norm_unique_regex =\
             '|'.join(
                 self.lname_norm_unique
@@ -121,13 +125,11 @@ class EmailNameExtractor:
             return
 
         fname_series = FULLNAME_DICT['first_name']
-        fname_series = fname_series.reindex(
-            fname_series.str.len().sort_values(ascending=False).index
-        )
-        self.fname_unique = fname_series.unique().tolist()
+        fname_series = sort_series_by_appearance(fname_series)
+        self.fname_unique = fname_series.tolist()
         self.fname_norm_unique = fname_series\
             .apply(self.__normalize_name)\
-            .unique().tolist()
+            .tolist()
         self.fname_norm_unique_regex =\
             '|'.join(
                 self.fname_norm_unique
@@ -139,20 +141,18 @@ class EmailNameExtractor:
 
         mname_series = FULLNAME_DICT[FULLNAME_DICT['middle_name']
                                      != '']['middle_name']
-        mname_series = mname_series.reindex(
-            mname_series.str.len().sort_values(ascending=False).index
-        )
-        self.mname_unique = mname_series.unique().tolist()
+        mname_series = sort_series_by_appearance(mname_series)
+        self.mname_unique = mname_series.tolist()
         self.mname_norm_unique = mname_series\
             .apply(self.__normalize_name)\
-            .unique().tolist()
+            .tolist()
         self.mname_norm_unique_regex =\
             '|'.join(
                 self.mname_norm_unique
             )
         self.mname_norm_trace_dict = dict(zip(
-            self.mname_unique,
-            self.mname_norm_unique
+            self.mname_norm_unique,
+            self.mname_unique
         ))
 
     def __generate_name_dict(self):
@@ -177,35 +177,120 @@ class EmailNameExtractor:
             index=names_df['name_norm']
         ).to_dict()
 
+    # ? EXTRACTION COMPONENT OF NAMES
+    def _extract_firstname(
+        self,
+        email_name: str
+    ) -> Tuple[str, str]:
+        """
+        Extraction for firstname in email name
+
+        Parameters
+        ----------
+        email_name : str
+            The input cleaned email name
+
+        Returns
+        -------
+        Tuple[str, str]
+            The firstname extracted from email name and the remaining email name
+        """
+        norm_first_name, remain_name = extract_sub_string(
+            self.fname_norm_unique_regex,
+            email_name,
+            take_first=True
+        )
+
+        first_name = norm_first_name.title()
+
+        return first_name, remain_name
+
+    def _extract_lastname(
+        self,
+        email_name: str
+    ) -> Tuple[str, str]:
+        """
+        Extraction for lastname in email name
+
+        Parameters
+        ----------
+        email_name : str
+            The input cleaned email name
+
+        Returns
+        -------
+        Tuple[str, str]
+            The lastname extracted from email name and the remaining email name
+        """
+        norm_last_name, remain_name = extract_sub_string(
+            self.lname_norm_unique_regex,
+            email_name,
+            take_first=True
+        )
+
+        last_name = norm_last_name.title()
+
+        return last_name, remain_name
+
+    def _extract_middlename(
+        self,
+        email_name: str
+    ) -> Tuple[str, str]:
+        """
+        Extraction for middlename in email name
+
+        Parameters
+        ----------
+        email_name : str
+            The input cleaned email name
+
+        Returns
+        -------
+        Tuple[str, str]
+            The middlename extracted from email name and the remaining email name
+        """
+        norm_middle_name, remain_name = extract_sub_string(
+            self.mname_norm_unique_regex,
+            email_name,
+            take_first=True
+        )
+
+        # * Found middlename -> Track back the name from the norm dictionary
+        if norm_middle_name != '':
+            middle_name = self.mname_norm_trace_dict[norm_middle_name]
+        # * Not found middlename -> let middlename be the remain name
+        else:
+            middle_name = remain_name
+        return middle_name, remain_name
+
     def extract_fullname(
         self,
         email_name: str
     ) -> str:
+        """
+        Extracting full username from email name using the dataset
+
+        Parameters
+        ----------
+        email_name : str
+            The input email name
+
+        Returns
+        -------
+        str
+            The full name extracted from email
+        """
         if email_name == '':
             return ''
 
-        # * Extract firstname
-        cleaned_email_name = email_name.translate(str.maketrans('', '', digits))
-        found_fname = re.findall(self.fname_norm_unique_regex, cleaned_email_name)
-        if len(found_fname) == 0:
-            return ''
-        final_fname = found_fname[0]
-        remain_name = re.sub(final_fname, '', cleaned_email_name)
+        # * Clean email name
+        cleaned_email_name = email_name.translate(
+            str.maketrans('', '', digits))
 
-        # * Extract lastname
-        found_lname = re.findall(self.lname_norm_unique_regex, remain_name)
-        final_lname = ''
-        if len(found_lname) != 0:
-            final_lname = found_lname[0]
-            remain_name = re.sub(final_lname, '', remain_name)
-
-        # * Extract middlename
-        found_mname = re.findall(self.mname_norm_unique_regex, remain_name)
-        final_mname = ''
-        if len(found_mname) != 0:
-            final_mname = found_mname[0]
-        else:
-            final_mname = remain_name
+        # * Extracting name components
+        fname, remain_name = self._extract_firstname(cleaned_email_name)
+        lname, remain_name = self._extract_lastname(remain_name)
+        mname, remain_name = self._extract_middlename(remain_name)
 
         # if len(found_lname) != 0:
         #     final_lname = found_lname[0]
@@ -232,8 +317,9 @@ class EmailNameExtractor:
         #         else:
         #             final_mname = found_mname[0]
 
-        full_name = ' '.join([final_lname, final_mname, final_fname])
-        return re.sub(' +', ' ', full_name).strip()
+        full_name = ' '.join([lname, mname, fname])
+        cleaned_full_name = re.sub(' +', ' ', full_name).strip()
+        return cleaned_full_name
 
     def extract_username(
         self,
@@ -241,11 +327,18 @@ class EmailNameExtractor:
         email_name_col: str = 'email_name',
     ) -> pd.DataFrame:
 
-        extracted_data = data.copy()
-        extracted_data['username_extracted'] =\
-            extracted_data[email_name_col].apply(self.extract_fullname)
+        extracted_data=data.copy()
+        orig_cols=extracted_data.columns
 
-        return extracted_data
+        # * Clean email's name
+        extracted_data[f'cleaned_{email_name_col}']=extracted_data[email_name_col].apply(
+            clean_email_name)
+
+        # * Extracting username from email
+        extracted_data['username_extracted']=extracted_data[f'cleaned_{email_name_col}']\
+            .apply(self.extract_fullname)
+
+        return extracted_data[[*orig_cols, 'username_extracted']]
         # orig_cols = extracted_data.columns
 
         # # * Clean email's name
