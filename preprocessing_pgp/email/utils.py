@@ -63,7 +63,12 @@ def clean_email_name(name: str) -> str:
     str
         Cleaned email name
     """
+
+    if is_name_accented(name):
+        return None
+
     cleaned_name = name.replace('.', '')
+    cleaned_name = re.sub(r'\d+', '', cleaned_name)
     cleaned_name = cleaned_name.lower()
 
     return cleaned_name

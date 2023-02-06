@@ -124,5 +124,5 @@ BRIEF_NAME_DICT = {
 NICKNAMES = pd.read_parquet(NICKNAME_PATH)
 NICKNAME_REGEX = '|'.join(
     [*NICKNAMES['name'].to_list(),
-     *NICKNAMES['de_name'].to_list()]
+     *NICKNAMES[NICKNAMES['de_name'].str.split().str.len() > 1]['de_name'].to_list()]
 )

@@ -14,7 +14,6 @@ from tensorflow import keras
 from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
-from preprocessing_pgp.name.const import NICKNAME_REGEX
 from preprocessing_pgp.name.utils import remove_nicknames
 
 tqdm.pandas()
