@@ -1,9 +1,14 @@
+"""
+Module to convert old type phones to their new type
+"""
 import multiprocessing as mp
+from time import time
 
 import pandas as pd
 import numpy as np
 from unidecode import unidecode
 from tqdm import tqdm
+from halo import Halo
 
 from preprocessing_pgp.phone.const import (
     SUB_PHONE_10NUM,
@@ -12,6 +17,10 @@ from preprocessing_pgp.phone.const import (
     SUB_TELEPHONE_11NUM,
 )
 from preprocessing_pgp.phone.utils import basic_phone_preprocess
+from preprocessing_pgp.utils import (
+    parallelize_dataframe,
+    sep_display
+)
 from preprocessing_pgp.phone.converter import (
     convert_mobi_phone,
     convert_phone_region
@@ -27,6 +36,12 @@ tqdm.pandas()
 
 
 # ? CHECK & EXTRACT FOR VALID PHONE
+@Halo(
+    text='Checking & Converting Valid Phone',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def extract_valid_phone(
     phones: pd.DataFrame,
     phone_col: str = "phone",
@@ -50,13 +65,13 @@ def extract_valid_phone(
         The DataFrame with converted phone column and check if valid or not
     """
     # * Split na phone
-    na_phones = phones[phones[phone_col].isna()].copy(deep=True)
+    na_phones = phones[phones[phone_col].isna()]
     #! Prevent override the origin DF
-    f_phones = phones[phones[phone_col].notna()].copy(deep=True)
+    f_phones = phones[phones[phone_col].notna()]
     origin_cols = f_phones.columns
 
     # ? Preprocess phone with basic phone string clean up
-    f_phones["clean_phone"] = f_phones[phone_col].progress_apply(
+    f_phones["clean_phone"] = f_phones[phone_col].apply(
         basic_phone_preprocess)
 
     if print_info:
@@ -69,7 +84,7 @@ def extract_valid_phone(
         # print(f_phones.query(f"clean_phone != {phone_col}"), end="\n\n\n")
 
     # ? Calculate the phone length for further preprocessing
-    f_phones["phone_length"] = f_phones["clean_phone"].progress_map(
+    f_phones["phone_length"] = f_phones["clean_phone"].map(
         lambda x: len(str(x))
     )
 
@@ -113,7 +128,7 @@ def extract_valid_phone(
 
     f_phones.loc[mask_old_phone_format, "phone_convert"] = f_phones.loc[
         mask_old_phone_format, "clean_phone"
-    ].progress_map(convert_mobi_phone)
+    ].map(convert_mobi_phone)
 
     if print_info:
         print(
@@ -163,7 +178,7 @@ def extract_valid_phone(
 
     f_phones.loc[mask_old_region_phone, "phone_convert"] = f_phones.loc[
         mask_old_region_phone, "clean_phone"
-    ].progress_map(convert_phone_region)
+    ].map(convert_phone_region)
 
     # if print_info:
     #     print("Sample of converted telephone by region:", end="\n\n")
@@ -241,3 +256,54 @@ def extract_valid_phone(
     ].apply(detect_meaningful_phone)
 
     return final_phones
+
+
+def process_convert_phone(
+    data: pd.DataFrame,
+    phone_col: str = 'phone',
+    n_cores: int = 1
+) -> pd.DataFrame:
+    """
+    Converting valid phone to new phone type
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data containing the phone numbers
+    phone_col : str, optional
+        The column name contains records of phones, by default 'phone'
+    n_cores : int, optional
+        The number of core to process, by default 1
+
+    Returns
+    -------
+    pd.DataFrame
+        The converted data with new columns:
+        * `is_phone_valid`: indicator for valid phone
+        * `is_mobi`: indicator for valid mobi phone
+        * `is_new_mobi`: indicator for valid new mobi phone
+        * `is_old_mobi`: indicator for valid old mobi phone
+        * `is_new_landline`: indicator for valid new landline phone
+        * `is_old_landline`: indicator for valid old landline phone
+        * `phone_convert`: converted valid old phone type to new phone type
+        * `phone_vendor`: the vendor type of the phone number
+        * `tail_phone_type`: the tail phone number meanings
+    """
+
+    sep_display()
+
+    start_time = time()
+
+    converted_data = parallelize_dataframe(
+        data,
+        extract_valid_phone,
+        n_cores=n_cores,
+        phone_col=phone_col,
+        print_info=False
+    )
+
+    convert_time = time()-start_time
+
+    print(f"Converting phones takes {int(convert_time)//60}m{int(convert_time)%60}s")
+
+    return converted_data
