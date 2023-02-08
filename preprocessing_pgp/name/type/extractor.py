@@ -168,7 +168,8 @@ def process_extract_name_type(
     data: pd.DataFrame,
     name_col: str = 'name',
     level: str = 'lv1',
-    n_cores: int = 1
+    n_cores: int = 1,
+    logging_info: bool = True
 ) -> pd.DataFrame:
     """
     Extract types from name records inputted from data
@@ -195,50 +196,48 @@ def process_extract_name_type(
     cleaned_data = data[data[name_col].notna()]
 
     # ? Preprocess data
-    cleaned_data = preprocess_df(
+    start_time = time()
+    cleaned_data = parallelize_dataframe(
         cleaned_data,
+        preprocess_df,
+        n_cores=n_cores,
         name_col=name_col
     )
+    clean_time = time() - start_time
+    if logging_info:
+        sep_display()
+        print(
+            f"Cleansing names takes {int(clean_time)//60}m{int(clean_time)%60}s")
+        sep_display()
 
     # ? Format name
     start_time = time()
-    if n_cores == 1:
-        formatted_data = format_names(
-            cleaned_data,
-            name_col=name_col
-        )
-    else:
-        formatted_data = parallelize_dataframe(
-            cleaned_data,
-            format_names,
-            n_cores=n_cores,
-            name_col=name_col
-        )
+    formatted_data = parallelize_dataframe(
+        cleaned_data,
+        format_names,
+        n_cores=n_cores,
+        name_col=name_col
+    )
     format_time = time() - start_time
-    print(
-        f"Formatting names takes {int(format_time)//60}m{int(format_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(
+            f"Formatting names takes {int(format_time)//60}m{int(format_time)%60}s")
+        sep_display()
 
     # ? Extract name type by kws
     start_time = time()
-    if n_cores == 1:
-        extracted_data = extract_ctype(
-            formatted_data,
-            name_col=f'de_{name_col}',
-            level=level
-        )
-    else:
-        extracted_data = parallelize_dataframe(
-            formatted_data,
-            extract_ctype,
-            n_cores=n_cores,
-            level=level,
-            name_col=f'de_{name_col}',
-        )
+    extracted_data = parallelize_dataframe(
+        formatted_data,
+        extract_ctype,
+        n_cores=n_cores,
+        level=level,
+        name_col=f'de_{name_col}',
+    )
     extract_time = time() - start_time
-    print(
-        f"Extracting customer's type takes {int(extract_time)//60}m{int(extract_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(
+            f"Extracting customer's type takes {int(extract_time)//60}m{int(extract_time)%60}s")
+        sep_display()
 
     # ? Drop clean_name column
     extracted_data = extracted_data.drop(columns=[f'de_{name_col}'])
