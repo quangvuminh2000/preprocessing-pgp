@@ -49,7 +49,7 @@ python
 Phan Thị Thúy Hằng
 ```
 
-#### 1.2. Enrich Vietnamese Names (New Features)
+#### 1.2. Enrich Vietnamese Names (Pending...)
 
 ```shell
 python
@@ -61,7 +61,6 @@ python
 >>> data = pd.read_parquet('/path/to/data.parquet')
 >>> enrich_data = process_enrich(data, name_col='name')
 
-
 Cleansing Takes 0m0s
 
 
@@ -69,6 +68,42 @@ Enrich names takes 5m10s
 
 >>> enrich_data.columns
 Index(['name', 'predict', 'final'], dtype='object')
+```
+
+#### 1.3. Extract customer type from name (New Feature)
+
+In big data platform, user might enter not just there name into the name field but many others.
+
+This module currently support detection of following type:
+
+1. **customer** : The name of the *customer*
+2. **company** : The name of any *company related*
+3. **biz** : The name of any *business related*
+4. **edu** : The name of any type of *education related*
+5. **medical** : The name of any *medical related*
+
+```shell
+python
+```
+
+```python
+>>> import pandas as pd
+>>> from preprocessing_pgp.name.type.extractor import process_extract_name_type
+>>> data = pd.read_parquet('/path/to/data.parquet')
+>>> extracted_data = process_extract_name_type(data, name_col='name')
+
+
+Cleansing names takes 0m0s
+
+
+Formatting names takes 0m0s
+
+
+Extracting customer's type takes 0m0s
+
+
+>>> extracted_data.columns
+Index(['username', 'customer_type'], dtype='object')
 ```
 
 ### 2. Extracting Vietnamese Phones
@@ -79,61 +114,19 @@ python
 
 ```python
 >>> import pandas as pd
->>> from preprocessing_pgp.phone.extractor import extract_valid_phone
+>>> from preprocessing_pgp.phone.extractor import process_convert_phone
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> extracted_data = extract_valid_phone(phones=data, phone_col='phone', print_info=True)
-# OF PHONE CLEANED : 0
-
-Sample of non-clean phones:
-Empty DataFrame
-Columns: [id, phone, clean_phone]
-Index: []
-
-100%|██████████| ####/#### [00:00<00:00, ####it/s]
-
-# OF PHONE 10 NUM VALID : ####
+>>> extracted_data = process_convert_phone(phones=data, phone_col='phone')
 
 
-# OF PHONE 11 NUM VALID : ####
+Converting phones takes 0m1s
 
 
-0it [00:00, ?it/s]
-
-# OF OLD PHONE CONVERTED : ####
-
-
-# OF OLD LANDLINE PHONE : ####
-
-100%|██████████| ####/#### [00:00<00:00, ####it/s]
-
-# OF VALID PHONE : ####
-
-# OF INVALID PHONE : ####
-
-Sample of invalid phones:
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-|      |      id |       phone | is_phone_valid   | is_mobi   | is_new_mobi   | is_old_mobi   | is_new_landline   | is_old_landline   | phone_convert   |
-+======+=========+=============+==================+===========+===============+===============+===================+===================+=================+
-|   47 | ####### |   083###### | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-|  317 | ####### |   098###### | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-|  398 | ####### | 039######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-|  503 | ####### | 093######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 1261 | ####### | 096######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 1370 | ####### | 097######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 1554 | ####### | 098######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 2469 | ####### | 032######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 2609 | ####### | 086######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
-| 2750 | ####### | 078######## | False            | False     | False         | False         | False             | False             |                 |
-+------+---------+-------------+------------------+-----------+---------------+---------------+-------------------+-------------------+-----------------+
+>>> extracted_data.columns
+Index(['phone', 'is_phone_valid', 'is_mobi', 'is_new_mobi',
+       'is_old_mobi', 'is_new_landline', 'is_old_landline',
+       'phone_convert', 'phone_vendor', 'tail_phone_type'],
+      dtype='object')
 ```
 
 ### 3. Verify Vietnamese Card IDs
@@ -144,96 +137,19 @@ python
 
 ```python
 >>> import pandas as pd
->>> from preprocessing_pgp.card.validation import verify_card
+>>> from preprocessing_pgp.card.validation import process_verify_card
 >>> data = pd.read_parquet('/path/to/data.parquet')
->>> verified_data = verify_card(data, card_col='card_id', print_info=True)
-
-##### CLEANSING #####
-
-
-# NAN CARD ID: ####
+>>> verified_data = process_verify_card(data, card_col='card_id')
+Process cleaning card id...
 
 
-# CARD ID CONTAINS NON-DIGIT CHARACTERS: ####
+Verifying card id takes 0m3s
 
 
-SAMPLE OF CARDS WITH NON-DIGIT CHARACTERS:
-              card_id  is_valid  is_personal_id
-#######      B#######     False           False
-#######      C#######     False           False
-#######       G######     False           False
-#######     A########     False           False
-#######  ###########k     False           False
-#######  ###########k     False           False
-#######      C#######     False           False
-#######      B#######     False           False
-#######  PT AR#######     False           False
-#######     E########     False           False
-
-
-
-# CARD OF LENGTH 9 OR 12: #######
-STATISTIC:
-True     ######
-False     #####
-Name: is_valid, dtype: int64
-
-
-
-
-# CARD OF LENGTH 8 OR 11: ###
-STATISTIC:
-True     ######
-False     #####
-Name: is_valid, dtype: int64
-
-
-
-# CARD WITH OTHER LENGTH: ####
-# PASSPORT FOUND: ####
-
-
-SAMPLE OF PASSPORT:
-          card_id  is_valid  card_length clean_card_id  is_passport
-#######  B#######      True            8      B#######         True
-#######  C#######      True            8      C#######         True
-#######  C#######      True            8      C#######         True
-#######  B#######      True            8      B#######         True
-#######  B#######      True            8      B#######         True
-#######  B#######      True            8      B#######         True
-#######  C#######      True            8      C#######         True
-#######  B#######      True            8      B#######         True
-#######  B#######      True            8      B#######         True
-#######  B#######      True            8      B#######         True
-
-
-
-
-# DRIVER LICENSE FOUND: 41461
-
-
-SAMPLE OF DRIVER LICENSE:
-          card_id  is_valid  is_personal_id  ...  clean_card_id is_passport  is_driver_license
-47   0###########      True           False  ...   0###########       False               True
-74   0###########      True           False  ...   0###########       False               True
-170  0###########      True           False  ...   0###########       False               True
-179  0###########      True           False  ...   0###########       False               True
-206  0###########      True           False  ...   0###########       False               True
-282  0###########      True           False  ...   0###########       False               True
-295  0###########      True           False  ...   0###########       False               True
-616  0###########      True           False  ...   0###########       False               True
-663  0###########      True           False  ...   0###########       False               True
-671  0###########      True           False  ...   0###########       False               True
-
-
-##### GENERAL CARD ID REPORT #####
-
-COHORT SIZE: #######
-STATISTIC:
-True     ######
-False     #####
-PASSPORT: ####
-DRIVER LICENSE: ####
+>>> verified_data.columns
+Index(['card_id', 'clean_card_id', 'is_valid', 'is_personal_id', 'is_passport',
+       'is_driver_license'],
+      dtype='object')
 ```
 
 ### 4. Extract Information in Vietnamese Address
