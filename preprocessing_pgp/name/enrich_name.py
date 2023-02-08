@@ -21,14 +21,12 @@ from preprocessing_pgp.name.const import (
 from preprocessing_pgp.utils import (
     sep_display,
     parallelize_dataframe,
-    tensorflow_suppress_log
 )
 
 tqdm.pandas()
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
 logger.setLevel(logging.CRITICAL)
-tensorflow_suppress_log()
 
 
 class EnrichName:

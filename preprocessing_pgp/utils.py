@@ -7,7 +7,6 @@ from typing import (
     Tuple
 )
 
-import tensorflow as tf
 import pandas as pd
 import numpy as np
 from unidecode import unidecode
@@ -205,13 +204,3 @@ def remove_non_accent_names(
     without_accent_names_df = names_df[~with_accent_mask].copy()
 
     return clean_names_df, without_accent_names_df
-
-
-def tensorflow_suppress_log():
-    """
-    Make Tensorflow less verbose
-    """
-    try:
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-    except ImportError:
-        pass
