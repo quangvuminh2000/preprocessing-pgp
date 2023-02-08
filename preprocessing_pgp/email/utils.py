@@ -49,29 +49,58 @@ def is_name_accented(name: str) -> bool:
     """
     return unidecode(name) != name
 
-def clean_email_name(name: str) -> str:
+def clean_email_name(
+    data:pd.DataFrame,
+    name_col: str = 'email_name'
+) -> pd.DataFrame:
     """
-    Process cleaning email name -- removing '.' and other processing
+    Process cleaning email name data -- removing '.' and other processing
 
     Parameters
     ----------
-    name : str
-        The input email's name
+    data : pd.DataFrame
+        The original dataframe
+    name_col : str, optional
+        The column name contains email_name, by default 'email_name'
 
     Returns
     -------
     str
-        Cleaned email name
+        Cleaned email name data with additional column `cleaned_email_name`
     """
+    data[f'cleaned_{name_col}'] = ''
 
-    if is_name_accented(name):
-        return None
+    # * Removing accented name
+    data.loc[
+        data[name_col].apply(is_name_accented),
+        f'cleaned_{name_col}'
+    ] = None
 
-    cleaned_name = name.replace('.', '')
-    cleaned_name = re.sub(r'\d+', '', cleaned_name)
-    cleaned_name = cleaned_name.lower()
+    # * Removing names with spaces
+    data.loc[
+        data[name_col].str.contains(r'\s+', regex=True),
+        f'cleaned_{name_col}'
+    ] = None
 
-    return cleaned_name
+    # * Remove digit, '.' from name & lower name
+    clean_data_mask = data[f'cleaned_{name_col}'].notna()
+    data.loc[
+        clean_data_mask,
+        f'cleaned_{name_col}'
+    ] = data.loc[
+        clean_data_mask,
+        name_col
+    ].str.replace(r'\d+', '', regex=True)\
+        .str.replace('.', '', regex=True)\
+        .str.lower()
+
+    # * Filter other case non-cleaned
+    data.loc[
+        data[f'cleaned_{name_col}'] == '',
+        f'cleaned_{name_col}'
+    ] = None
+
+    return data
 
 def sort_series_by_appearance(
     series: pd.Series

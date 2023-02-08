@@ -9,7 +9,7 @@ import pandas as pd
 # ? STUDENT FULLNAME
 fullname_path = os.path.join(
     os.path.dirname(__file__),
-    '../../data/email_info/student_names.parquet'
+    '../../data/email_info/norm_name_trace_dict.parquet'
 )
 
 FULLNAME_DICT = pd.read_parquet(fullname_path)
