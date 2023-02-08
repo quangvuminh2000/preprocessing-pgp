@@ -305,5 +305,6 @@ def process_convert_phone(
     convert_time = time()-start_time
 
     print(f"Converting phones takes {int(convert_time)//60}m{int(convert_time)%60}s")
+    sep_display()
 
     return converted_data

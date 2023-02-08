@@ -1,11 +1,13 @@
 import os
 import re
 from abc import ABC, abstractmethod
+from time import time
 
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
 from tqdm import tqdm
+from halo import Halo
 
 from preprocessing_pgp.card.preprocess import (
     clean_card_data
@@ -15,7 +17,8 @@ from preprocessing_pgp.utils import (
     sep_display,
     # apply_multi_process,
     apply_progress_bar,
-    extract_null_values
+    extract_null_values,
+    parallelize_dataframe
 )
 from preprocessing_pgp.card.const import (
     # Personal ID
@@ -337,8 +340,14 @@ class DriverLicenseValidator(CardValidator):
             and DriverLicenseValidator.is_real_driver_license(card_id)
 
 
+@Halo(
+    text='Verifying card id',
+    color='cyan',
+    spinner='dots7',
+    text_color='magenta'
+)
 def verify_card(
-    card_df: pd.DataFrame,
+    data: pd.DataFrame,
     card_col: str = "card_id",
     print_info: bool = True
 ) -> pd.DataFrame:
@@ -359,70 +368,37 @@ def verify_card(
     pd.DataFrame
         The final DF contains the columns that verify whether the card id is valid or not
     """
-    orig_cols = card_df.columns.values.tolist()
-
-    # ? CLEAN CARD ID
-    if print_info:
-        sep_display()
-        print(f"{'#'*5} CLEANSING CARD ID {'#'*5}")
-        sep_display()
-
-    # * Removing na values
-    clean_card_df, na_card_df = extract_null_values(card_df, card_col)
-
-    # * Basic cleaning card_id
-    clean_card_df = clean_card_data(clean_card_df, card_col)
-
-    if print_info:
-        print(f"# NAN CARD ID: {na_card_df.shape[0]}")
-        sep_display()
-
-        print(f"{'#'*5} VALIDATING CARD ID {'#'*5}")
-        sep_display()
-
-    # ? VALIDATE CARD ID
-    print("Validating personal card id...")
     # * Check for valid personal card id
-    clean_card_df['is_personal_id'] =\
-        apply_progress_bar(
-            PersonalIDValidator.is_valid_card,
-            clean_card_df[f"clean_{card_col}"]
-    )
+    data['is_personal_id'] =\
+        data[f"clean_{card_col}"]\
+            .apply(PersonalIDValidator.is_valid_card)
 
     if print_info:
-        print(f"# PERSONAL ID FOUND: {clean_card_df['is_personal_id'].sum()}")
+        print(f"# PERSONAL ID FOUND: {data['is_personal_id'].sum()}")
         sep_display()
 
     # * Check for valid passport id
-    print("Validating passport id...")
-    clean_card_df['is_passport'] =\
-        apply_progress_bar(
-            PassportValidator.is_valid_card,
-            clean_card_df[f"clean_{card_col}"]
-    )
+    data['is_passport'] =\
+        data[f"clean_{card_col}"]\
+            .apply(PassportValidator.is_valid_card)
 
     if print_info:
-        print(f"# PASSPORT FOUND: {clean_card_df['is_passport'].sum()}")
+        print(f"# PASSPORT FOUND: {data['is_passport'].sum()}")
         sep_display()
 
     # * Check for valid driver license id
-    print("Validating driver license id...")
-    clean_card_df['is_driver_license'] =\
-        apply_progress_bar(
-            DriverLicenseValidator.is_valid_card,
-            clean_card_df[f"clean_{card_col}"]
-    )
+    data['is_driver_license'] =\
+        data[f"clean_{card_col}"].apply(DriverLicenseValidator.is_valid_card)
 
     if print_info:
         print(
-            f"# DRIVER LICENSE FOUND: {clean_card_df['is_driver_license'].sum()}")
+            f"# DRIVER LICENSE FOUND: {data['is_driver_license'].sum()}")
         sep_display()
 
     # * Make a general is_valid column to verify whether the card is generally valid
 
-    print("Generating valid tag...")
-    clean_card_df['is_valid'] =\
-        clean_card_df.progress_apply(
+    data['is_valid'] =\
+        data.apply(
         lambda row: is_checker_valid(
             [
                 row['is_personal_id'],
@@ -432,6 +408,53 @@ def verify_card(
         ),
         axis=1
     )
+
+    return data
+
+
+def process_verify_card(
+    data: pd.DataFrame,
+    card_col: str = "card_id",
+    n_cores: int = 1
+) -> pd.DataFrame:
+    """
+    Verify whether the card ids are valid or not with multi-core
+
+    Parameters
+    ----------
+    card_df : pd.DataFrame
+        The input DF containing card id
+    card_col : str, optional
+        The column contain card id, by default "card_id"
+    n_cores : int, optional
+        Number of cores to process, by default 1
+
+    Returns
+    -------
+    pd.DataFrame
+        The final DF contains the columns that verify whether the card id is valid or not
+    """
+    orig_cols = data.columns.values.tolist()
+
+    # ? CLEAN CARD ID
+    # * Removing na values
+    clean_data, na_data = extract_null_values(data, card_col)
+
+    # * Basic cleaning card_id
+    clean_data = clean_card_data(clean_data, card_col)
+
+    # ? VALIDATE CARD ID
+    start_time = time()
+    clean_data = parallelize_dataframe(
+        clean_data,
+        verify_card,
+        n_cores=n_cores,
+        card_col=card_col,
+        print_info=False
+    )
+    verify_time = time() - start_time
+    print(f"Verifying card id takes {int(verify_time)//60}m{int(verify_time)%60}s")
+    sep_display()
 
     # ? CONCAT ALL SEP CARD IDS
     validator_cols = [
@@ -443,7 +466,7 @@ def verify_card(
         *validator_cols
     ]
 
-    final_card_df = pd.concat([clean_card_df, na_card_df])
+    final_card_df = pd.concat([clean_data, na_data])
 
     final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
 
