@@ -6,10 +6,6 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from preprocessing_pgp.utils import (
-    # apply_multi_process,
-    apply_progress_bar
-)
 from preprocessing_pgp.utils import sep_display
 
 
@@ -137,10 +133,7 @@ def clean_card_data(
 
     print("Process cleaning card id...")
     clean_data[f'clean_{card_col}'] =\
-        apply_progress_bar(
-            card_cleaner.clean_card,
-            clean_data[card_col]
-    )
+        clean_data[card_col].apply(card_cleaner.clean_card)
     sep_display()
 
     return clean_data
