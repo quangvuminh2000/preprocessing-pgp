@@ -11,10 +11,9 @@ from unidecode import unidecode
 from preprocessing_pgp.email.extractors.const import FULLNAME_DICT
 from preprocessing_pgp.email.utils import (
     clean_email_name,
-    sort_series_by_appearance,
-    extract_sub_string
 )
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
+from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
 
 pd.options.mode.chained_assignment = None
 
@@ -99,7 +98,7 @@ class EmailNameExtractor:
             .to_dict()['name']
 
     # ? EXTRACTION COMPONENT OF NAMES
-    def _extract_username_candidate(
+    def _get_username_candidate(
         self,
         data: pd.DataFrame,
         email_name_col: str = 'email_name'
@@ -208,6 +207,7 @@ class EmailNameExtractor:
         pd.DataFrame
             Data with additional columns:
             * `username_extracted` : The username extracted from email
+            * `gender_extracted` : The gender predicted from the extracted username
         """
 
         extracted_data=data.copy()
@@ -237,7 +237,7 @@ class EmailNameExtractor:
         ignored_data = extracted_data[~proceed_mask]
 
         # * Get email's name candidate
-        name_candidate = self._extract_username_candidate(
+        name_candidate = self._get_username_candidate(
             proceed_data,
             email_name_col=f'cleaned_{email_name_col}'
         )
@@ -247,6 +247,17 @@ class EmailNameExtractor:
             proceed_data,
             name_candidate
         )
+
+        # * Predict gender from extracted username
+        proceed_data = process_predict_gender(
+            proceed_data,
+            name_col='username_extracted',
+            n_cores=1,
+            logging_info=False
+        )
+        proceed_data.rename(columns={
+            'gender_predict': 'gender_extracted'
+        }, inplace=True)
 
         # * Combine to get final data
         final_data = pd.concat([
@@ -259,4 +270,5 @@ class EmailNameExtractor:
             f'cleaned_{email_name_col}',
             'customer_type',
             'username_extracted',
+            'gender_extracted'
         ]]
