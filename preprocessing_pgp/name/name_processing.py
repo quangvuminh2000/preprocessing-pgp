@@ -48,7 +48,7 @@ class NameProcessor:
                     name_col: str,
                     #                     nprocess: int, # number of processes to multi-inference
                     ):
-        predicted_name = name_df.copy(deep=True)
+        predicted_name = name_df
         orig_cols = predicted_name.columns
 
         # n_names = predicted_name.shape[0]
@@ -73,19 +73,31 @@ class NameProcessor:
 
         # print("Applying rule-based postprocess...")
         # start_time = time()
-        predicted_name['final'] = predicted_name.apply(
+        predicted_name['final_name'] = predicted_name.apply(
             lambda row: rule_base_name(
                 row['predict'], row[f'clean_{name_col}'], self.name_dicts),
             axis=1
         )
+
+        dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
+                      'none': None, 'Null': None, 'null': None, "''": None}
+
+        predicted_name[['last_name', 'middle_name', 'first_name']] =\
+            predicted_name['final'].apply(self.name_process.SplitName)
+
+        predicted_name['final_name'] =\
+            predicted_name[['last_name', 'middle_name', 'first_name']]\
+            .fillna('').agg(' '.join, axis=1)\
+            .str.strip().replace(dict_trash, regex=False)
 
         # mean_rb_time = (time() - start_time) / n_names
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
 
         # print('\n\n')
+        out_cols = ['final_name', 'predict']
 
-        return predicted_name[[*orig_cols, 'final', 'predict']]
+        return predicted_name[[*orig_cols, *out_cols]]
 
     def unify_name(self,
                    name_df: pd.DataFrame,

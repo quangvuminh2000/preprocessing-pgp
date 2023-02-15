@@ -175,7 +175,7 @@ class NameProcess:
             pct_vn = self.CountNameVN(process_name) / \
                 len(process_name.split(' '))
 #             print(pct_vn)
-            process_name = None if ((pct_vn < 0.5) |
+            process_name = None if ((pct_vn < 0.8) |
                                     # (len(process_name) == 1) |
                                     (len(process_name.split(' ')) > 6)
                                     ) else process_name

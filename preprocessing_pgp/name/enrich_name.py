@@ -197,6 +197,7 @@ def process_enrich(
         n_cores=n_cores
     )
     customer_data = cleaned_data.query('customer_type == "customer"')
+    #                    | (cleaned_data[name_col].str.split(' ').str.len() > 3))
     non_customer_data = cleaned_data.query('customer_type != "customer"')
 
     # Clean names

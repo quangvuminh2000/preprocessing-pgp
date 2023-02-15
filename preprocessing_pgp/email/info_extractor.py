@@ -142,8 +142,11 @@ def process_extract_email_info(
     extracted_cols = [
         'customer_type',
         'username_extracted',
+        'gender_extracted',
         'yob_extracted',
-        'phone_extracted'
+        'phone_extracted',
+        'address_extracted',
+        'is_email_valid'
     ]
     final_data = pd.concat(
         [data[orig_cols], final_data[extracted_cols]], axis=1)
