@@ -15,20 +15,16 @@ fullname_path = os.path.join(
 FULLNAME_DICT = pd.read_parquet(fullname_path)
 
 # ? YOB
-YEAR_REGEX_DICT = {
-    'full_year': '(19[5-9][0-9]|200[0-9])',
-    'half_year': '([7-9][0-9])',
-    'full_month': '(0[1-9]|1[012])',
-    'half_month': '([1-9])',
-    'full_day': '(0[1-9]|[12][0-9]|3[01])',
-    'half_day': '([1-9])'
-}
+dob_path = os.path.join(
+    os.path.dirname(__file__),
+    '../../data/email_info/dob_dict.parquet'
+)
+DOB_DICT = pd.read_parquet(dob_path)
 
-YEAR_FORMAT_DICT = {
-    'full_year': 'yyyy',
-    'half_year': 'yy',
-    'full_month': 'mm',
-    'half_month': 'm',
-    'full_day': 'dd',
-    'half_day': 'd'
-}
+DOB_REGEX_DICT = DOB_DICT.set_index('dob_type')['regex'].to_dict()
+DOB_NUM_DIGIT_DICT = DOB_DICT.set_index('dob_type')['num_digit'].to_dict()
+DOB_FORMAT_DICT = DOB_DICT.set_index('dob_type')['format'].to_dict()
+
+# ? PHONE
+
+VIETNAMESE_PHONE_REGEX = r'((02[0-9]|0|84)[3|5|7|8|9]*[0-9]{8})'
