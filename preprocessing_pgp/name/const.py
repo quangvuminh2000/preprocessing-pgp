@@ -34,6 +34,11 @@ NICKNAME_PATH = os.path.join(
     '../data/name_split/nicknames.parquet'
 )
 
+GENDER_MODEL_PATH = os.path.join(
+    os.path.dirname(__file__),
+    '../data/gender_model'
+)
+
 # ? PREPROCESS CONSTANTS
 NON_HUMAN_REG_LIST = [
     # Companies

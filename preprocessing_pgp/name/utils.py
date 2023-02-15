@@ -28,7 +28,7 @@ def remove_nicknames(
         Cleaned data without nickname -- added new column `clean_name_col`
     """
     name_df[name_col] =\
-        name_df[name_col].str.replace(NICKNAME_REGEX, '')\
+        name_df[name_col].str.replace(NICKNAME_REGEX, '', regex=True)\
         .str.strip()
 
     return name_df

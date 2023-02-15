@@ -60,7 +60,7 @@ def process_predict_gender(
     # * Get customer type
     cleaned_name_data = process_extract_name_type(
         cleaned_name_data,
-        'name',
+        name_col=name_col,
         n_cores=n_cores,
         logging_info=False
     )

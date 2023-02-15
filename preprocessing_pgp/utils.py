@@ -1,3 +1,8 @@
+"""
+Module contains package utils
+"""
+import os
+import logging
 import multiprocessing as mp
 from functools import partial
 from typing import (
@@ -18,6 +23,14 @@ from preprocessing_pgp.const import (
 
 
 tqdm.pandas()
+
+
+def suppress_warnings():
+    """
+    Function to suppress all possible warnings
+    """
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 
 def sentence_length(sentence: str) -> int:
