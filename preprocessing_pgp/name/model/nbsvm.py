@@ -1,5 +1,5 @@
 """
-Module to contains architecture of Naive Bayes SVM
+Module to contains architecture of Naive Bayes SVM -- Deprecated
 """
 
 import string
