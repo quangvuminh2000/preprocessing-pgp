@@ -6,7 +6,8 @@ import re
 from typing import List, Tuple
 
 import pandas as pd
-from unidecode import unidecode
+
+from preprocessing_pgp.name.utils import is_name_accented
 
 
 def split_email(email: str) -> List[str]:
@@ -32,22 +33,6 @@ def split_email(email: str) -> List[str]:
         return split_result
 
     return [*split_result, None]
-
-def is_name_accented(name: str) -> bool:
-    """
-    Check whether the name is accented or not
-
-    Parameters
-    ----------
-    name : str
-        The input name
-
-    Returns
-    -------
-    bool
-        Whether the name is accented
-    """
-    return unidecode(name) != name
 
 def clean_email_name(
     data:pd.DataFrame,

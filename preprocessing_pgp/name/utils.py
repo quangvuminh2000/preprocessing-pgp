@@ -3,6 +3,7 @@ Module contains tools for processing name
 """
 
 import pandas as pd
+from unidecode import unidecode
 
 from preprocessing_pgp.name.const import NICKNAME_REGEX
 
@@ -31,3 +32,20 @@ def remove_nicknames(
         .str.strip()
 
     return name_df
+
+
+def is_name_accented(name: str) -> bool:
+    """
+    Check whether the name is accented or not
+
+    Parameters
+    ----------
+    name : str
+        The input name
+
+    Returns
+    -------
+    bool
+        Whether the name is accented
+    """
+    return unidecode(name) != name
