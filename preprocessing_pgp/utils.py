@@ -18,7 +18,8 @@ from unidecode import unidecode
 from tqdm import tqdm
 
 from preprocessing_pgp.const import (
-    N_PROCESSES
+    N_PROCESSES,
+    DICT_TRASH_STRING
 )
 
 
@@ -52,6 +53,28 @@ def is_empty_dataframe(data: pd.DataFrame) -> bool:
     Check whether the dataframe is empty or not
     """
     return data.shape[0] == 0
+
+
+def replace_trash_string(
+    data: pd.DataFrame,
+    replace_col: str
+) -> pd.DataFrame:
+    """
+    Replace all trash value with None
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The original data
+    replace_col : str
+        The column that apply the replacement
+
+    Returns
+    -------
+    pd.DataFrame
+        The clean data after replace None
+    """
+    return data[replace_col].replace(DICT_TRASH_STRING, regex=False)
 
 
 def extract_null_values(

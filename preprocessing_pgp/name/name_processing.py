@@ -15,6 +15,7 @@ from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
 from preprocessing_pgp.name.utils import remove_nicknames
+from preprocessing_pgp.utils import replace_trash_string
 
 tqdm.pandas()
 
@@ -79,23 +80,24 @@ class NameProcessor:
             axis=1
         )
 
-        dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                      'none': None, 'Null': None, 'null': None, "''": None}
-
         predicted_name[['last_name', 'middle_name', 'first_name']] =\
             predicted_name['final'].apply(self.name_process.SplitName)
 
-        predicted_name['final_name'] =\
+        predicted_name['final'] =\
             predicted_name[['last_name', 'middle_name', 'first_name']]\
             .fillna('').agg(' '.join, axis=1)\
-            .str.strip().replace(dict_trash, regex=False)
+            .str.strip()
 
+        predicted_name = replace_trash_string(
+            predicted_name,
+            replace_col='final'
+        )
         # mean_rb_time = (time() - start_time) / n_names
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
 
         # print('\n\n')
-        out_cols = ['final_name', 'predict']
+        out_cols = ['final', 'predict']
 
         return predicted_name[[*orig_cols, *out_cols]]
 

@@ -17,7 +17,8 @@ from preprocessing_pgp.email.const import (
     LEAST_NUM_EMAIL_CHAR,
     EMAIL_DOMAIN_REGEX,
     COMMON_EMAIL_REGEX,
-    EDGE_AUTO_EMAIL_REGEX
+    EDGE_AUTO_EMAIL_REGEX,
+    PRIVATE_EMAIL_DOMAINS
 )
 from preprocessing_pgp.email.preprocess import (
     clean_email
@@ -278,6 +279,10 @@ def process_validate_email(
     print(
         f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
     sep_display()
+
+    # * Get the domain of the email name
+    validated_data['email_domain'] = validated_data[email_col].str.split('@').str[1]
+    validated_data['private_email'] = validated_data['email_domain'].isin(PRIVATE_EMAIL_DOMAINS)
 
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])

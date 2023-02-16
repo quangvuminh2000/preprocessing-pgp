@@ -694,7 +694,7 @@ def ValidPhoneEmail(date_str):
     phones_bank = phones_bank[~phones_bank['phone'].isin(
         latest_check_phones['phone_raw'].unique())]  # Only check new phones
 
-    if phones_bank.empty == False:
+    if not phones_bank.empty:
         check_phones = check_valid_phone(phones_bank, 'phone')
         check_phones.columns = ['phone_raw', 'is_phone_valid', 'phone']
     else:

@@ -38,5 +38,9 @@ EDGE_AUTO_EMAIL_REGEX = r'@privaterelay.appleid.com|[0-9a-z]+\_autoemail'
 
 # ? EMAIL CONSTRAINTS
 
+PRIVATE_EMAIL_DOMAINS = [
+    'gmail.com', 'yahoo.com',
+    'yahoo.com.vn', 'icloud.com',
+    'email.com', 'hotmail.com', 'gmai.com', 'outlook.com']
 LEAST_NUM_EMAIL_CHAR = 8
 LONGEST_VIETNAMESE_WORD = 'Nghieng'
