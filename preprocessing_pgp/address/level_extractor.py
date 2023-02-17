@@ -353,10 +353,13 @@ def extract_vi_address_by_level(
     pd.DataFrame
         Final data with new columns:
 
-        * `level 1`: city, countryside found
-        * `level 2`: district found
-        * `level 3`: ward found
-        * `remained address`: the remaining in the address
+        * `level_1`: city, countryside found
+        * `best_level_1`: beautified city, countryside found
+        * `level_2`: district found
+        * `best_level_2`: beautified district found
+        * `level_3`: ward found
+        * `best_level_3`: beautified ward found
+        * `remained_address`: the remaining in the address
     """
 
     extractor = LevelExtractor()
@@ -369,15 +372,15 @@ def extract_vi_address_by_level(
         )
 
     for level in extractor.avail_levels:
-        extracted_data[f'level {level}'] =\
+        extracted_data[f'level_{level}'] =\
             [result[0][level]
              for result in extracted_results]
 
-        extracted_data[f'best level {level}'] =\
+        extracted_data[f'best_level_{level}'] =\
             [result[-1][level]
              for result in extracted_results]
 
-    extracted_data['remained address'] =\
+    extracted_data['remained_address'] =\
         [result[1]
          for result in extracted_results]
 

@@ -11,10 +11,8 @@ from halo import Halo
 
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.model.transformers import TransformerModel
-from preprocessing_pgp.name.preprocess import preprocess_df
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.const import (
-    NAME_SPLIT_PATH,
     MODEL_PATH,
     RULE_BASED_PATH
 )
@@ -39,7 +37,6 @@ class EnrichName:
         model_weight_path: str,
         vectorization_paths: Tuple[str, str],
         model_config_path: str,
-        split_data_path: str,
         name_rb_pth: str
     ) -> None:
         start_time = time()
@@ -56,7 +53,6 @@ class EnrichName:
             self.fname_rb,
             self.mname_rb,
             self.lname_rb,
-            split_data_path
         )
         # Timing
         self.total_load_time = time() - start_time
@@ -145,7 +141,6 @@ def enrich_clean_data(
         model_weight_path=model_weight_path,
         vectorization_paths=vectorization_paths,
         model_config_path=model_config_path,
-        split_data_path=NAME_SPLIT_PATH,
         name_rb_pth=RULE_BASED_PATH
     )
 
@@ -180,15 +175,15 @@ def process_enrich(
     pd.DataFrame
         The final dataframe that contains:
 
-        * `name_col`: raw names -- input name column
+        * `customer_type`: the type of customer extracted from name
         * `predict`: predicted names using model only
         * `final`: beautified version of prediction with additional rule-based approach
     """
-    sep_display()
+    orig_cols = data.columns
 
-    # * Na names
-    na_data = data[data[name_col].isna()]
-    cleaned_data = data[data[name_col].notna()]
+    # * Na names & filter out name col
+    na_data = data[data[name_col].isna()][[name_col]]
+    cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # * Extracting customer type -- Only enrich 'customer' type
     cleaned_data = process_extract_name_type(
@@ -200,23 +195,23 @@ def process_enrich(
     #                    | (cleaned_data[name_col].str.split(' ').str.len() > 3))
     non_customer_data = cleaned_data.query('customer_type != "customer"')
 
-    # Clean names
-    start_time = time()
-    if n_cores == 1:
-        customer_data = preprocess_df(
-            customer_data,
-            name_col=name_col
-        )
-    else:
-        customer_data = parallelize_dataframe(
-            customer_data,
-            preprocess_df,
-            n_cores=n_cores,
-            name_col=name_col
-        )
-    clean_time = time() - start_time
-    print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
-    sep_display()
+    # # Clean names -- Not Needed
+    # start_time = time()
+    # if n_cores == 1:
+    #     customer_data = preprocess_df(
+    #         customer_data,
+    #         name_col=name_col
+    #     )
+    # else:
+    #     customer_data = parallelize_dataframe(
+    #         customer_data,
+    #         preprocess_df,
+    #         n_cores=n_cores,
+    #         name_col=name_col
+    #     )
+    # clean_time = time() - start_time
+    # print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
+    # sep_display()
 
     # Enrich names
     start_time = time()
@@ -234,6 +229,7 @@ def process_enrich(
         )
     enrich_time = time() - start_time
     print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
+    sep_display()
 
     # * Concat na data
     final_data = pd.concat([
@@ -241,5 +237,18 @@ def process_enrich(
         non_customer_data,
         na_data
     ])
+
+    # * Concat with original cols
+    new_cols = [
+        'customer_type',
+        'predict',
+        'final',
+        'last_name',
+        'middle_name',
+        'first_name',
+        'pronoun'
+    ]
+    final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
+    print(final_data.columns)
 
     return final_data

@@ -130,9 +130,9 @@ def generate_loc_code(
 ) -> pd.DataFrame:
     """
     Function to retrieve location code for each level:
-    * `level 1 code`: code for city
-    * `level 2 code`: code for district
-    * `level 3 code`: code for ward
+    * `level_1_code`: code for city
+    * `level_2_code`: code for district
+    * `level_3_code`: code for ward
 
     Parameters
     ----------
@@ -162,7 +162,7 @@ def generate_loc_code(
     )
 
     for level in AVAIL_LEVELS:
-        generated_data[f'level {level} code'] = [
+        generated_data[f'level_{level}_code'] = [
             code[level] for code in row_codes]
 
     return generated_data

@@ -192,8 +192,10 @@ def process_extract_name_type(
 
         * `customer_type` contains type of customer extracted from `name` column
     """
-    na_data = data[data[name_col].isna()]
-    cleaned_data = data[data[name_col].notna()]
+    orig_cols = data.columns
+    # * Remove NaNs and select only name col
+    na_data = data[data[name_col].isna()][[name_col]]
+    cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # ? Preprocess data
     start_time = time()
@@ -244,5 +246,9 @@ def process_extract_name_type(
 
     # ? Combined with Na data
     final_data = pd.concat([extracted_data, na_data])
+
+    # ? Combined with the origin cols
+    new_cols = ['customer_type']
+    final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

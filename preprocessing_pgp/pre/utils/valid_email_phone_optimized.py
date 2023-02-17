@@ -9,7 +9,10 @@ import multiprocessing as mp
 from preprocessing_pgp.email.info_extractor import process_extract_email_info
 from preprocessing_pgp.name.enrich_name import process_enrich
 from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
+from preprocessing_pgp.email.validator import process_validate_email
+from preprocessing_pgp.phone.extractor import process_convert_phone
 
+import sys
 import os
 import subprocess
 from pyarrow import fs
@@ -405,32 +408,45 @@ def ValidPhoneEmail(date_str):
         # ).str.replace('\s+', '', regex=True)
         # emails_bank.loc[emails_bank['email'] == '', 'email'] = np.nan
 
-        # Not check email nan
-        emails_bank = emails_bank.loc[emails_bank.email.notna()].drop_duplicates(subset=[
-            'email'])
+        emails_bank = emails_bank[~emails_bank.duplicated(
+            subset=['email'], keep='first')]
 
-        emails_bank['count_id'] = emails_bank.groupby(
-            'email')['id'].transform('nunique')
-        raw_f_emails = parallelize(emails_bank.copy(), check_valid_email, 10)
-    #     raw_f_emails = check_valid_email(emails_bank.copy(), 'email')
+        emails_bank = process_validate_email(
+            emails_bank,
+            'email',
+            n_cores=1
+        )
 
-        # Mapping email
-        raw_mapping_emails = raw_f_emails[
-            raw_f_emails['email'].notna()
-        ][['email', 'email_convert']].copy().drop_duplicates(subset=['email'], keep='first')
-        raw_mapping_emails.columns = ['email_raw', 'email']
+    #     # Not check email nan
+    #     emails_bank = emails_bank.loc[emails_bank.email.notna()].drop_duplicates(subset=[
+    #         'email'])
 
-        raw_f_emails = raw_f_emails.drop(columns=['email'])
-        raw_f_emails = raw_f_emails.rename(columns={'email_convert': 'email'})
+    #     emails_bank['count_id'] = emails_bank.groupby(
+    #         'email')['id'].transform('nunique')
+    #     raw_f_emails = parallelize(emails_bank.copy(), check_valid_email, 10)
+    # #     raw_f_emails = check_valid_email(emails_bank.copy(), 'email')
+
+    #     # Mapping email
+    #     raw_mapping_emails = raw_f_emails[
+    #         raw_f_emails['email'].notna()
+    #     ][['email', 'email_convert']].copy().drop_duplicates(subset=['email'], keep='first')
+    #     raw_mapping_emails.columns = ['email_raw', 'email']
+
+    #     raw_f_emails = raw_f_emails.drop(columns=['email'])
+    #     raw_f_emails = raw_f_emails.rename(columns={'email_convert': 'email'})
 
         # Pass syntax
-        f_emails = raw_f_emails[
-            raw_f_emails['is_email_valid']
+        f_emails = emails_bank[
+            emails_bank['is_email_valid']
         ][['id', 'email']].copy().drop_duplicates()
 
         raw_stats_email = f_emails.groupby(
             by=['email'])['id'].agg(count_id='count').reset_index()
         stats_email = raw_stats_email.copy()
+
+        raw_mapping_emails = emails_bank[
+            emails_bank['email'].notna()
+        ]
 
         # Create 2 dict email
         email_ok_cdp = pd.DataFrame()
@@ -562,20 +578,22 @@ def ValidPhoneEmail(date_str):
         word_name = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/name2gender/dataset/word_name.parquet',
                                     filesystem=hdfs)['word_name'].tolist()
 
-        def CheckName(text):
-            text = unidecode(text).lower()
-            words_text = unidecode(text).split(' ')
-            for word_text in words_text:
-                if word_text in word_name:
-                    return True
-            return False
+        def check_name_valid(series: pd.Series):
+            de_data = series.apply(
+                unidecode).str.lower().str.split(expand=True)
+            name_valid = de_data.apply(
+                lambda row:
+                    row.isin(word_name).all()
+            )
+
+            return name_valid
 
         temp_profile_fplay = profile_fplay[profile_fplay['email'].isin(
             stats_email['email'])].copy()
         temp_profile_fplay = temp_profile_fplay[temp_profile_fplay['name'].str.split(
             ' ').str.len() > 1]
-        temp_profile_fplay['name_valid'] = temp_profile_fplay['name'].apply(
-            CheckName)
+        temp_profile_fplay['name_valid'] = check_name_valid(
+            temp_profile_fplay['name'])
 
         email_ok_fplay = pd.DataFrame()
         email_ok_fplay['email'] = temp_profile_fplay[temp_profile_fplay['name_valid']
@@ -656,8 +674,10 @@ def ValidPhoneEmail(date_str):
                          'is_email_valid'] = False
         check_emails.loc[check_emails['description'].isna(
         ), 'description'] = 'Warning - Syntax email'
-        check_emails.loc[check_emails['is_email_valid']
-                         == False, 'email'] = None
+        check_emails.loc[
+            ~check_emails['is_email_valid'],
+            'email'
+        ] = None
     else:
         check_emails = pd.DataFrame()
 
@@ -695,8 +715,14 @@ def ValidPhoneEmail(date_str):
         latest_check_phones['phone_raw'].unique())]  # Only check new phones
 
     if not phones_bank.empty:
-        check_phones = check_valid_phone(phones_bank, 'phone')
-        check_phones.columns = ['phone_raw', 'is_phone_valid', 'phone']
+        check_phones = process_convert_phone(
+            phones_bank,
+            phone_col='phone',
+            n_cores=1
+        )
+        check_phones['export_date'] = today
+        latest_check_phones = pd.concat(
+            [latest_check_phones, check_phones], ignore_index=True)
     else:
         check_phones = pd.DataFrame()
 
@@ -736,12 +762,12 @@ def ValidPhoneEmail(date_str):
         #                         , 'username_iscertain'] = False
 #         latest_check_emails = FormatName(latest_check_emails)
 
-    if not check_phones.empty:
-        check_phones = MetaDataPhone(check_phones)
-        check_phones['export_date'] = today
+    # if not check_phones.empty:
+    #     check_phones = MetaDataPhone(check_phones)
+    #     check_phones['export_date'] = today
 
-        latest_check_phones = pd.concat(
-            [latest_check_phones, check_phones], ignore_index=True)
+    #     latest_check_phones = pd.concat(
+    #         [latest_check_phones, check_phones], ignore_index=True)
 
     # SAVE (lastest)
 #     latest_check_emails.loc[latest_check_emails['customer_type'] != 'Ca nhan', 'gender'] = None
@@ -751,7 +777,7 @@ def ValidPhoneEmail(date_str):
     #     f'{utils_path}/valid_email_latest.parquet', filesystem=hdfs, index=False)
 
     latest_check_phones = latest_check_phones.drop_duplicates(
-        subset=['phone_raw'], keep='first')
+        subset=['phone'], keep='first')
     # latest_check_phones.to_parquet(
     #     f'{utils_path}/valid_phone_latest.parquet', filesystem=hdfs, index=False)
 
@@ -759,24 +785,23 @@ def ValidPhoneEmail(date_str):
     product_path = '/data/fpt/ftel/cads/dep_solution/sa/cdp/data'
 
     # emails
-    pro_check_emails = latest_check_emails[(
-        latest_check_emails['is_email_valid'])]
-    pro_check_emails = pro_check_emails.drop(
-        columns=['email_raw', 'description', 'is_email_valid', 'email_name', 'export_date'])
+    pro_check_emails = latest_check_emails[latest_check_emails['is_email_valid']]
+    # pro_check_emails = pro_check_emails.drop(
+    #     columns=['email_raw', 'description', 'is_email_valid', 'email_name', 'export_date'])
 
-    columns_email = [
-        'email', 'username_iscertain', 'username', 'year_of_birth', 'phone', 'address',
-        'email_group', 'is_autoemail', 'gender', 'customer_type',  # 'customer_type_detail'
-    ]
-    pro_check_emails = pro_check_emails[columns_email]
+    # columns_email = [
+    #     'email', 'username_iscertain', 'username', 'year_of_birth', 'phone', 'address',
+    #     'email_group', 'is_autoemail', 'gender', 'customer_type',  # 'customer_type_detail'
+    # ]
+    # pro_check_emails = pro_check_emails[columns_email]
 
     # pro_check_emails.to_parquet(
     #     f'{product_path}/valid_email_latest.parquet', filesystem=hdfs, index=False)
 
     # phones
-    pro_check_phones = latest_check_phones[latest_check_phones['is_phone_valid'] == True]
-    pro_check_phones = pro_check_phones.drop(
-        columns=['is_phone_valid', 'export_date'])
+    pro_check_phones = latest_check_phones[latest_check_phones['is_phone_valid']]
+    # pro_check_phones = pro_check_phones.drop(
+    #     columns=['is_phone_valid', 'export_date'])
     # pro_check_phones.to_parquet(
     #     f'{product_path}/valid_phone_latest.parquet', filesystem=hdfs, index=False)
 

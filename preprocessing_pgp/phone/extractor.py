@@ -281,21 +281,20 @@ def process_convert_phone(
         The converted data with new columns:
         * `is_phone_valid`: indicator for valid phone
         * `is_mobi`: indicator for valid mobi phone
-        * `is_new_mobi`: indicator for valid new mobi phone
-        * `is_old_mobi`: indicator for valid old mobi phone
-        * `is_new_landline`: indicator for valid new landline phone
-        * `is_old_landline`: indicator for valid old landline phone
         * `phone_convert`: converted valid old phone type to new phone type
         * `phone_vendor`: the vendor type of the phone number
         * `tail_phone_type`: the tail phone number meanings
     """
 
-    sep_display()
+    # * Select only phone column
+    orig_cols = data.columns
+    phone_data = data[[phone_col]]
 
+    # * Validate and convert phone
     start_time = time()
 
     converted_data = parallelize_dataframe(
-        data,
+        phone_data,
         extract_valid_phone,
         n_cores=n_cores,
         phone_col=phone_col,
@@ -304,7 +303,21 @@ def process_convert_phone(
 
     convert_time = time()-start_time
 
-    print(f"Converting phones takes {int(convert_time)//60}m{int(convert_time)%60}s")
+    print(
+        f"Converting phones takes {int(convert_time)//60}m{int(convert_time)%60}s")
     sep_display()
+
+    # * Concat with original cols
+    new_cols = [
+        'is_phone_valid',
+        'is_mobi',
+        'phone_convert',
+        'phone_vendor',
+        'tail_phone_type'
+    ]
+    converted_data = pd.concat([
+        data[orig_cols],
+        converted_data[new_cols]
+    ], axis=1)
 
     return converted_data

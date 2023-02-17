@@ -434,11 +434,12 @@ def process_verify_card(
     pd.DataFrame
         The final DF contains the columns that verify whether the card id is valid or not
     """
-    orig_cols = data.columns.values.tolist()
+    orig_cols = data.columns
+    card_data = data[[card_col]]
 
     # ? CLEAN CARD ID
     # * Removing na values
-    clean_data, na_data = extract_null_values(data, card_col)
+    clean_data, na_data = extract_null_values(card_data, card_col)
 
     # * Basic cleaning card_id
     clean_data = clean_card_data(clean_data, card_col)

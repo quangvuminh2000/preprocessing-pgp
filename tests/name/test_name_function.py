@@ -5,6 +5,8 @@ import pytest as pt
 import pandas as pd
 
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
+from preprocessing_pgp.name.enrich_name import process_enrich
+
 
 class TestNameFunction:
     """
@@ -24,7 +26,8 @@ class TestNameFunction:
                 'Ngô Triệu Long', 'Lê Duy Long', 'Hoàng Bảo Khánh',
                 'Nguyễn Khắc Toàn', 'Trương Quang Hoàng', 'Phạm Minh Quang',
                 'Ngô Hoàng Khôi', 'Võ Ngọc Trăm', 'Trần Ngọc Lan Khanh',
-                'Nguyễn Thị Kim Hà', 'Nguyễn Huỳnh Xuân Mai', 'Nguyễn Quỳnh Sương'
+                'Nguyễn Thị Kim Hà', 'Nguyễn Huỳnh Xuân Mai', 'Nguyễn Quỳnh Sương',
+                'Nguyễn Văn Lành'
             ]
         })
 
@@ -39,7 +42,8 @@ class TestNameFunction:
             'M', 'M', 'M',
             'M', 'M', 'M',
             'M', 'F', 'F',
-            'F', 'F', 'F'
+            'F', 'F', 'F',
+            'M'
         ]
 
     @pt.mark.name2gender
@@ -54,7 +58,8 @@ class TestNameFunction:
                 'Ngo Trieu Long', 'Le Duy Long', 'Hoang Bao Khanh',
                 'Nguyen Khac Toan', 'Truong Quang Hoang', 'Pham Minh Quang',
                 'Ngo Hoang Khoi', 'Vo Ngoc Tram', 'Tran Ngoc Lan Khanh',
-                'Nguyen Thi Kim Ha', 'Nguyen Huynh Xuan Mai', 'Nguyen Quynh Suong'
+                'Nguyen Thi Kim Ha', 'Nguyen Huynh Xuan Mai', 'Nguyen Quynh Suong',
+                'Nguyen Van Lanh'
             ]
         })
 
@@ -69,7 +74,8 @@ class TestNameFunction:
             'M', 'M', 'M',
             'M', 'M', 'M',
             'M', 'F', 'F',
-            'F', 'F', 'F'
+            'F', 'F', 'F',
+            'M'
         ]
 
     @pt.mark.name2gender
@@ -90,4 +96,24 @@ class TestNameFunction:
 
         assert predicted_genders == [
             'M'
+        ]
+
+    @pt.mark.enrich_name
+    def test_enrich_name_basic_case(self):
+        """
+        Test whether the model can predict correctly non-accent names
+        """
+        name_data = pd.DataFrame.from_dict({
+            'name': [
+                'Vu Minh Quang'
+            ]
+        })
+
+        predicted_names = process_enrich(
+            name_data,
+            name_col='name'
+        )['final'].values.tolist()
+
+        assert predicted_names == [
+            'Vũ Minh Quang'
         ]

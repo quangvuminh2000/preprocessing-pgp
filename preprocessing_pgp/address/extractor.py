@@ -43,29 +43,39 @@ def extract_vi_address(
         The data with additional columns:
 
         * `cleaned_<address_col>` contains the unified and clean Vietnamese address
-        * `level 1`: city, countryside found
-        * `level 2`: district found
-        * `level 3`: ward found
+        * `level_1`: city, countryside found
+        * `best_level_1`: beautified city, countryside found
+        * `level_1_code`: code for city
+        * `level_2`: district found
+        * `best_level_2`: beautified district found
+        * `level_2_code`: code for district
+        * `level_3`: ward found
+        * `best_level_3`: beautified ward found
+        * `level_3_code`: code for ward
         * `remained address`: the remaining in the address
     """
 
+    # * Select only address column
+    orig_cols = data.columns
+    address_data = data[[address_col]]
+
     # * Removing na addresses
-    clean_address_df, na_address_df =\
+    clean_address_data, na_address_data =\
         extract_null_values(
-            data,
+            address_data,
             by_col=address_col
         )
 
     # * Cleanse the address
     start_time = time()
-    cleaned_data = clean_vi_address(clean_address_df, address_col)
+    cleaned_data = clean_vi_address(clean_address_data, address_col)
     clean_time = time() - start_time
     print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
 
     # * Feed the cleansed address to extract the level
     start_time = time()
-    if n_cores == 1: # Not using multi-processing
+    if n_cores == 1:  # Not using multi-processing
         extracted_data = extract_vi_address_by_level(
             cleaned_data,
             address_col=f'cleaned_{address_col}'
@@ -101,6 +111,24 @@ def extract_vi_address(
         f"Code generation takes {int(code_gen_time)//60}m{int(code_gen_time)%60}s")
 
     # * Concat to original data
-    final_address_df = pd.concat([generated_data, na_address_df])
+    final_data = pd.concat([generated_data, na_address_data])
 
-    return final_address_df
+    # * Concat with origin columns
+    new_cols = [
+        'level_1',
+        'best_level_1',
+        'level_1_code',
+        'level_2',
+        'best_level_2',
+        'level_2_code',
+        'level_3',
+        'best_level_3',
+        'level_3_code',
+        'remained_address'
+    ]
+    final_data = pd.concat([
+        data[orig_cols],
+        final_data[new_cols]
+    ], axis=1)
+
+    return final_data

@@ -210,7 +210,12 @@ def validate_clean_email(
     validated_data = data.copy()
 
     validated_data['is_email_valid'] = validated_data[email_col].apply(
-        validator.is_valid_email)
+        validator.is_valid_email
+    )
+    # * Check for autoemail
+    validated_data['is_autoemail'] = validated_data[email_col].apply(
+        validator.is_auto_email
+    )
 
     return validated_data
 
@@ -237,18 +242,22 @@ def process_validate_email(
     pd.DataFrame
         The data with additional columns:
         * `is_email_valid`: indicator for whether the email is valid or not
+        * `is_autoemail`: indicator for whether the email is autoemail or not
     """
+    # * Select only email column to continue
+    orig_cols = data.columns
+    email_data = data[[email_col]]
 
     # * Cleansing email
     start_time = time()
     if n_cores == 1:
         cleaned_data = clean_email(
-            data,
+            email_data,
             email_col=email_col
         )
     else:
         cleaned_data = parallelize_dataframe(
-            data,
+            email_data,
             clean_email,
             n_cores=n_cores,
             email_col=email_col
@@ -280,7 +289,7 @@ def process_validate_email(
         f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
     sep_display()
 
-    # * Get the domain of the email name
+    # * Get the domain of the email name & Check for private email
     validated_data['email_domain'] = validated_data[email_col].str.split('@').str[1]
     validated_data['private_email'] = validated_data['email_domain'].isin(PRIVATE_EMAIL_DOMAINS)
 
@@ -290,5 +299,14 @@ def process_validate_email(
 
     # * Filling na data to invalid email
     final_data['is_email_valid'].fillna(False, inplace=True)
+
+    # * Concat with the origin cols
+    new_cols = [
+        'is_email_valid',
+        'is_autoemail',
+        'email_domain',
+        'private_email'
+    ]
+    final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

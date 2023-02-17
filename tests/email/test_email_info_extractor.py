@@ -32,6 +32,7 @@ class TestEmailInfoExtraction:
                 'nguyenphamanhnguyen1996',
                 'nguyenhuynhhuy1997',
                 'lekhactrinh1992',
+                'doanhnghiepfpt1212'
             ]
         })
 
@@ -46,6 +47,7 @@ class TestEmailInfoExtraction:
             'Nguyen Pham Anh Nguyen',
             'Nguyen Huynh Huy',
             'Le Khac Trinh',
+            None
         ]
 
     @pt.mark.email2name

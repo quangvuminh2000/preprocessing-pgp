@@ -8,7 +8,10 @@ from unidecode import unidecode
 from flashtext import KeywordProcessor
 from tqdm import tqdm
 
-from preprocessing_pgp.name.const import BRIEF_NAME_DICT
+from preprocessing_pgp.name.const import (
+    BRIEF_NAME_DICT,
+    NAME_SPLIT_PATH
+)
 
 tqdm.pandas()
 
@@ -80,10 +83,10 @@ def BuildWordName(base_path):
 
 
 class NameProcess:
-    def __init__(self, base_path):
-        self.word_name = np.array(list(BuildWordName(base_path)))
-        self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(
-            base_path)
+    def __init__(self):
+
+        self.word_name = np.array(list(BuildWordName(NAME_SPLIT_PATH)))
+        self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(NAME_SPLIT_PATH)
         self.__generate_brief_keywords()
         self.brief_name_terms = list(
             self.brief_name_kws.get_all_keywords().keys())
@@ -120,6 +123,22 @@ class NameProcess:
         except:
             return -1
 
+    def check_name_valid(
+        self,
+        series: pd.Series
+    ) -> pd.Series:
+        de_data = series\
+            .apply(unidecode)\
+            .str.lower()\
+            .str.split(expand=True)
+
+        name_valid = de_data.apply(
+            lambda row:
+                row.isin(self.word_name).all()
+        )
+
+        return name_valid
+
     def CleanName(self, raw_name):
         try:
             process_name = raw_name.lower().strip()
@@ -152,12 +171,15 @@ class NameProcess:
             regex_pronoun1 = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b|\ba\.|\bc\.)\s+'
             regex_pronoun2 = r'^(?:\bnội\b|\bngoại\b)\s+'
             regex_pronoun3 = r'^(?:\bvo anh\b|\bvo a\b|\bvo chu\b|\bbo anh\b|\bme anh\b|\bem anh\b|\bbo a\b|\bban chi\b|\bbo chi\b|\bban\b|\bck\b|\bvk\b)\s+'
-
+            try:
+                pronouns = re.findall(regex_pronoun1, process_name)
+                pronoun = pronouns[0].strip()
+            except:
+                pronoun = None
             process_name = re.sub(regex_pronoun1, '', process_name)
             process_name = re.sub(regex_pronoun2, '', process_name)
             process_name = re.sub(regex_pronoun3, '', process_name)
             process_name = process_name.strip('-| |.|,|(|)')
-            # print(f'remove pronoun char: {process_name}')
 
             # defaut
             regex_default1 = r'người mua|người nhận|số ngoài danh bạ|nhập số điện thoại|giao hàng|test|[~!#$%^?]'
@@ -176,7 +198,7 @@ class NameProcess:
                 len(process_name.split(' '))
 #             print(pct_vn)
             process_name = None if ((pct_vn < 0.8) |
-                                    # (len(process_name) == 1) |
+                                    (len(process_name) == 1) |
                                     (len(process_name.split(' ')) > 6)
                                     ) else process_name
             # print(f'check VN char: {process_name}')
@@ -189,10 +211,9 @@ class NameProcess:
             # title
             process_name = process_name.title()
 
-            return process_name
-
+            return process_name, pronoun
         except:
-            return None
+            return None, None
 
     # SPLIT_NAME
 
@@ -520,11 +541,3 @@ class NameProcess:
         print(f"Unify runs in {unify_time/60} mins")
 
         return pre_names_n
-
-
-if __name__ == '__main__':
-    name = input("Please input the name: ")
-
-    name_process = NameProcess()
-    name = name_process.CleanName(name)
-    last, middle, first = name_process.SplitName(name)
