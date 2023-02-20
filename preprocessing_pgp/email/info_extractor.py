@@ -145,6 +145,7 @@ def process_extract_email_info(
         'private_email',
         'customer_type',
         'username_extracted',
+        'enrich_name',
         'gender_extracted',
         'yob_extracted',
         'phone_extracted',

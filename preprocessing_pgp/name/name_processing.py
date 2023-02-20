@@ -36,6 +36,8 @@ class NameProcessor:
         raw_name: str,
         enrich_name: str
     ) -> str:
+        if raw_name is None or enrich_name is None:
+            return None
         raw_components = raw_name.split(' ')
         enrich_components = enrich_name.split(' ')
 
@@ -71,14 +73,18 @@ class NameProcessor:
 
         # n_names = predicted_name.shape[0]
         # * Clean name before processing
-        name_df[[f'clean_{name_col}', 'pronoun']] =\
-            name_df[name_col].apply(self.name_process.CleanName).tolist()
+        name_df[f'clean_{name_col}'] =\
+            name_df[name_col].apply(
+                lambda name: self.name_process.CleanName(name)[0]
+            )
 
         # * Separate 1-word strange name
-        one_word_mask = name_df[f'clean_{name_col}'].str.split(' ').str.len() == 1
+        one_word_mask = name_df[f'clean_{name_col}'].str.split(
+            ' ').str.len() == 1
         strange_name_mask = (
             (one_word_mask) &
-            (~self.name_process.check_name_valid(name_df[one_word_mask][f'clean_{name_col}']))
+            (~self.name_process.check_name_valid(
+                name_df[one_word_mask][f'clean_{name_col}']))
         )
         one_word_strange_names = name_df[strange_name_mask]
         normal_names = name_df[~strange_name_mask]
@@ -135,8 +141,10 @@ class NameProcessor:
         # print(f"\nAVG rb time : {mean_rb_time}s")
 
         # print('\n\n')
-        out_cols = ['final', 'predict', 'last_name',
-                    'middle_name', 'first_name', 'pronoun']
+        out_cols = [
+            'final', 'predict',
+            'last_name', 'middle_name', 'first_name',
+        ]
 
         return predicted_name[[*orig_cols, *out_cols]]
 

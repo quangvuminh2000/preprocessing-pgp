@@ -105,15 +105,20 @@ class TestNameFunction:
         """
         name_data = pd.DataFrame.from_dict({
             'name': [
-                'Vu Minh Quang'
+                'Anh Vu Minh Quang',
+                'Nguyễn Thị Bích  Liên',
+                'Xiao San Ye'
             ]
         })
 
-        predicted_names = process_enrich(
+        predict_data = process_enrich(
             name_data,
             name_col='name'
-        )['final'].values.tolist()
+        )
+
+        predicted_names = predict_data['final'].values.tolist()
 
         assert predicted_names == [
-            'Vũ Minh Quang'
+            'Vũ Minh Quang',
+            'Nguyễn Thị Bích Liên'
         ]

@@ -255,6 +255,16 @@ def extract_valid_phone(
         'phone_convert'
     ].apply(detect_meaningful_phone)
 
+    # ? Add phone type
+    final_phones.loc[
+        final_phones['is_mobi'],
+        'phone_type'
+    ] = 'mobile phone'
+    final_phones.loc[
+        (~final_phones['is_mobi']) & (final_phones['is_phone_valid']),
+        'phone_type'
+    ] = 'landline'
+
     return final_phones
 
 
@@ -280,7 +290,7 @@ def process_convert_phone(
     pd.DataFrame
         The converted data with new columns:
         * `is_phone_valid`: indicator for valid phone
-        * `is_mobi`: indicator for valid mobi phone
+        * `phone_type`: the phone type (mobi or landline)
         * `phone_convert`: converted valid old phone type to new phone type
         * `phone_vendor`: the vendor type of the phone number
         * `tail_phone_type`: the tail phone number meanings
@@ -310,7 +320,7 @@ def process_convert_phone(
     # * Concat with original cols
     new_cols = [
         'is_phone_valid',
-        'is_mobi',
+        'phone_type',
         'phone_convert',
         'phone_vendor',
         'tail_phone_type'

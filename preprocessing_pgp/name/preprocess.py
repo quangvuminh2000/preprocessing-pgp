@@ -168,13 +168,32 @@ def preprocess_df(
     pd.DataFrame
         The finalized data with clean names
     """
-    basic_clean_names = data.copy()
-    basic_clean_names[f'clean_{name_col}'] = basic_clean_names[name_col].apply(
+    # *
+    other_cols = data.columns.difference([name_col])
+
+    # * Na names & filter out name col
+    na_data = data[data[name_col].isna()][[name_col]]
+    cleaned_data = data[data[name_col].notna()][[name_col]]
+
+    # * Cleansing data
+    cleaned_data[f'clean_{name_col}'] = cleaned_data[name_col].apply(
         basic_preprocess_name)
 
-    basic_clean_names = basic_clean_names.drop(columns=[name_col])
-    basic_clean_names = basic_clean_names.rename(columns={
+    cleaned_data = cleaned_data.drop(columns=[name_col])
+    cleaned_data = cleaned_data.rename(columns={
         f'clean_{name_col}': name_col
     })
 
-    return basic_clean_names
+    # * Concat na data
+    final_data = pd.concat([
+        cleaned_data,
+        na_data
+    ])
+
+    # * Concat with original cols
+    new_cols = [
+        name_col
+    ]
+    final_data = pd.concat([data[other_cols], final_data[new_cols]], axis=1)
+
+    return final_data

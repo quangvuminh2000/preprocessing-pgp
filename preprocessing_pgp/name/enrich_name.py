@@ -246,9 +246,7 @@ def process_enrich(
         'last_name',
         'middle_name',
         'first_name',
-        'pronoun'
     ]
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
-    print(final_data.columns)
 
     return final_data

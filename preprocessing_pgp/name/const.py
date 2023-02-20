@@ -120,9 +120,9 @@ REPLACE_HUMAN_REG_DICT = {
 }
 
 BRIEF_NAME_DICT = {
-    'nguyen': ['ng.', 'ng', 'n.', 'n'],
-    'do': ['d.', 'd'],
-    'pham': ['p.', 'p']
+    'nguyen': ['ng.', 'n.'],
+    'do': ['d.'],
+    'pham': ['p.']
 }
 
 # * NICKNAMES

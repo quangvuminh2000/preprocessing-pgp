@@ -38,12 +38,23 @@ def DifferenceProfile(now_df, yesterday_df):
 def UnifyFo(profile_fo, date_str='2022-07-01'):
     # VARIABLE
     dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None, 'none': None, 'Null': None, 'null': None, "''": None}
-    
+
+    profile_phones = profile_fo['phone']
+    profile_emails = profile_fo['email']
+
     # phone, email (valid)
-    valid_phone = pd.read_parquet(ROOT_PATH + '/utils/valid_phone_latest.parquet',
-                                  filesystem=hdfs, columns=['phone_raw', 'phone', 'is_phone_valid'])
-    valid_email = pd.read_parquet(ROOT_PATH + '/utils/valid_email_latest.parquet',
-                                  filesystem=hdfs, columns=['email_raw', 'email', 'is_email_valid'])
+    valid_phone = pd.read_parquet(
+        f'{ROOT_PATH}/utils/valid_phone_latest.parquet',
+        filters=[('phone_raw', 'in', profile_phones)],
+        filesystem=hdfs,
+        columns=['phone_raw', 'phone', 'is_phone_valid']
+    )
+    valid_email = pd.read_parquet(
+        f'{ROOT_PATH}/utils/valid_email_latest.parquet',
+        filters=[('email_raw', 'in', profile_emails)],
+        filesystem=hdfs,
+        columns=['email_raw', 'email', 'is_email_valid']
+    )
 
     # info
     profile_fo = profile_fo.rename(columns={'vne_id_fo': 'vne_id'})

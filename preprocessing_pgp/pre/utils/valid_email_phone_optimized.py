@@ -747,7 +747,7 @@ def ValidPhoneEmail(date_str):
         # new_check_emails = new_check_emails.merge(
         #     email_to_info, how='left', on=['email_raw'])
         #! Replace FormatName with process_extract_email_info
-        check_emails = FormatName(check_emails)
+        # check_emails = FormatName(check_emails)
         # new_check_emails.loc[new_check_emails['customer_type']
         #                      != 'Ca nhan', 'gender'] = None
         # new_check_emails['username_iscertain'] = new_check_emails['username_iscertain'].fillna(
@@ -762,12 +762,16 @@ def ValidPhoneEmail(date_str):
         #                         , 'username_iscertain'] = False
 #         latest_check_emails = FormatName(latest_check_emails)
 
-    # if not check_phones.empty:
+    if not check_phones.empty:
     #     check_phones = MetaDataPhone(check_phones)
-    #     check_phones['export_date'] = today
+        check_phones['export_date'] = today
+        check_phones.rename(columns={
+            'phone': 'phone_raw',
+            'phone_convert': 'phone',
+        })
 
-    #     latest_check_phones = pd.concat(
-    #         [latest_check_phones, check_phones], ignore_index=True)
+        latest_check_phones = pd.concat(
+            [latest_check_phones, check_phones], ignore_index=True)
 
     # SAVE (lastest)
 #     latest_check_emails.loc[latest_check_emails['customer_type'] != 'Ca nhan', 'gender'] = None
@@ -777,7 +781,7 @@ def ValidPhoneEmail(date_str):
     #     f'{utils_path}/valid_email_latest.parquet', filesystem=hdfs, index=False)
 
     latest_check_phones = latest_check_phones.drop_duplicates(
-        subset=['phone'], keep='first')
+        subset=['phone_raw'], keep='first')
     # latest_check_phones.to_parquet(
     #     f'{utils_path}/valid_phone_latest.parquet', filesystem=hdfs, index=False)
 

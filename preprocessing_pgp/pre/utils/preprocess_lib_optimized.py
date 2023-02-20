@@ -472,7 +472,10 @@ def Name2Gender(df, name_col='name'):
 # FILL ACCENT
 
 
-def UpdateDictName(date_str):
+def UpdateDictName(
+    date_str: str,
+    n_cores: int = 1
+):
     # LOAD DATA
     # dict name
     dict_name_cdp = pd.read_parquet(
@@ -492,33 +495,39 @@ def UpdateDictName(date_str):
                                     columns=['name', 'gender'])
 
         # filters
-        data_cttv = data_cttv[data_cttv['name'].notna()][[
-            'name']].drop_duplicates()
+        data_cttv = data_cttv[data_cttv['name'].notna()]\
+            .drop_duplicates(subset=['name'])
 
         # append
         raw_names = pd.concat([raw_names, data_cttv], ignore_index=True)
 
     #! Load data Email -- MAYBE DEPRECATED IN FUTURE
     name_email = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/sa/cdp/data/email_dict_latest.parquet',
-                                 filesystem=hdfs, filters=[('username_iscertain', '=', True)])[['username']]
+                                 filesystem=hdfs, filters=[('username_iscertain', '=', True)])[['username', 'gender']]
     name_email = name_email[name_email['username'].notna()].drop_duplicates()
-    name_email.columns = ['name']
+    name_email.rename(columns={
+        'username': 'name'
+    }, inplace=True)
     name_email = name_email[~name_email['name'].isin(raw_names['name'])]
 
     # Concat raw data
     raw_names = pd.concat([raw_names, name_email], ignore_index=True)
     raw_names = raw_names.drop_duplicates()
-    raw_names = raw_names[~raw_names['name'].isin(dict_name_cdp['full_name'])]
+    raw_names = raw_names[
+        ~raw_names['name'].isin(dict_name_cdp['raw_name'].unique())
+    ]
+    raw_names = raw_names[
+        ~raw_names['name'].isin(
+            dict_name_cdp['raw_name'].apply(unidecode).unique()
+        )
+    ]
 
     # * Change to enrich name in package
     pre_names = process_enrich(
         raw_names,
         name_col='name',
-        n_cores=1
+        n_cores=n_cores
     )
-    pre_names.rename(columns={
-        'final': 'enrich_name'
-    })
 
     # ? CHANGE BLOCK
     # # Filters: name accent and not accent
@@ -566,9 +575,26 @@ def UpdateDictName(date_str):
     # gender
     pre_names = process_predict_gender(
         pre_names,
-        name_col='enrich_name',
-        n_cores=1
+        name_col='final',
+        n_cores=n_cores
     )
+    # * Mask confused gender
+    confused_gender_mask = (pre_names['gender'].notna())\
+        & (pre_names['gender'] != pre_names['gender_predict'])
+    pre_names[
+        confused_gender_mask,
+        'is_confused'
+    ] = True
+    pre_names['is_confused'] = pre_names['is_confused'].fillna(False)
+
+    # * Mask fullname
+    fullname_mask = (pre_names['first_name'].notna())\
+        & (pre_names['last_name'].notna())
+    pre_names.loc[
+        fullname_mask,
+        'is_full_name'
+    ] = True
+    pre_names['is_full_name'] = pre_names['is_full_name'].fillna(False)
     # pre_names = Name2Gender(pre_names, name_col='full_name')
     # pre_names = pre_names.rename(columns={'predict_gender': 'gender'})
 
@@ -577,6 +603,11 @@ def UpdateDictName(date_str):
     dict_name_cdp = pd.concat([pre_names, dict_name_cdp], ignore_index=True)
     dict_name_cdp = dict_name_cdp.drop_duplicates(
         subset=['name'], keep='first')
+    dict_name_cdp.rename(columns={
+        'name': 'raw_name',
+        'final': 'enrich_name',
+        'gender': 'gender_raw'
+    }, inplace=True)
 
     # # Post-process
     # # split data
@@ -598,15 +629,26 @@ def UpdateDictName(date_str):
     # dict_name_cdp = dict_name_cdp.drop(columns=['unidecode_full_name'])
 
     # SAVE DEV
+    dict_name_cols = [
+        'raw_name', 'enrich_name',
+        'last_name', 'middle_name', 'first_name', 'is_full_name',
+        'customer_type',
+        'gender_raw', 'gender_predict', 'is_confused',
+        'd'
+    ]
+    dict_name_cdp = dict_name_cdp[dict_name_cols]
     dict_name_cdp.to_parquet(
         ROOT_PATH + '/utils/dict_name_latest.parquet', filesystem=hdfs, index=False)
 
     # SAVE PRODUCT
-    pro_dict_name_cdp = dict_name_cdp.drop(columns=['source', 'd'])
+    pro_dict_name_cdp = dict_name_cdp.drop(columns=['d'])
     pro_dict_name_cdp = pro_dict_name_cdp.drop_duplicates().sample(frac=1)
 
     pro_dict_name_cdp.to_parquet(
-        '/data/fpt/ftel/cads/dep_solution/sa/cdp/data/dict_name_latest.parquet', filesystem=hdfs, index=False)
+        '/data/fpt/ftel/cads/dep_solution/sa/cdp/data/dict_name_latest.parquet',
+        filesystem=hdfs,
+        index=False
+    )
 
 
 # ENRICH NAME

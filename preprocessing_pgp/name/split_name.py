@@ -86,7 +86,8 @@ class NameProcess:
     def __init__(self):
 
         self.word_name = np.array(list(BuildWordName(NAME_SPLIT_PATH)))
-        self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(NAME_SPLIT_PATH)
+        self.last_name_list1, self.last_name_list2, self.last_name_list3, self.last_name_list = BuildLastName(
+            NAME_SPLIT_PATH)
         self.__generate_brief_keywords()
         self.brief_name_terms = list(
             self.brief_name_kws.get_all_keywords().keys())
