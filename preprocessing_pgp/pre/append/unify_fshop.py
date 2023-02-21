@@ -195,7 +195,6 @@ def UnifyFshop(profile_fshop: pd.DataFrame):
     profile_fshop['is_full_name'] = profile_fshop['is_full_name'].fillna(False)
     profile_fshop = profile_fshop.drop(
         columns=['last_name', 'middle_name', 'first_name'])
-    profile_fshop['name'] = profile_fshop['name'].str.strip().str.title()
 
     # valid gender by model
     print(">>> Validating Gender")

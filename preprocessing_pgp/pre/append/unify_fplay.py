@@ -166,7 +166,6 @@ def UnifyFplay(profile_fplay):
     profile_fplay['is_full_name'] = profile_fplay['is_full_name'].fillna(False)
     profile_fplay = profile_fplay.drop(
         columns=['last_name', 'middle_name', 'first_name'])
-    profile_fplay['name'] = profile_fplay['name'].str.strip().str.title()
 
     # add info
     print(">>> Adding Temp Info")

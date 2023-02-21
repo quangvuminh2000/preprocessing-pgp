@@ -52,7 +52,7 @@ def UnifySendo(profile_sendo):
         'name': 'raw_name'
     }, inplace=True)
 
-    # * Loadding dictionary
+    # * Loading dictionary
     print(">>> Loading dictionaries")
     profile_phones = profile_sendo['phone_raw'].drop_duplicates().dropna()
     profile_emails = profile_sendo['email_raw'].drop_duplicates().dropna()
@@ -150,7 +150,6 @@ def UnifySendo(profile_sendo):
     profile_sendo.loc[profile_sendo['last_name'].notna() & profile_sendo['first_name'].notna(), 'is_full_name'] = True
     profile_sendo['is_full_name'] = profile_sendo['is_full_name'].fillna(False)
     profile_sendo = profile_sendo.drop(columns=['last_name', 'middle_name', 'first_name'])
-    profile_sendo['name'] = profile_sendo['name'].str.strip().str.title()
 
     # spare unit_address
     print(">>> Processing Address")

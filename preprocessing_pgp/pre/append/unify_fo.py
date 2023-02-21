@@ -59,7 +59,7 @@ def UnifyFo(profile_fo: pd.DataFrame):
         'name': 'raw_name'
     }, inplace=True)
 
-    # * Loadding dictionary
+    # * Loading dictionary
     print(">>> Loading dictionaries")
     profile_phones = profile_fo['phone_raw'].drop_duplicates().dropna()
     profile_emails = profile_fo['email_raw'].drop_duplicates().dropna()

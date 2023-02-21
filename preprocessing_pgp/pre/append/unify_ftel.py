@@ -192,7 +192,6 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
     profile_ftel['is_full_name'] = profile_ftel['is_full_name'].fillna(False)
     profile_ftel = profile_ftel.drop(
         columns=['last_name', 'middle_name', 'first_name'])
-    profile_ftel['name'] = profile_ftel['name'].str.strip().str.title()
 
     # Transfering model gender
     print(">>> Transfering Model Gender")

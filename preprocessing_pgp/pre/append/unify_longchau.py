@@ -64,7 +64,7 @@ def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
         'name': 'raw_name'
     }, inplace=True)
 
-    # * Loadding dictionary
+    # * Loading dictionary
     print(">>> Loading dictionaries")
     profile_phones = profile_longchau['phone_raw'].drop_duplicates().dropna()
     profile_emails = profile_longchau['email_raw'].drop_duplicates().dropna()
