@@ -14,6 +14,10 @@ import os
 import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
+
+from preprocessing_pgp.name.preprocess import basic_preprocess_name
+from preprocessing_pgp.name.split_name import NameProcess
+
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
 os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
@@ -35,67 +39,121 @@ def DifferenceProfile(now_df, yesterday_df):
     return difference_df
 
 # function unify profile
-def UnifySendo(profile_sendo, date_str='2022-07-01'):
-    # VARIABLE
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None, 'none': None, 'Null': None, 'null': None, "''": None}
-    dict_location = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/dict_location.parquet', 
-                                filesystem=hdfs)
+def UnifySendo(profile_sendo):
+    # * Cleansing
+    print(">>> Cleansing profile")
+    condition_name = profile_sendo['name'].notna()
+    profile_sendo.loc[condition_name, 'name'] =\
+        profile_sendo.loc[condition_name, 'name']\
+        .apply(basic_preprocess_name)
+    profile_sendo.rename(columns={
+        'email': 'email_raw',
+        'phone': 'phone_raw',
+        'name': 'raw_name'
+    }, inplace=True)
+
+    # * Loadding dictionary
+    print(">>> Loading dictionaries")
+    profile_phones = profile_sendo['phone_raw'].drop_duplicates().dropna()
+    profile_emails = profile_sendo['email_raw'].drop_duplicates().dropna()
+    profile_names = profile_sendo['raw_name'].drop_duplicates().dropna()
+
+    dict_location = pd.read_parquet(
+        '/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/dict_location.parquet',
+        filesystem=hdfs
+    )
 
     # phone, email (valid)
-    valid_phone = pd.read_parquet(ROOT_PATH + '/utils/valid_phone_latest.parquet',
-                                  filesystem=hdfs, columns=['phone_raw', 'phone', 'is_phone_valid'])
-    valid_email = pd.read_parquet(ROOT_PATH + '/utils/valid_email_latest.parquet',
-                                  filesystem=hdfs, columns=['email_raw', 'email', 'is_email_valid'])
+    valid_phone = pd.read_parquet(
+        f'{ROOT_PATH}/utils/valid_phone_latest.parquet',
+        filters=[('phone_raw', 'in', profile_phones)],
+        filesystem=hdfs,
+        columns=['phone_raw', 'phone', 'is_phone_valid']
+    )
+    valid_email = pd.read_parquet(
+        f'{ROOT_PATH}/utils/valid_email_latest.parquet',
+        filters=[('email_raw', 'in', profile_emails)],
+        filesystem=hdfs,
+        columns=['email_raw', 'email', 'is_email_valid']
+    )
+    dict_name_lst = pd.read_parquet(
+        f'{ROOT_PATH}/utils/dict_name_latest_new.parquet',
+        filters=[('raw_name', 'in', profile_names)],
+        filesystem=hdfs,
+        columns=[
+            'raw_name', 'enrich_name',
+            'last_name', 'middle_name', 'first_name',
+            'gender', 'customer_type'
+        ]
+    ).rename(columns={
+        'gender': 'gender_enrich'
+    })
 
     # merge get phone, email (valid)
-    profile_sendo = profile_sendo.rename(columns={'phone': 'phone_raw', 'email': 'email_raw'})
-    profile_sendo = profile_sendo.merge(valid_phone, how='left', on=['phone_raw'])
-    profile_sendo = profile_sendo.merge(valid_email, how='left', on=['email_raw'])
-    
-    # customer_type
-    condition_name = profile_sendo['name'].notna()
-    profile_sendo.loc[condition_name, 'name'] = profile_sendo.loc[condition_name, 'name'].apply(clean_name_cdp)
-    
-    name_sendo = profile_sendo[profile_sendo['name'].notna()][['name']].copy().drop_duplicates()
-    name_sendo = preprocess_lib.ExtractCustomerType(name_sendo)
-    profile_sendo = profile_sendo.merge(name_sendo, how='left', on=['name'])
-    profile_sendo.loc[profile_sendo['customer_type'].isna(), 'customer_type'] = None
-#     profile_sendo.loc[profile_sendo['customer_type_detail'].isna(), 'customer_type_detail'] = None
+    print(">>> Merging phone, email, name")
+    profile_sendo = pd.merge(
+        profile_sendo.set_index('phone_raw'),
+        valid_phone.set_index('phone_raw'),
+        left_index=True, right_index=True,
+        how='left',
+        sort=False
+    ).reset_index(drop=False)
+
+    profile_sendo = pd.merge(
+        profile_sendo.set_index('email_raw'),
+        valid_email.set_index('email_raw'),
+        left_index=True, right_index=True,
+        how='left',
+        sort=False
+    ).reset_index(drop=False)
+
+    profile_sendo = pd.merge(
+        profile_sendo.set_index('raw_name'),
+        dict_name_lst.set_index('raw_name'),
+        left_index=True, right_index=True,
+        how='left',
+        sort=False
+    ).rename(columns={
+        'enrich_name': 'name'
+    }).reset_index(drop=False)
 
     # drop name is username_email
+    print(">>> Extra Cleansing Name")
     profile_sendo['username_email'] = profile_sendo['email'].str.split('@').str[0]
     profile_sendo.loc[profile_sendo['name'] == profile_sendo['username_email'], 'name'] = None
     profile_sendo = profile_sendo.drop(columns=['username_email'])
 
-    # clean name
-    condition_name = profile_sendo['customer_type'].isna() & profile_sendo['name'].notna()
+    # clean name, extract pronoun
+    name_process = NameProcess()
+    condition_name = (profile_sendo['customer_type'] == 'customer')\
+        & (profile_sendo['name'].notna())
+
     profile_sendo.loc[
         condition_name,
         ['clean_name', 'pronoun']
-    ] = profile_sendo.loc[condition_name, ].apply(lambda row: preprocess_lib.CleanName(row['name'], row['email']), axis=1).tolist()
-    profile_sendo.loc[profile_sendo['customer_type'].isna() , 'name'] = profile_sendo['clean_name']
+    ] = profile_sendo.loc[condition_name, 'name']\
+        .apply(name_process.CleanName).tolist()
+
+    profile_sendo.loc[
+        profile_sendo['customer_type'] == 'customer',
+        'name'
+    ] = profile_sendo['clean_name']
     profile_sendo = profile_sendo.drop(columns=['clean_name'])
-    
+
     # skip pronoun
     profile_sendo['name'] = profile_sendo['name'].str.strip().str.title()
     skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba', 'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
     profile_sendo.loc[profile_sendo['name'].isin(skip_names), 'name'] = None
 
-    # format name
-    with mp.Pool(8) as pool:
-        profile_sendo[['last_name', 'middle_name', 'first_name']] = pool.map(preprocess_lib.SplitName, profile_sendo['name'])
-    columns = ['last_name', 'middle_name', 'first_name']
-    profile_sendo.loc[condition_name, 'name'] = profile_sendo[columns].fillna('').agg(' '.join, axis=1).str.replace('(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
-    profile_sendo['name'] = profile_sendo['name'].str.strip().replace(dict_trash)
-    profile_sendo.loc[profile_sendo['name'].isna(), 'name'] = None
-
     # is full name
+    print(">>> Checking Full Name")
     profile_sendo.loc[profile_sendo['last_name'].notna() & profile_sendo['first_name'].notna(), 'is_full_name'] = True
     profile_sendo['is_full_name'] = profile_sendo['is_full_name'].fillna(False)
     profile_sendo = profile_sendo.drop(columns=['last_name', 'middle_name', 'first_name'])
     profile_sendo['name'] = profile_sendo['name'].str.strip().str.title()
 
-    ## spare unit_address
+    # spare unit_address
+    print(">>> Processing Address")
     def SparseUnitAddress(address, ward, district, city):
         result = address.title()
 
@@ -205,7 +263,13 @@ def UnifySendo(profile_sendo, date_str='2022-07-01'):
     norm_sendo_city = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/ftel_provinces.parquet', 
                                       filesystem=hdfs)
     norm_sendo_city.columns = ['city', 'norm_city']
-    profile_sendo = profile_sendo.merge(norm_sendo_city, how='left', on='city')
+    profile_sendo = pd.merge(
+        profile_sendo.set_index('city'),
+        norm_sendo_city.set_index('city'),
+        left_index=True, right_index=True,
+        how='left',
+        sort=False
+    ).reset_index()
     profile_sendo['city'] = profile_sendo['norm_city']
     profile_sendo = profile_sendo.drop(columns=['norm_city'])
 
@@ -311,27 +375,33 @@ def UnifySendo(profile_sendo, date_str='2022-07-01'):
     profile_sendo['address'] = profile_sendo[columns].fillna('').agg(', '.join, axis=1).str.replace('(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
 
     # add info
-    profile_sendo['gender'] = None
+    print(">>> Adding Temp Info")
     profile_sendo['birthday'] = None
-    columns = ['id_sendo', 'phone_raw', 'phone', 'is_phone_valid', 
-               'email_raw', 'email', 'is_email_valid', 
-               'name', 'pronoun', 'is_full_name', 'gender', 
+    columns = ['id_sendo', 'phone_raw', 'phone', 'is_phone_valid',
+               'email_raw', 'email', 'is_email_valid',
+               'name', 'pronoun', 'is_full_name', 'gender',
                'birthday', 'customer_type', # 'customer_type_detail',
                'address', 'unit_address', 'ward', 'district', 'city', 'source']
     profile_sendo = profile_sendo[columns]
 
     # Fill 'Ca nhan'
     profile_sendo.loc[profile_sendo['name'].notna() & profile_sendo['customer_type'].isna(), 'customer_type'] = 'Ca nhan'
-    
+
     # Create id_phone_sendo
-    profile_sendo.loc[profile_sendo['id_sendo'].notna() & 
-                  profile_sendo['phone'].notna(), 'id_phone_sendo'] = profile_sendo['id_sendo'] + '-' + profile_sendo['phone']
-    profile_sendo.loc[profile_sendo['id_sendo'].notna() & 
-                      profile_sendo['phone'].isna(), 'id_phone_sendo'] = profile_sendo['id_sendo']
+    profile_sendo.loc[
+        (profile_sendo['id_sendo'].notna())
+        & (profile_sendo['phone'].notna()),
+        'id_phone_sendo'
+    ] = profile_sendo['id_sendo'] + '-' + profile_sendo['phone']
+    profile_sendo.loc[
+        (profile_sendo['id_sendo'].notna())
+        & (profile_sendo['phone'].isna()),
+        'id_phone_sendo'
+    ] = profile_sendo['id_sendo']
 
     # return
     return profile_sendo
-    
+
 # function update profile (unify)
 def UpdateUnifySendo(now_str):
     # VARIABLES
@@ -341,63 +411,57 @@ def UpdateUnifySendo(now_str):
     yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
 
     # load profile (yesterday, now)
+    print(">>> Loading today and yesterday profile")
     info_columns = ['id_sendo', 'phone', 'email', 'name',
                     'address', 'ward', 'district', 'city', 'source']
-    now_profile = pd.read_parquet(f'{raw_path}/{f_group}.parquet/d={now_str}', 
-                                  filesystem=hdfs, columns=info_columns).drop_duplicates()
-    yesterday_profile = pd.read_parquet(f'{raw_path}/{f_group}.parquet/d={yesterday_str}', 
-                                        filesystem=hdfs, columns=info_columns).drop_duplicates()
-    
+    now_profile = pd.read_parquet(
+        f'{raw_path}/{f_group}.parquet/d={now_str}',
+        filesystem=hdfs, columns=info_columns
+    )
+    yesterday_profile = pd.read_parquet(
+        f'{raw_path}/{f_group}.parquet/d={yesterday_str}',
+        filesystem=hdfs, columns=info_columns
+    )
+
     # get profile change/new
+    print(">>> Filtering new profile")
     difference_profile = DifferenceProfile(now_profile, yesterday_profile)
-    
+
     # update profile
-    profile_unify = pd.DataFrame()
-    if difference_profile.empty:
-        profile_unify = pd.read_parquet(f'{unify_path}/{f_group}.parquet/d={yesterday_str}', filesystem=hdfs).drop_duplicates()
-    else:
+    profile_unify = pd.read_parquet(
+        f'{unify_path}/{f_group}.parquet/d={yesterday_str}',
+        filesystem=hdfs
+    )
+    if not difference_profile.empty:
         # get profile unify (old + new)
-        old_profile_unify = pd.read_parquet(f'{unify_path}/{f_group}.parquet/d={yesterday_str}', filesystem=hdfs)
-        new_profile_unify = UnifySendo(difference_profile, date_str=yesterday_str)
+        new_profile_unify = UnifySendo(difference_profile)
 
         # synthetic profile
-        profile_unify = new_profile_unify.append(old_profile_unify, ignore_index=True)
-
-    # update valid: phone & email
-    profile_unify = profile_unify.drop(columns=['phone', 'email', 'is_phone_valid', 'is_email_valid', 'id_phone_sendo'])
-
-    valid_phone = pd.read_parquet(ROOT_PATH + '/utils/valid_phone_latest.parquet',
-                                  filesystem=hdfs, columns=['phone_raw', 'phone', 'is_phone_valid'])
-    valid_email = pd.read_parquet(ROOT_PATH + '/utils/valid_email_latest.parquet',
-                                  filesystem=hdfs, columns=['email_raw', 'email', 'is_email_valid'])
-
-    profile_unify = profile_unify.merge(valid_phone, how='left', on=['phone_raw'])
-    profile_unify = profile_unify.merge(valid_email, how='left', on=['email_raw'])
-    profile_unify['is_phone_valid'] = profile_unify['is_phone_valid'].fillna(False)
-    profile_unify['is_email_valid'] = profile_unify['is_email_valid'].fillna(False)
-
-    # create contract_phone_ftel
-    profile_unify.loc[profile_unify['id_sendo'].notna() & 
-                      profile_unify['phone'].notna(), 'id_phone_sendo'] = profile_unify['id_sendo'] + '-' + profile_unify['phone']
-    profile_unify.loc[profile_unify['id_sendo'].notna() & 
-                      profile_unify['phone'].isna(), 'id_phone_sendo'] = profile_unify['id_sendo']
+        profile_unify = pd.concat(
+            [new_profile_unify, profile_unify],
+            ignore_index=True
+        )
 
     # arrange columns
-    columns = ['id_sendo', 'phone_raw', 'phone', 'is_phone_valid', 
-               'email_raw', 'email', 'is_email_valid', 
-               'name', 'pronoun', 'is_full_name', 'gender', 
+    print(">>> Re-Arranging Columns")
+    columns = ['id_sendo', 'phone_raw', 'phone', 'is_phone_valid',
+               'email_raw', 'email', 'is_email_valid',
+               'name', 'pronoun', 'is_full_name', 'gender',
                'birthday', 'customer_type', # 'customer_type_detail',
                'address', 'unit_address', 'ward', 'district', 'city', 'source', 'id_phone_sendo']
-    
-    profile_unify = profile_unify[columns].copy()
+
+    profile_unify = profile_unify[columns]
+    profile_unify['is_phone_valid'] = profile_unify['is_phone_valid'].fillna(False)
+    profile_unify['is_email_valid'] = profile_unify['is_email_valid'].fillna(False)
     profile_unify = profile_unify.drop_duplicates(subset=['id_sendo', 'phone_raw', 'email_raw'], keep='first')
-        
+
     # save
     profile_unify['d'] = now_str
-    profile_unify.drop_duplicates().to_parquet(f'{unify_path}/{f_group}.parquet', 
-                                               filesystem=hdfs,
-                                               index=False,
-                                               partition_cols='d')
+    profile_unify.to_parquet(
+        f'{unify_path}/{f_group}.parquet',
+        filesystem=hdfs, index=False,
+        partition_cols='d'
+    )
 
 if __name__ == '__main__':
     
