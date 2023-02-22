@@ -17,8 +17,7 @@ import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
 
-from preprocessing_pgp.name.preprocess import basic_preprocess_name
-from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
@@ -29,7 +28,13 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
+from utils.filter_profile import get_difference_data
+from utils.preprocess_profile import (
+    cleansing_profile_name,
+    remove_same_username_email,
+    extracting_pronoun_from_name
+)
 
 sys.path.append(
     '/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/fill_accent_name/scripts')
@@ -39,25 +44,29 @@ ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 # function get profile change/new
 
 
-def DifferenceProfile(now_df, yesterday_df):
-    difference_df = now_df[~now_df.apply(tuple, 1).isin(
-        yesterday_df.apply(tuple, 1))].copy()
-    return difference_df
+# def DifferenceProfile(now_df, yesterday_df):
+#     difference_df = now_df[~now_df.apply(tuple, 1).isin(
+#         yesterday_df.apply(tuple, 1))].copy()
+#     return difference_df
 
 # function unify profile
 
 
-def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
+def UnifyLongChau(
+    profile_longchau: pd.DataFrame,
+    n_cores: int = 1
+):
     # VARIABLE
     dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
                   'none': None, 'Null': None, 'null': None, "''": None}
 
     # * Cleansing
     print(">>> Cleansing profile")
-    condition_name = profile_longchau['name'].notna()
-    profile_longchau.loc[condition_name, 'name'] =\
-        profile_longchau.loc[condition_name, 'name']\
-        .apply(basic_preprocess_name)
+    profile_longchau = cleansing_profile_name(
+        profile_longchau,
+        name_col='name',
+        n_cores=n_cores
+    )
     profile_longchau.rename(columns={
         'email': 'email_raw',
         'phone': 'phone_raw',
@@ -90,7 +99,7 @@ def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
         columns=[
             'raw_name', 'enrich_name',
             'last_name', 'middle_name', 'first_name',
-            'gender', 'customer_type'
+            'gender'
         ]
     ).rename(columns={
         'gender': 'gender_enrich'
@@ -142,8 +151,25 @@ def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
         'enrich_name': 'name'
     }).reset_index(drop=False)
 
+    # Refilling info
+    cant_predict_name_mask = profile_longchau['name'].isna()
+    profile_longchau.loc[
+        cant_predict_name_mask,
+        'name'
+    ] = profile_longchau.loc[
+        cant_predict_name_mask,
+        'raw_name'
+    ]
+    profile_longchau['name'] = profile_longchau['name'].replace(dict_trash)
+
     # customer_type
     print(">>> Processing Customer Type")
+    profile_longchau = process_extract_name_type(
+        profile_longchau,
+        name_col='name',
+        n_cores=n_cores,
+        logging_info=False
+    )
     profile_longchau['customer_type'] = profile_longchau['customer_type'].map({
         'customer': 'Ca nhan',
         'company': 'Cong ty',
@@ -154,40 +180,26 @@ def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
     profile_longchau.loc[
         profile_longchau['customer_type'] == 'Ca nhan',
         'customer_type'
-    ] = profile_longchau['customer_type_fshop']
-    profile_longchau = profile_longchau.drop(columns=['customer_type_fshop'])
+    ] = profile_longchau['customer_type_longchau']
+    profile_longchau = profile_longchau.drop(columns=['customer_type_longchau'])
 
     # drop name is username_email
     print(">>> Extra Cleansing Name")
-    profile_longchau['username_email'] = profile_longchau['email'].str.split(
-        '@').str[0]
-    profile_longchau.loc[profile_longchau['name'] ==
-                         profile_longchau['username_email'], 'name'] = None
-    profile_longchau = profile_longchau.drop(columns=['username_email'])
+    profile_longchau = remove_same_username_email(
+        profile_longchau,
+        name_col='name',
+        email_col='email'
+    )
 
     # clean name
-    name_process = NameProcess()
     condition_name =\
         (profile_longchau['customer_type'].isin([None, 'Ca nhan', np.nan]))\
         & (profile_longchau['name'].notna())
-    profile_longchau.loc[
-        condition_name,
-        ['clean_name', 'pronoun']
-    ] = profile_longchau.loc[condition_name, 'name']\
-        .apply(name_process.CleanName).tolist()
-
-    profile_longchau.loc[
-        profile_longchau['customer_type'].isin([None, 'Ca nhan', np.nan]),
-        'name'
-    ] = profile_longchau['clean_name']
-    profile_longchau = profile_longchau.drop(columns=['clean_name'])
-
-    # skip pronoun
-    profile_longchau['name'] = profile_longchau['name'].str.strip().str.title()
-    skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba',
-                  'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
-    profile_longchau.loc[profile_longchau['name'].isin(
-        skip_names), 'name'] = None
+    profile_longchau = extracting_pronoun_from_name(
+        profile_longchau,
+        condition=condition_name,
+        name_col='name'
+    )
 
     # is full name
     print(">>> Checking Full Name")
@@ -425,7 +437,10 @@ def UnifyLongChau(profile_longchau: pd.DataFrame, date_str='2022-07-01'):
 # function update profile (unify)
 
 
-def UpdateUnifyLongChau(now_str):
+def UpdateUnifyLongChau(
+    now_str:str,
+    n_cores:int = 1
+):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
     unify_path = ROOT_PATH + '/pre'
@@ -448,7 +463,8 @@ def UpdateUnifyLongChau(now_str):
 
     # get profile change/new
     print(">>> Filtering new profile")
-    difference_profile = DifferenceProfile(now_profile, yesterday_profile)
+    difference_profile = get_difference_data(now_profile, yesterday_profile)
+    print(f"Number of new profile {difference_profile.shape}")
 
     # update profile
     profile_unify = pd.read_parquet(
@@ -459,8 +475,7 @@ def UpdateUnifyLongChau(now_str):
         # get profile unify (old + new)
         old_profile_unify = pd.read_parquet(
             f'{unify_path}/{f_group}.parquet/d={yesterday_str}', filesystem=hdfs)
-        new_profile_unify = UnifyLongChau(
-            difference_profile, date_str=yesterday_str)
+        new_profile_unify = UnifyLongChau(difference_profile, n_cores=n_cores)
 
         # synthetic profile
         profile_unify = new_profile_unify.append(

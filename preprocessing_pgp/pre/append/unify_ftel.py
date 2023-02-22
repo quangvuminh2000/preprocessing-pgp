@@ -16,8 +16,7 @@ import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
 
-from preprocessing_pgp.name.preprocess import basic_preprocess_name
-from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
@@ -28,25 +27,31 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
-
-sys.path.append(
-    '/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/fill_accent_name/scripts')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
+from utils.preprocess_profile import (
+    cleansing_profile_name,
+    remove_same_username_email,
+    extracting_pronoun_from_name
+)
+from utils.filter_profile import get_difference_data
 
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 
 # function get profile change/new
 
 
-def DifferenceProfile(now_df, yesterday_df):
-    difference_df = now_df[~now_df.apply(tuple, 1).isin(
-        yesterday_df.apply(tuple, 1))].copy()
-    return difference_df
+# def DifferenceProfile(now_df, yesterday_df):
+#     difference_df = now_df[~now_df.apply(tuple, 1).isin(
+#         yesterday_df.apply(tuple, 1))].copy()
+#     return difference_df
 
 # function unify profile
 
 
-def UnifyFtel(profile_ftel: pd.DataFrame):
+def UnifyFtel(
+    profile_ftel: pd.DataFrame,
+    n_cores: int = 1
+):
     # VARIABLE
     dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
                   'none': None, 'Null': None, 'null': None, "''": None}
@@ -54,10 +59,11 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
                                     filesystem=hdfs)
 
     print(">>> Cleansing profile")
-    condition_name = profile_ftel['name'].notna()
-    profile_ftel.loc[condition_name, 'name'] =\
-        profile_ftel.loc[condition_name, 'name']\
-        .apply(basic_preprocess_name)
+    profile_ftel = cleansing_profile_name(
+        profile_ftel,
+        name_col='name',
+        n_cores=n_cores
+    )
     profile_ftel.rename(columns={
         'email': 'email_raw',
         'phone': 'phone_raw',
@@ -90,11 +96,9 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
         columns=[
             'raw_name', 'enrich_name',
             'last_name', 'middle_name', 'first_name',
-            'gender', 'customer_type'
+            'gender'
         ]
-    ).rename(columns={
-        'gender': 'gender_enrich'
-    })
+    )
 
     # info
     print(">>> Processing Info")
@@ -128,6 +132,17 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
         'enrich_name': 'name'
     }).reset_index(drop=False)
 
+    # Refilling info
+    cant_predict_name_mask = profile_ftel['name'].isna()
+    profile_ftel.loc[
+        cant_predict_name_mask,
+        'name'
+    ] = profile_ftel.loc[
+        cant_predict_name_mask,
+        'raw_name'
+    ]
+    profile_ftel['name'] = profile_ftel['name'].replace(dict_trash)
+
     # load datapay => customer type
     # ds_contract = pd.read_parquet('/data/fpt/ftel/isc/dwh/ds_contract.parquet',
     #                               columns=['contract', 'net_customer_type'],
@@ -152,38 +167,32 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
             errors='coerce'
     ).dt.strftime('%d/%m/%Y')
 
+    # customer type from raw
+    print(">>> Extracting customer type")
+    profile_ftel = process_extract_name_type(
+        profile_ftel,
+        name_col='name',
+        n_cores=n_cores,
+        logging_info=False
+    )
+
     # drop name is username_email
     print(">>> Extra Cleansing Name")
-    profile_ftel['username_email'] = profile_ftel['email'].str.split(
-        '@').str[0]
-    profile_ftel.loc[profile_ftel['name'] ==
-                     profile_ftel['username_email'], 'name'] = None
-    profile_ftel = profile_ftel.drop(columns=['username_email'])
+
+    profile_ftel = remove_same_username_email(
+        profile_ftel,
+        name_col='name',
+        email_col='email'
+    )
 
     # clean name
-    name_process = NameProcess()
     condition_name = (profile_ftel['customer_type'] == 'customer')\
         & (profile_ftel['name'].notna())
-
-    profile_ftel.loc[
-        condition_name,
-        ['clean_name', 'pronoun']
-    ] = profile_ftel.loc[
-        condition_name,
-        'name'
-    ].apply(name_process.CleanName).tolist()
-
-    profile_ftel.loc[
-        profile_ftel['customer_type'] == 'customer',
-        'name'
-    ] = profile_ftel['clean_name']
-    profile_ftel = profile_ftel.drop(columns=['clean_name'])
-
-    # skip pronoun
-    profile_ftel['name'] = profile_ftel['name'].str.strip().str.title()
-    skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba',
-                  'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
-    profile_ftel.loc[profile_ftel['name'].isin(skip_names), 'name'] = None
+    profile_ftel = extracting_pronoun_from_name(
+        profile_ftel,
+        condition=condition_name,
+        name_col='name',
+    )
 
     # is full name
     print(">>> Checking Full Name")
@@ -192,20 +201,6 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
     profile_ftel['is_full_name'] = profile_ftel['is_full_name'].fillna(False)
     profile_ftel = profile_ftel.drop(
         columns=['last_name', 'middle_name', 'first_name'])
-
-    # Transfering model gender
-    print(">>> Transfering Model Gender")
-    profile_ftel.loc[
-        profile_ftel['customer_type'] != 'customer',
-        'gender'
-    ] = None
-    profile_ftel.loc[
-        profile_ftel['gender_enrich'].notna(),
-        'gender'
-    ] = profile_ftel.loc[
-        profile_ftel['gender_enrich'].notna(),
-        'gender_enrich'
-    ]
 
     # unify location
     print(">>> Processing Address")
@@ -508,13 +503,32 @@ def UnifyFtel(profile_ftel: pd.DataFrame):
         'contract_phone_ftel'
     ] = profile_ftel['contract_ftel']
 
+    # Map back customer type
+    profile_ftel['customer_type'] =\
+        profile_ftel['customer_type'].map({
+            'customer': 'Ca nhan',
+            'company': 'Cong ty',
+            'medical': 'Benh vien - Phong kham',
+            'edu': 'Giao duc',
+            'biz': 'Ho kinh doanh'
+        })
+    # Fill 'Ca nhan'
+    profile_ftel.loc[
+        (profile_ftel['name'].notna())
+        & (profile_ftel['customer_type'].isna()),
+        'customer_type'
+    ] = 'Ca nhan'
+
     # return
     return profile_ftel
 
 # function update profile (unify)
 
 
-def UpdateUnifyFtel(now_str):
+def UpdateUnifyFtel(
+    now_str: str,
+    n_cores: int = 1
+):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
     unify_path = ROOT_PATH + '/pre'
@@ -537,7 +551,8 @@ def UpdateUnifyFtel(now_str):
 
     # get profile change/new
     print(">>> Filtering new profile")
-    difference_profile = DifferenceProfile(now_profile, yesterday_profile)
+    difference_profile = get_difference_data(now_profile, yesterday_profile)
+    print(f"Number of new profile {difference_profile.shape}")
 
     # update profile
     profile_unify = pd.read_parquet(
@@ -546,7 +561,7 @@ def UpdateUnifyFtel(now_str):
     )
     if not difference_profile.empty:
         # get profile unify (old + new)
-        new_profile_unify = UnifyFtel(difference_profile)
+        new_profile_unify = UnifyFtel(difference_profile, n_cores=n_cores)
 
         # synthetic profile
         profile_unify = pd.concat(
@@ -555,6 +570,7 @@ def UpdateUnifyFtel(now_str):
         )
 
     # arrange columns
+    print(">>> Re-Arranging Columns")
     columns = [
         'contract_ftel', 'phone_raw', 'phone', 'is_phone_valid',
         'email_raw', 'email', 'is_email_valid',
@@ -582,5 +598,5 @@ def UpdateUnifyFtel(now_str):
 
 if __name__ == '__main__':
 
-    now_str = sys.argv[1]
-    UpdateUnifyFtel(now_str)
+    day_str = sys.argv[1]
+    UpdateUnifyFtel(day_str)

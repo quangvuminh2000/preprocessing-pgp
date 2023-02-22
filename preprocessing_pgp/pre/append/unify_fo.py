@@ -16,8 +16,7 @@ import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
 
-from preprocessing_pgp.name.preprocess import basic_preprocess_name
-from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
@@ -28,31 +27,40 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
-
-sys.path.append(
-    '/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/fill_accent_name/scripts')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
+from utils.preprocess_profile import (
+    remove_same_username_email,
+    cleansing_profile_name,
+    extracting_pronoun_from_name
+)
+from utils.filter_profile import get_difference_data
 
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 
 # function get profile change/new
 
 
-def DifferenceProfile(now_df, yesterday_df):
-    difference_df = now_df[~now_df.apply(tuple, 1).isin(
-        yesterday_df.apply(tuple, 1))].copy()
-    return difference_df
+# def DifferenceProfile(now_df, yesterday_df):
+#     difference_df = now_df[~now_df.apply(tuple, 1).isin(
+#         yesterday_df.apply(tuple, 1))].copy()
+#     return difference_df
 
 # function unify profile
 
 
-def UnifyFo(profile_fo: pd.DataFrame):
+def UnifyFo(
+    profile_fo: pd.DataFrame,
+    n_cores: int = 1
+):
+    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
+                  'none': None, 'Null': None, 'null': None, "''": None}
     # * Cleansing
     print(">>> Cleansing profile")
-    condition_name = profile_fo['name'].notna()
-    profile_fo.loc[condition_name, 'name'] =\
-        profile_fo.loc[condition_name, 'name']\
-        .apply(basic_preprocess_name)
+    profile_fo = cleansing_profile_name(
+        profile_fo,
+        name_col='name',
+        n_cores=n_cores
+    )
     profile_fo.rename(columns={
         'email': 'email_raw',
         'phone': 'phone_raw',
@@ -85,7 +93,8 @@ def UnifyFo(profile_fo: pd.DataFrame):
         columns=[
             'raw_name', 'enrich_name',
             'last_name', 'middle_name', 'first_name',
-            'gender', 'customer_type'
+            'gender',
+            # 'customer_type'
         ]
     ).rename(columns={
         'gender': 'gender_enrich'
@@ -127,6 +136,18 @@ def UnifyFo(profile_fo: pd.DataFrame):
         'enrich_name': 'name'
     }).reset_index(drop=False)
 
+    # Refilling info
+    cant_predict_name_mask =\
+        (profile_fo['name'].isna()) & (profile_fo['raw_name'].notna())
+    profile_fo.loc[
+        cant_predict_name_mask,
+        'name'
+    ] = profile_fo.loc[
+        cant_predict_name_mask,
+        'raw_name'
+    ]
+    profile_fo['name'] = profile_fo['name'].replace(dict_trash)
+
     # birthday
     print(">>> Processing Birthday")
     now_year = datetime.today().year
@@ -144,35 +165,49 @@ def UnifyFo(profile_fo: pd.DataFrame):
     profile_fo['gender'] = profile_fo['gender'].replace(
         {'Female': 'F', 'Male': 'M', 'Other': None})
 
+    # customer type from raw
+    print(">>> Extracting customer type")
+    profile_fo = process_extract_name_type(
+        profile_fo,
+        name_col='name',
+        n_cores=n_cores,
+        logging_info=False
+    )
+
     # drop name is username_email
     print(">>> Extra Cleansing Name")
-    profile_fo['username_email'] = profile_fo['email'].str.split('@').str[0]
-    profile_fo.loc[profile_fo['name'] ==
-                   profile_fo['username_email'], 'name'] = None
-    profile_fo = profile_fo.drop(columns=['username_email'])
+    profile_fo = remove_same_username_email(
+        profile_fo,
+        name_col='name',
+        email_col='email'
+    )
+    # profile_fo['username_email'] = profile_fo['email'].str.split('@').str[0]
+    # profile_fo.loc[profile_fo['name'] ==
+    #                profile_fo['username_email'], 'name'] = None
+    # profile_fo = profile_fo.drop(columns=['username_email'])
 
     # clean name, extract pronoun
-    name_process = NameProcess()
+
     condition_name = (profile_fo['customer_type'] == 'customer')\
         & (profile_fo['name'].notna())
-
-    profile_fo.loc[
+    profile_fo = extracting_pronoun_from_name(
+        profile_fo,
         condition_name,
-        ['clean_name', 'pronoun']
-    ] = profile_fo.loc[condition_name, 'name']\
-        .apply(name_process.CleanName).tolist()
+        name_col='name',
+    )
 
-    profile_fo.loc[
-        profile_fo['customer_type'] == 'customer',
-        'name'
-    ] = profile_fo['clean_name']
-    profile_fo = profile_fo.drop(columns=['clean_name'])
+    # name_process = NameProcess()
+    # profile_fo.loc[
+    #     condition_name,
+    #     ['clean_name', 'pronoun']
+    # ] = profile_fo.loc[condition_name, 'name']\
+    #     .apply(name_process.CleanName).tolist()
 
-    # skip pronoun
-    profile_fo['name'] = profile_fo['name'].str.strip().str.title()
-    skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba',
-                  'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
-    profile_fo.loc[profile_fo['name'].isin(skip_names), 'name'] = None
+    # profile_fo.loc[
+    #     profile_fo['customer_type'] == 'customer',
+    #     'name'
+    # ] = profile_fo['clean_name']
+    # profile_fo = profile_fo.drop(columns=['clean_name'])
 
     # is full name
     print(">>> Checking Full Name")
@@ -203,8 +238,12 @@ def UnifyFo(profile_fo: pd.DataFrame):
     profile_fo.loc[profile_fo['address'] == 'Not set', 'address'] = None
     profile_fo.loc[profile_fo['address'].notna(
     ), 'city'] = profile_fo.loc[profile_fo['address'].notna(), 'address'].apply(unidecode)
-    profile_fo['city'] = profile_fo['city'].replace({'Ba Ria - Vung Tau': 'Vung Tau', 'Thua Thien Hue': 'Hue',
-                                                     'Bac Kan': 'Bac Can', 'Dak Nong': 'Dac Nong'})
+    profile_fo['city'] = profile_fo['city'].replace({
+        'Ba Ria - Vung Tau': 'Vung Tau',
+        'Thua Thien Hue': 'Hue',
+        'Bac Kan': 'Bac Can',
+        'Dak Nong': 'Dac Nong'
+    })
     profile_fo = pd.merge(
         profile_fo.set_index('city'),
         norm_fo_city.set_index('city'),
@@ -237,6 +276,14 @@ def UnifyFo(profile_fo: pd.DataFrame):
         'biz': 'Ho kinh doanh'
     })
     # Fill 'Ca nhan'
+    profile_fo['customer_type'] =\
+    profile_fo['customer_type'].map({
+        'customer': 'Ca nhan',
+        'company': 'Cong ty',
+        'medical': 'Benh vien - Phong kham',
+        'edu': 'Giao duc',
+        'biz': 'Ho kinh doanh'
+    })
     profile_fo.loc[
         (profile_fo['name'].notna())
         & (profile_fo['customer_type'].isna()),
@@ -249,7 +296,10 @@ def UnifyFo(profile_fo: pd.DataFrame):
 # function update profile (unify)
 
 
-def UpdateUnifyFo(now_str):
+def UpdateUnifyFo(
+    now_str:str,
+    n_cores:int = 1
+):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
     unify_path = ROOT_PATH + '/pre'
@@ -272,7 +322,8 @@ def UpdateUnifyFo(now_str):
 
     # get profile change/new
     print(">>> Filtering new profile")
-    difference_profile = DifferenceProfile(now_profile, yesterday_profile)
+    difference_profile = get_difference_data(now_profile, yesterday_profile)
+    print(f"Number of new profile {difference_profile.shape}")
 
     # update profile
     profile_unify = pd.read_parquet(
@@ -281,7 +332,7 @@ def UpdateUnifyFo(now_str):
     )
     if not difference_profile.empty:
         # get profile unify (old + new)
-        new_profile_unify = UnifyFo(difference_profile)
+        new_profile_unify = UnifyFo(difference_profile, n_cores=n_cores)
 
         # synthetic profile
         profile_unify = pd.concat(

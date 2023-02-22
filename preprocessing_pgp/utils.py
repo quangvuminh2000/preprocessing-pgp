@@ -164,7 +164,7 @@ def parallelize_dataframe(
     if n_cores == 1:
         final_data = partial(func, **kwargs)(data)
     else:
-        sub_data = np.array_split(data.copy(), n_cores)
+        sub_data = np.array_split(data, n_cores)
 
         with mp.Pool(n_cores) as pool:
             final_data = pd.concat(pool.map(partial(func, **kwargs), sub_data))

@@ -17,8 +17,7 @@ import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
 
-from preprocessing_pgp.name.preprocess import basic_preprocess_name
-from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
@@ -29,35 +28,42 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
-
-sys.path.append(
-    '/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/fill_accent_name/scripts')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
+from utils.filter_profile import get_difference_data
+from utils.preprocess_profile import (
+    cleansing_profile_name,
+    remove_same_username_email,
+    extracting_pronoun_from_name
+)
 
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 
 # function get profile change/new
 
 
-def DifferenceProfile(now_df, yesterday_df):
-    difference_df = now_df[~now_df.apply(tuple, 1).isin(
-        yesterday_df.apply(tuple, 1))].copy()
-    return difference_df
+# def DifferenceProfile(now_df, yesterday_df):
+#     difference_df = now_df[~now_df.apply(tuple, 1).isin(
+#         yesterday_df.apply(tuple, 1))].copy()
+#     return difference_df
 
 # function unify profile
 
 
-def UnifyFshop(profile_fshop: pd.DataFrame):
+def UnifyFshop(
+    profile_fshop: pd.DataFrame,
+    n_cores: int = 1
+):
     # VARIABLE
     dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
                   'none': None, 'Null': None, 'null': None, "''": None}
 
     # * Cleansing
     print(">>> Cleansing profile")
-    condition_name = profile_fshop['name'].notna()
-    profile_fshop.loc[condition_name, 'name'] =\
-        profile_fshop.loc[condition_name, 'name']\
-        .apply(basic_preprocess_name)
+    profile_fshop = cleansing_profile_name(
+        profile_fshop,
+        name_col='name',
+        n_cores=n_cores
+    )
     profile_fshop.rename(columns={
         'email': 'email_raw',
         'phone': 'phone_raw',
@@ -90,7 +96,7 @@ def UnifyFshop(profile_fshop: pd.DataFrame):
         columns=[
             'raw_name', 'enrich_name',
             'last_name', 'middle_name', 'first_name',
-            'gender', 'customer_type'
+            'gender'
         ]
     ).rename(columns={
         'gender': 'gender_enrich'
@@ -141,8 +147,25 @@ def UnifyFshop(profile_fshop: pd.DataFrame):
         'enrich_name': 'name'
     }).reset_index(drop=False)
 
+    # Refilling info
+    cant_predict_name_mask = profile_fshop['name'].isna()
+    profile_fshop.loc[
+        cant_predict_name_mask,
+        'name'
+    ] = profile_fshop.loc[
+        cant_predict_name_mask,
+        'raw_name'
+    ]
+    profile_fshop['name'] = profile_fshop['name'].replace(dict_trash)
+
     # customer_type
     print(">>> Processing Customer Type")
+    profile_fshop = process_extract_name_type(
+        profile_fshop,
+        name_col='name',
+        n_cores=n_cores,
+        logging_info=False
+    )
     profile_fshop['customer_type'] = profile_fshop['customer_type'].map({
         'customer': 'Ca nhan',
         'company': 'Cong ty',
@@ -159,34 +182,21 @@ def UnifyFshop(profile_fshop: pd.DataFrame):
 
     # drop name is username_email
     print(">>> Extra Cleansing Name")
-    profile_fshop['username_email'] = profile_fshop['email'].str.split(
-        '@').str[0]
-    profile_fshop.loc[profile_fshop['name'] ==
-                      profile_fshop['username_email'], 'name'] = None
-    profile_fshop = profile_fshop.drop(columns=['username_email'])
+    profile_fshop = remove_same_username_email(
+        profile_fshop,
+        name_col='name',
+        email_col='email'
+    )
 
     # clean name
-    name_process = NameProcess()
     condition_name =\
         (profile_fshop['customer_type'].isin([None, 'Ca nhan', np.nan]))\
         & (profile_fshop['name'].notna())
-    profile_fshop.loc[
-        condition_name,
-        ['clean_name', 'pronoun']
-    ] = profile_fshop.loc[condition_name, 'name']\
-        .apply(name_process.CleanName).tolist()
-
-    profile_fshop.loc[
-        profile_fshop['customer_type'].isin([None, 'Ca nhan', np.nan]),
-        'name'
-    ] = profile_fshop['clean_name']
-    profile_fshop = profile_fshop.drop(columns=['clean_name'])
-
-    # skip pronoun
-    profile_fshop['name'] = profile_fshop['name'].str.strip().str.title()
-    skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba',
-                  'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
-    profile_fshop.loc[profile_fshop['name'].isin(skip_names), 'name'] = None
+    profile_fshop = extracting_pronoun_from_name(
+        profile_fshop,
+        condition=condition_name,
+        name_col='name'
+    )
 
     # is full name
     print(">>> Checking Full Name")
@@ -432,7 +442,10 @@ def UnifyFshop(profile_fshop: pd.DataFrame):
 # function update profile (unify)
 
 
-def UpdateUnifyFshop(now_str):
+def UpdateUnifyFshop(
+    now_str: str,
+    n_cores: int = 1
+):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
     unify_path = ROOT_PATH + '/pre'
@@ -455,7 +468,8 @@ def UpdateUnifyFshop(now_str):
 
     # get profile change/new
     print(">>> Filtering new profile")
-    difference_profile = DifferenceProfile(now_profile, yesterday_profile)
+    difference_profile = get_difference_data(now_profile, yesterday_profile)
+    print(f"Number of new profile {difference_profile.shape}")
 
     # update profile
     profile_unify = pd.read_parquet(
@@ -464,7 +478,7 @@ def UpdateUnifyFshop(now_str):
     )
     if not difference_profile.empty:
         # get profile unify (old + new)
-        new_profile_unify = UnifyFshop(difference_profile)
+        new_profile_unify = UnifyFshop(difference_profile, n_cores=n_cores)
 
         # synthetic profile
         profile_unify = pd.concat(

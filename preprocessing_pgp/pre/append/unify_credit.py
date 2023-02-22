@@ -1,4 +1,6 @@
 
+from preprocess import clean_name_cdp
+import preprocess_lib
 import pandas as pd
 from glob import glob
 import numpy as np
@@ -15,50 +17,62 @@ import subprocess
 from pyarrow import fs
 import pyarrow.parquet as pq
 
-from preprocessing_pgp.name.preprocess import basic_preprocess_name
-from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
 os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
 os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
 os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output("$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
+os.environ['CLASSPATH'] = subprocess.check_output(
+    "$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
+hdfs = fs.HadoopFileSystem(
+    host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
-import preprocess_lib
-
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/fill_accent_name/scripts')
-from preprocess import clean_name_cdp
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
+from utils.preprocess_profile import (
+    cleansing_profile_name,
+    extracting_pronoun_from_name
+)
+from utils.filter_profile import get_difference_data
 
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 
 # function get profile change/new
-def DifferenceProfile(now_df, yesterday_df):
-    difference_df = now_df[~now_df.apply(tuple,1).isin(yesterday_df.apply(tuple,1))].copy()
-    return difference_df
+
+
+# def DifferenceProfile(now_df, yesterday_df):
+#     difference_df = now_df[~now_df.apply(tuple, 1).isin(
+#         yesterday_df.apply(tuple, 1))].copy()
+#     return difference_df
 
 # function unify profile
-def UnifyCredit(profile_credit: pd.DataFrame):
+
+
+def UnifyCredit(
+    profile_credit: pd.DataFrame,
+    n_cores: int = 1
+):
     # VARIABLE
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None, 'none': None, 'Null': None, 'null': None, "''": None}
+    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
+                  'none': None, 'Null': None, 'null': None, "''": None}
 
     # * Cleansing
     print(">>> Cleansing profile")
-    condition_name = profile_fo['name'].notna()
-    profile_fo.loc[condition_name, 'name'] =\
-        profile_fo.loc[condition_name, 'name']\
-        .apply(basic_preprocess_name)
-    profile_fo.rename(columns={
+    profile_credit = cleansing_profile_name(
+        profile_credit,
+        name_col='name',
+        n_cores=n_cores
+    )
+    profile_credit.rename(columns={
         'phone': 'phone_raw',
         'name': 'raw_name'
     }, inplace=True)
 
     # * Loading dictionary
     print(">>> Loading dictionaries")
-    profile_phones = profile_fo['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_fo['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_fo['raw_name'].drop_duplicates().dropna()
+    profile_phones = profile_credit['phone_raw'].drop_duplicates().dropna()
+    # profile_emails = profile_credit['email_raw'].drop_duplicates().dropna()
+    profile_names = profile_credit['raw_name'].drop_duplicates().dropna()
 
     # phone, email (valid)
     valid_phone = pd.read_parquet(
@@ -67,12 +81,12 @@ def UnifyCredit(profile_credit: pd.DataFrame):
         filesystem=hdfs,
         columns=['phone_raw', 'phone', 'is_phone_valid']
     )
-    valid_email = pd.read_parquet(
-        f'{ROOT_PATH}/utils/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
+    # valid_email = pd.read_parquet(
+    #     f'{ROOT_PATH}/utils/valid_email_latest.parquet',
+    #     filters=[('email_raw', 'in', profile_emails)],
+    #     filesystem=hdfs,
+    #     columns=['email_raw', 'email', 'is_email_valid']
+    # )
     dict_name_lst = pd.read_parquet(
         f'{ROOT_PATH}/utils/dict_name_latest_new.parquet',
         filters=[('raw_name', 'in', profile_names)],
@@ -80,7 +94,7 @@ def UnifyCredit(profile_credit: pd.DataFrame):
         columns=[
             'raw_name', 'enrich_name',
             'last_name', 'middle_name', 'first_name',
-            'gender', 'customer_type'
+            'gender'
         ]
     ).rename(columns={
         'gender': 'gender_enrich'
@@ -94,9 +108,12 @@ def UnifyCredit(profile_credit: pd.DataFrame):
         }
     )
     profile_credit.loc[profile_credit['gender'] == '-1', 'gender'] = None
-    profile_credit.loc[profile_credit['address'].isin(['', 'Null', 'None', 'Test']), 'address'] = None
-    profile_credit.loc[profile_credit['address'].notna() & profile_credit['address'].str.isnumeric(), 'address'] = None
-    profile_credit.loc[profile_credit['address'].str.len() < 5, 'address'] = None
+    profile_credit.loc[profile_credit['address'].isin(
+        ['', 'Null', 'None', 'Test']), 'address'] = None
+    profile_credit.loc[profile_credit['address'].notna(
+    ) & profile_credit['address'].str.isnumeric(), 'address'] = None
+    profile_credit.loc[profile_credit['address'].str.len() <
+                       5, 'address'] = None
     profile_credit['customer_type_credit'] =\
         profile_credit['customer_type_credit']\
         .replace({
@@ -125,8 +142,25 @@ def UnifyCredit(profile_credit: pd.DataFrame):
         'enrich_name': 'name'
     }).reset_index(drop=False)
 
+    # Refilling info
+    cant_predict_name_mask = profile_credit['name'].isna()
+    profile_credit.loc[
+        cant_predict_name_mask,
+        'name'
+    ] = profile_credit.loc[
+        cant_predict_name_mask,
+        'raw_name'
+    ]
+    profile_credit['name'] = profile_credit['name'].replace(dict_trash)
+
     # customer_type
     print(">>> Processing Customer Type")
+    profile_credit = process_extract_name_type(
+        profile_credit,
+        name_col='name',
+        n_cores=n_cores,
+        logging_info=False
+    )
     profile_credit['customer_type'] =\
         profile_credit['customer_type'].map({
             'customer': 'Ca nhan',
@@ -142,32 +176,23 @@ def UnifyCredit(profile_credit: pd.DataFrame):
     profile_credit = profile_credit.drop(columns=['customer_type_credit'])
 
     # clean name
-    name_process = NameProcess()
     condition_name =\
         (profile_credit['customer_type'].isin([None, 'Ca nhan', np.nan]))\
         & (profile_credit['name'].notna())
-    profile_credit.loc[
-        condition_name,
-        ['clean_name', 'pronoun']
-    ] = profile_credit.loc[condition_name, 'name']\
-        .apply(name_process.CleanName).tolist()
-
-    profile_credit.loc[
-        profile_credit['customer_type'].isin([None, 'Ca nhan', np.nan]),
-        'name'
-    ] = profile_credit['clean_name']
-    profile_credit = profile_credit.drop(columns=['clean_name'])
-
-    # skip pronoun
-    profile_credit['name'] = profile_credit['name'].str.strip().str.title()
-    skip_names = ['Vợ', 'Vo', 'Anh', 'Chị', 'Chi', 'Mẹ', 'Me', 'Em', 'Ba', 'Chú', 'Chu', 'Bác', 'Bac', 'Ông', 'Ong', 'Cô', 'Co', 'Cha', 'Dì', 'Dượng']
-    profile_credit.loc[profile_credit['name'].isin(skip_names), 'name'] = None
+    profile_credit = extracting_pronoun_from_name(
+        profile_credit,
+        condition=condition_name,
+        name_col='name',
+    )
 
     # is full name
     print(">>> Checking Full Name")
-    profile_credit.loc[profile_credit['last_name'].notna() & profile_credit['first_name'].notna(), 'is_full_name'] = True
-    profile_credit['is_full_name'] = profile_credit['is_full_name'].fillna(False)
-    profile_credit = profile_credit.drop(columns=['last_name', 'middle_name', 'first_name'])
+    profile_credit.loc[profile_credit['last_name'].notna(
+    ) & profile_credit['first_name'].notna(), 'is_full_name'] = True
+    profile_credit['is_full_name'] = profile_credit['is_full_name'].fillna(
+        False)
+    profile_credit = profile_credit.drop(
+        columns=['last_name', 'middle_name', 'first_name'])
 
     # valid gender by model
     print(">>> Validating Gender")
@@ -184,7 +209,8 @@ def UnifyCredit(profile_credit: pd.DataFrame):
 
     # normlize address
     print(">>> Processing Address")
-    profile_credit['address'] = profile_credit['address'].str.strip().replace(dict_trash)
+    profile_credit['address'] = profile_credit['address'].str.strip().replace(
+        dict_trash)
     profile_credit['street'] = None
     profile_credit['ward'] = None
     profile_credit['district'] = None
@@ -192,18 +218,23 @@ def UnifyCredit(profile_credit: pd.DataFrame):
 
     # unit_address
     profile_credit = profile_credit.rename(columns={'street': 'unit_address'})
-    profile_credit.loc[profile_credit['unit_address'].notna(), 'source_unit_address'] = 'CREDIT from profile'
-    profile_credit.loc[profile_credit['ward'].notna(), 'source_ward'] = 'CREDIT from profile'
-    profile_credit.loc[profile_credit['district'].notna(), 'source_district'] = 'CREDIT from profile'
-    profile_credit.loc[profile_credit['city'].notna(), 'source_city'] = 'CREDIT from profile'
-    profile_credit.loc[profile_credit['address'].notna(), 'source_address'] = 'CREDIT from profile'
+    profile_credit.loc[profile_credit['unit_address'].notna(
+    ), 'source_unit_address'] = 'CREDIT from profile'
+    profile_credit.loc[profile_credit['ward'].notna(
+    ), 'source_ward'] = 'CREDIT from profile'
+    profile_credit.loc[profile_credit['district'].notna(
+    ), 'source_district'] = 'CREDIT from profile'
+    profile_credit.loc[profile_credit['city'].notna(
+    ), 'source_city'] = 'CREDIT from profile'
+    profile_credit.loc[profile_credit['address'].notna(
+    ), 'source_address'] = 'CREDIT from profile'
 
     # add info
-    columns = ['cardcode_fshop', 'phone_raw', 'phone', 'is_phone_valid', 
-               # 'email_raw', 'email', 'is_email_valid', 
-               'name', 'pronoun', 'is_full_name', 'gender', 
-               'birthday', 'customer_type', # 'customer_type_detail',
-               'address', 'source_address', 'unit_address', 'source_unit_address', 
+    columns = ['cardcode_fshop', 'phone_raw', 'phone', 'is_phone_valid',
+               # 'email_raw', 'email', 'is_email_valid',
+               'name', 'pronoun', 'is_full_name', 'gender',
+               'birthday', 'customer_type',  # 'customer_type_detail',
+               'address', 'source_address', 'unit_address', 'source_unit_address',
                'ward', 'source_ward', 'district', 'source_district', 'city', 'source_city']
     profile_credit = profile_credit[columns]
 
@@ -216,18 +247,25 @@ def UnifyCredit(profile_credit: pd.DataFrame):
 
     # return
     return profile_credit
-    
+
 # function update profile (unify)
-def UpdateUnifyCredit(now_str):
+
+
+def UpdateUnifyCredit(
+    now_str: str,
+    n_cores: int = 1
+):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
     unify_path = ROOT_PATH + '/pre'
     f_group = 'credit'
-    yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+    yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') -
+                     timedelta(days=1)).strftime('%Y-%m-%d')
 
     # load profile (yesterday, now)
     print(">>> Loading today and yesterday profile")
-    info_columns = ['cardcode_fshop', 'phone', 'name', 'gender', 'birthday', 'address', 'customer_type']
+    info_columns = ['cardcode_fshop', 'phone', 'name',
+                    'gender', 'birthday', 'address', 'customer_type']
     now_profile = pd.read_parquet(
         f'{raw_path}/{f_group}.parquet/d={now_str}',
         filesystem=hdfs, columns=info_columns
@@ -239,7 +277,8 @@ def UpdateUnifyCredit(now_str):
 
     # get profile change/new
     print(">>> Filtering new profile")
-    difference_profile = DifferenceProfile(now_profile, yesterday_profile)
+    difference_profile = get_difference_data(now_profile, yesterday_profile)
+    print(f"Number of new profile {difference_profile.shape}")
 
     # update profile
     profile_unify = pd.read_parquet(
@@ -248,7 +287,7 @@ def UpdateUnifyCredit(now_str):
     )
     if not difference_profile.empty:
         # get profile unify (old + new)
-        new_profile_unify = UnifyCredit(difference_profile)
+        new_profile_unify = UnifyCredit(difference_profile, n_cores=n_cores)
 
         # synthetic profile
         profile_unify = pd.concat(
@@ -261,14 +300,16 @@ def UpdateUnifyCredit(now_str):
         'cardcode_fshop', 'phone_raw', 'phone', 'is_phone_valid',
         # 'email_raw', 'email', 'is_email_valid',
         'name', 'pronoun', 'is_full_name', 'gender',
-        'birthday', 'customer_type', # 'customer_type_detail',
+        'birthday', 'customer_type',  # 'customer_type_detail',
         'address', 'source_address', 'unit_address', 'source_unit_address',
         'ward', 'source_ward', 'district', 'source_district', 'city', 'source_city'
     ]
 
     profile_unify = profile_unify[columns]
-    profile_unify['is_phone_valid'] = profile_unify['is_phone_valid'].fillna(False)
-    profile_unify = profile_unify.drop_duplicates(subset=['cardcode_fshop', 'phone_raw'], keep='first')
+    profile_unify['is_phone_valid'] = profile_unify['is_phone_valid'].fillna(
+        False)
+    profile_unify = profile_unify.drop_duplicates(
+        subset=['cardcode_fshop', 'phone_raw'], keep='first')
 
     # save
     profile_unify['d'] = now_str
@@ -277,6 +318,7 @@ def UpdateUnifyCredit(now_str):
         filesystem=hdfs, index=False,
         partition_cols='d'
     )
+
 
 if __name__ == '__main__':
     now_str = sys.argv[1]
