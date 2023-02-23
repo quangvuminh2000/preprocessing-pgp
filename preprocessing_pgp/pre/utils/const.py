@@ -19,14 +19,18 @@ hdfs = fs.HadoopFileSystem(
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 VALID_PHONE_PATH = f'{ROOT_PATH}/utils/valid_phone_latest.parquet'
 VALID_EMAIL_PATH = f'{ROOT_PATH}/utils/valid_email_latest.parquet'
+RAW_PATH = f'{ROOT_PATH}/raw'
+UNIFY_PATH = f'{ROOT_PATH}/pre'
 
 # * REQUIRED DICTS
-VALID_PHONE_DICT = pd.read_parquet(
-    VALID_PHONE_PATH,
-    filesystem=hdfs
-)
+# VALID_PHONE_DICT = pd.read_parquet(
+#     VALID_PHONE_PATH,
+#     filesystem=hdfs
+# )
 
-VALID_EMAIL_DICT = pd.read_parquet(
-    VALID_PHONE_PATH,
-    filesystem=hdfs
-)
+# VALID_EMAIL_DICT = pd.read_parquet(
+#     VALID_PHONE_PATH,
+#     filesystem=hdfs
+# )
+
+# DICT_NAME_LATEST = pd.read_parquet()

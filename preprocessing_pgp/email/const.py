@@ -37,6 +37,8 @@ EDU_EMAIL_REGEX = r'^[0-9a-z]+@[0-9a-z\.]'
 EDGE_AUTO_EMAIL_REGEX = r'@privaterelay.appleid.com|[0-9a-z]+\_autoemail'
 
 # ? EMAIL CONSTRAINTS
+_FLATTEN_DOMAIN_LIST = [(x, y['domains']) for (x, y) in EMAIL_DOMAIN_REGEX.items()]
+DOMAIN_GROUP_DICT = dict((x, v[0]) for v in _FLATTEN_DOMAIN_LIST for x in v[1])
 
 PRIVATE_EMAIL_DOMAINS = [
     'gmail.com', 'yahoo.com',

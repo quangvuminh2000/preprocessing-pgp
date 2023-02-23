@@ -120,8 +120,8 @@ def process_extract_email_info(
     valid_email = validated_data.query('is_email_valid').copy()
     invalid_email = validated_data.query('~is_email_valid').copy()
     # ? Separate email name and group
-    valid_email[f'{email_col}_name'] = valid_email[email_col].str.split(
-        '@').str[0]
+    valid_email[f'{email_col}_name'] =\
+        valid_email[f'cleaned_{email_col}'].str.split('@').str[0]
 
     # ? Extract username from email
     start_time = time()
@@ -138,9 +138,19 @@ def process_extract_email_info(
 
     final_data = pd.concat([extracted_valid_email, invalid_email])
 
+
+    # * Generate whether username is certain
+    final_data['username_iscertain'] =\
+        (final_data['is_email_valid'])\
+        & (final_data['customer_type'] == 'customer')
+
     # * Concat with data of other columns
     extracted_cols = [
+        f'{email_col}_name',
+        f'cleaned_{email_col}',
         'is_email_valid',
+        'is_autoemail',
+        'username_iscertain',
         'email_domain',
         'private_email',
         'customer_type',

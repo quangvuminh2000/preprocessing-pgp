@@ -121,8 +121,6 @@ def extract_valid_phone(
             end="\n\n\n",
         )
 
-    f_phones = f_phones.reset_index(drop=True)
-
     # ? Correct phone numbers with old phone number format.
     mask_old_phone_format = f_phones["is_old_mobi"] == True
 
@@ -325,9 +323,11 @@ def process_convert_phone(
         'phone_vendor',
         'tail_phone_type'
     ]
+    converted_data = converted_data[new_cols]
+
     converted_data = pd.concat([
         data[orig_cols],
-        converted_data[new_cols]
+        converted_data
     ], axis=1)
 
     return converted_data

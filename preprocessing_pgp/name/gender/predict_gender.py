@@ -49,6 +49,7 @@ def process_predict_gender(
     cleaned_name_data = parallelize_dataframe(
         name_data,
         preprocess_df,
+        n_cores=n_cores,
         name_col=name_col
     )
     clean_time = time() - start_time

@@ -76,7 +76,7 @@ class NameProcessor:
         name_df[f'clean_{name_col}'] =\
             name_df[name_col].apply(
                 lambda name: self.name_process.CleanName(name)[0]
-            )
+        )
 
         # * Separate 1-word strange name
         one_word_mask = name_df[f'clean_{name_col}'].str.split(
@@ -93,6 +93,19 @@ class NameProcessor:
         predicted_name = remove_nicknames(
             normal_names,
             name_col=f'clean_{name_col}'
+        )
+
+        predicted_name[['last_name', 'middle_name', 'first_name']] =\
+            predicted_name[f'clean_{name_col}'].apply(
+                self.name_process.SplitName).tolist()
+
+        predicted_name[f'clean_{name_col}'] =\
+            predicted_name[['last_name', 'middle_name', 'first_name']]\
+            .fillna('').agg(' '.join, axis=1)\
+            .str.strip()
+
+        predicted_name = predicted_name.drop(
+            columns=['last_name', 'middle_name', 'first_name']
         )
 
         # print("Filling diacritics to names...")
@@ -119,14 +132,9 @@ class NameProcessor:
             ),
             axis=1
         )
-
         predicted_name[['last_name', 'middle_name', 'first_name']] =\
-            predicted_name['final'].apply(self.name_process.SplitName).tolist()
-
-        predicted_name['final'] =\
-            predicted_name[['last_name', 'middle_name', 'first_name']]\
-            .fillna('').agg(' '.join, axis=1)\
-            .str.strip()
+            predicted_name['final'].apply(
+                self.name_process.SplitName).tolist()
 
         predicted_name['final'] = replace_trash_string(
             predicted_name,

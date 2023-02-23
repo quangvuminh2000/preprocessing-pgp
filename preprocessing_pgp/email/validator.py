@@ -18,7 +18,8 @@ from preprocessing_pgp.email.const import (
     EMAIL_DOMAIN_REGEX,
     COMMON_EMAIL_REGEX,
     EDGE_AUTO_EMAIL_REGEX,
-    PRIVATE_EMAIL_DOMAINS
+    PRIVATE_EMAIL_DOMAINS,
+    DOMAIN_GROUP_DICT
 )
 from preprocessing_pgp.email.preprocess import (
     clean_email
@@ -291,17 +292,18 @@ def process_validate_email(
 
     # * Get the domain of the email name & Check for private email
     validated_data['email_domain'] = validated_data[email_col].str.split('@').str[1]
+    validated_data['email_domain'] = validated_data['email_domain'].replace(DOMAIN_GROUP_DICT)
     validated_data['private_email'] = validated_data['email_domain'].isin(PRIVATE_EMAIL_DOMAINS)
 
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])
-    final_data = final_data.drop(columns=[f'cleaned_{email_col}'])
 
     # * Filling na data to invalid email
     final_data['is_email_valid'].fillna(False, inplace=True)
 
     # * Concat with the origin cols
     new_cols = [
+        f'cleaned_{email_col}',
         'is_email_valid',
         'is_autoemail',
         'email_domain',
