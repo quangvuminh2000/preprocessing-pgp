@@ -11,12 +11,40 @@ from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExt
 from preprocessing_pgp.email.extractors.email_yob_extractor import EmailYOBExtractor
 from preprocessing_pgp.email.extractors.email_phone_extractor import EmailPhoneExtractor
 from preprocessing_pgp.email.extractors.email_address_extractor import EmailAddressExtractor
+from preprocessing_pgp.email.info_extractor import process_extract_email_info
 
 
 class TestEmailInfoExtraction:
     """
     Class contains tests for information extraction from email
     """
+    # * Testing for extracting all info
+    @pt.mark.email2info
+    def test_extract_full_info_basic(self):
+        """
+        Test whether the function can extract for full name in email name
+        with basic name
+        """
+        email_name_data = pd.DataFrame.from_dict({
+            'email': [
+                'vuminhquang2000@gmail.com',
+                'nguyenphamanhnguyen1996@fpt.com.vn',
+                'nguyenhuynhhuy1997@yahoo.com.vn',
+                'lekhactrinh1992@gmail.com',
+                'vuminhquang12102000@fpt.com.vn'
+            ]
+        })
+
+
+        extracted_info = process_extract_email_info(
+            email_name_data,
+            email_col='email',
+            n_cores=2
+        )
+        print(extracted_info)
+        print(extracted_info.columns)
+
+        assert True
 
     # * Testing for names
     @pt.mark.email2name
@@ -47,7 +75,7 @@ class TestEmailInfoExtraction:
             'Nguyen Pham Anh Nguyen',
             'Nguyen Huynh Huy',
             'Le Khac Trinh',
-            None
+            'Do Anh Nghiep'
         ]
 
     @pt.mark.email2name
