@@ -55,20 +55,20 @@ class NameProcessor:
             return None
         de_name = unidecode(name)
 
-        # # Keep case already have accent
-        # if name != de_name:
-        #     return name
+        # Keep case already have accent
+        if name != de_name:
+            return name
 
         # Only apply to case not having accent
         predicted_name = capwords(self.model.predict(de_name))
 
         return predicted_name
 
-    def fill_accent(self,
-                    name_df: pd.DataFrame,
-                    name_col: str,
-                    #                     nprocess: int, # number of processes to multi-inference
-                    ):
+    def fill_accent(
+        self,
+        name_df: pd.DataFrame,
+        name_col: str,
+    ):
         orig_cols = name_df.columns
 
         # n_names = predicted_name.shape[0]
@@ -126,12 +126,12 @@ class NameProcessor:
             axis=1
         )
 
-        predicted_name['final'] = predicted_name.apply(
-            lambda row: self.choose_better_enrich(
-                row[f'clean_{name_col}'], row['final']
-            ),
-            axis=1
-        )
+        # predicted_name['final'] = predicted_name.apply(
+        #     lambda row: self.choose_better_enrich(
+        #         row[f'clean_{name_col}'], row['final']
+        #     ),
+        #     axis=1
+        # )
         predicted_name[['last_name', 'middle_name', 'first_name']] =\
             predicted_name['final'].apply(
                 self.name_process.SplitName).tolist()

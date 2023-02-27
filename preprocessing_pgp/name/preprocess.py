@@ -12,6 +12,7 @@ from halo import Halo
 from preprocessing_pgp.accent_typing_formatter import reformat_vi_sentence_accent
 from preprocessing_pgp.name.unicode_converter import minimal_convert_unicode
 from preprocessing_pgp.name.extract_human import replace_non_human_reg
+from preprocessing_pgp.name.split_name import NameProcess
 
 _dir = "/".join(os.path.split(os.getcwd()))
 if _dir not in sys.path:
@@ -168,7 +169,7 @@ def preprocess_df(
     pd.DataFrame
         The finalized data with clean names
     """
-    # *
+    # * Filter out columns
     other_cols = data.columns.difference([name_col])
 
     # * Na names & filter out name col
@@ -176,8 +177,15 @@ def preprocess_df(
     cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # * Cleansing data
-    cleaned_data[f'clean_{name_col}'] = cleaned_data[name_col].apply(
-        basic_preprocess_name)
+    cleaned_data[f'clean_{name_col}'] =\
+        cleaned_data[name_col].apply(
+            basic_preprocess_name
+        )
+    name_process = NameProcess()
+    cleaned_data[f'clean_{name_col}'] =\
+        cleaned_data[f'clean_{name_col}'].apply(
+            lambda name: name_process.CleanName(name)[0]
+        )
 
     cleaned_data = cleaned_data.drop(columns=[name_col])
     cleaned_data = cleaned_data.rename(columns={

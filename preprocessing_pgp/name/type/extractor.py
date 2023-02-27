@@ -193,14 +193,11 @@ def process_extract_name_type(
         * `customer_type` contains type of customer extracted from `name` column
     """
     orig_cols = data.columns
-    # * Remove NaNs and select only name col
-    na_data = data[data[name_col].isna()][[name_col]]
-    cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # ? Preprocess data
     start_time = time()
-    cleaned_data = parallelize_dataframe(
-        cleaned_data,
+    data = parallelize_dataframe(
+        data,
         preprocess_df,
         n_cores=n_cores,
         name_col=name_col
@@ -211,6 +208,10 @@ def process_extract_name_type(
         print(
             f"Cleansing names takes {int(clean_time)//60}m{int(clean_time)%60}s")
         sep_display()
+
+    # * Remove NaNs and select only name col
+    na_data = data[data[name_col].isna()][[name_col]]
+    cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # ? Format name
     start_time = time()
