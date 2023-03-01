@@ -20,9 +20,9 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
-from utils.filter_profile import get_difference_data
-from utils.preprocess_profile import (
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+from filter_profile import get_difference_data
+from preprocess_profile import (
     cleansing_profile_name,
     remove_same_username_email,
     extracting_pronoun_from_name
@@ -300,8 +300,8 @@ def UnifyLongChau(
     profile_location_longchau_bug = profile_location_longchau_bug[[
         'cardcode_longchau', 'address']]
     profile_location_longchau_bug = pd.merge(
-        profile_location_longchau_bug.set_index('cardcode_fshop'),
-        latest_location_longchau.set_index('cardcode_fshop'),
+        profile_location_longchau_bug.set_index('cardcode_longchau'),
+        latest_location_longchau.set_index('cardcode_longchau'),
         left_index=True, right_index=True,
         how='left',
         sort=False
@@ -321,8 +321,8 @@ def UnifyLongChau(
     temp_latest_location_longchau = latest_location_longchau[['cardcode_longchau', 'city', 'source_city',
                                                               'district', 'source_district']]
     profile_location_longchau_bug = pd.merge(
-        profile_location_longchau_bug.set_index('cardcode_fshop'),
-        temp_latest_location_longchau.set_index('cardcode_fshop'),
+        profile_location_longchau_bug.set_index('cardcode_longchau'),
+        temp_latest_location_longchau.set_index('cardcode_longchau'),
         left_index=True, right_index=True,
         how='left',
         sort=False
@@ -342,8 +342,8 @@ def UnifyLongChau(
     temp_latest_location_longchau = latest_location_longchau[[
         'cardcode_longchau', 'district', 'city', 'source_city']]
     profile_location_longchau_bug = pd.merge(
-        profile_location_longchau_bug.set_index('cardcode_fshop'),
-        temp_latest_location_longchau.set_index('cardcode_fshop'),
+        profile_location_longchau_bug.set_index('cardcode_longchau'),
+        temp_latest_location_longchau.set_index('cardcode_longchau'),
         left_index=True, right_index=True,
         how='left',
         sort=False
@@ -363,8 +363,8 @@ def UnifyLongChau(
     temp_latest_location_longchau = latest_location_longchau[[
         'cardcode_longchau', 'city', 'district', 'source_district']]
     profile_location_longchau_bug = pd.merge(
-        profile_location_longchau_bug.set_index('cardcode_fshop'),
-        temp_latest_location_longchau.set_index('cardcode_fshop'),
+        profile_location_longchau_bug.set_index('cardcode_longchau'),
+        temp_latest_location_longchau.set_index('cardcode_longchau'),
         left_index=True, right_index=True,
         how='left',
         sort=False
@@ -462,13 +462,13 @@ def UpdateUnifyLongChau(
     )
     if not difference_profile.empty:
         # get profile unify (old + new)
-        old_profile_unify = pd.read_parquet(
-            f'{unify_path}/{f_group}.parquet/d={yesterday_str}', filesystem=hdfs)
         new_profile_unify = UnifyLongChau(difference_profile, n_cores=n_cores)
 
         # synthetic profile
-        profile_unify = new_profile_unify.append(
-            old_profile_unify, ignore_index=True)
+        profile_unify = pd.concat(
+            [new_profile_unify, profile_unify],
+            ignore_index=True
+        )
 
     # arrange columns
     print(">>> Re-Arranging Columns")
@@ -499,4 +499,4 @@ def UpdateUnifyLongChau(
 if __name__ == '__main__':
 
     now_str = sys.argv[1]
-    UpdateUnifyLongChau(now_str, n_cores=5)
+    UpdateUnifyLongChau(now_str, n_cores=10)

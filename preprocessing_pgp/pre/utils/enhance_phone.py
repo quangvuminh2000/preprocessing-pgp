@@ -1,3 +1,9 @@
+from const import (
+    hdfs,
+    RAW_PATH,
+    UTILS_PATH,
+    PRODUCT_PATH,
+)
 import sys
 
 import pandas as pd
@@ -5,13 +11,7 @@ from tqdm import tqdm
 
 from preprocessing_pgp.phone.extractor import process_convert_phone
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
-from const import (
-    hdfs,
-    RAW_PATH,
-    UTILS_PATH,
-    PRODUCT_PATH,
-)
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
 
 
 def load_phone(
@@ -38,6 +38,17 @@ def load_phone_bank(
             phone_bank,
             cttv_phone
         ], ignore_index=True)
+
+    # Phone extracted from email
+    phone_email = pd.read_parquet(
+        f'{UTILS_PATH}/valid_email_latest_new.parquet',
+        filesystem=hdfs,
+        columns=['phone']
+    ).drop_duplicates().dropna()
+    phone_bank = pd.concat([
+        phone_bank,
+        phone_email
+    ], ignore_index=True)
 
     phone_bank = phone_bank[~phone_bank.duplicated()]
     return phone_bank

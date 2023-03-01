@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from preprocessing_pgp.email.info_extractor import process_extract_email_info
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
 from const import (
     hdfs,
     RAW_PATH,

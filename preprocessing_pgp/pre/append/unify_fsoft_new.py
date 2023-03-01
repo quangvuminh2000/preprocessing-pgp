@@ -18,9 +18,9 @@ os.environ['CLASSPATH'] = subprocess.check_output(
 hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre')
-from utils.filter_profile import get_difference_data
-from utils.preprocess_profile import (
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+from filter_profile import get_difference_data
+from preprocess_profile import (
     cleansing_profile_name,
     remove_same_username_email,
     extracting_pronoun_from_name

@@ -1,9 +1,3 @@
-from const import (
-    hdfs,
-    RAW_PATH,
-    UTILS_PATH,
-    PRODUCT_PATH
-)
 import sys
 
 import pandas as pd
@@ -12,11 +6,16 @@ from unidecode import unidecode
 
 from preprocessing_pgp.name.enrich_name import process_enrich
 from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.utils import parallelize_dataframe
 from preprocessing_pgp.name.preprocess import preprocess_df
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/')
+sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new/')
+from const import (
+    hdfs,
+    RAW_PATH,
+    UTILS_PATH,
+    PRODUCT_PATH
+)
 
 
 def load_name_info(
