@@ -267,8 +267,8 @@ def CoreBestName(
 
     # merge
     single_last_name_df = pd.merge(
-        single_last_name_df[['group_id', 'best_name']].set_index('group_id'),
-        map_single_name_df.set_index('group_id'),
+        single_last_name_df.set_index('group_id'),
+        map_single_name_df[['group_id', 'best_name']].set_index('group_id'),
         left_index=True, right_index=True,
         how='left',
         sort=True
