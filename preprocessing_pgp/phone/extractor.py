@@ -1,12 +1,9 @@
 """
 Module to convert old type phones to their new type
 """
-import multiprocessing as mp
 from time import time
 
 import pandas as pd
-import numpy as np
-from unidecode import unidecode
 from tqdm import tqdm
 from halo import Halo
 
@@ -73,6 +70,8 @@ def extract_valid_phone(
     # ? Preprocess phone with basic phone string clean up
     f_phones["clean_phone"] = f_phones[phone_col].apply(
         basic_phone_preprocess)
+
+    print(f_phones)
 
     if print_info:
         print(

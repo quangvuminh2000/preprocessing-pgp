@@ -11,26 +11,15 @@ import pandas as pd
 from tqdm import tqdm
 from unidecode import unidecode
 from preprocessing_pgp.name.split_name import NameProcess
-from preprocessing_pgp.utils import parallelize_dataframe
 
 sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+from filter_profile import get_difference_data
 from const import (
     hdfs,
     ROOT_PATH,
     UTILS_PATH
 )
-from filter_profile import get_difference_data
 
-
-def generate_similarity(
-    data,
-    name_src_col,
-    name_target_col
-):
-    return data.apply(
-        lambda col: SequenceMatcher(None, col[name_src_col], col[name_target_col]).ratio(),
-        axis=1
-    )
 
 def LoadNameGender(
     date_str: str,
@@ -91,7 +80,6 @@ def CoreBestName(
     n_cores: int = 1
 ):
     # Skip name (non personal)
-    print(">>> Skipping non-customer names")
     map_name_customer = raw_names_n.drop_duplicates(subset='raw_name')
     map_name_customer["num_word"] = map_name_customer["raw_name"].str.split(
         " ").str.len()
@@ -111,7 +99,8 @@ def CoreBestName(
         .drop_duplicates()
     )
 
-    print(">> Skip & Decode name components")
+    print(">> Skip/Filter name")
+
     # Split name: last, middle, first
     map_split_name = names_df[["raw_name"]].drop_duplicates()
     name_process = NameProcess()
@@ -147,7 +136,7 @@ def CoreBestName(
     ).reset_index()
 
     # * Create group_id
-    print(">> Create group id based on first name & key")
+    print(">> Create group_id")
 
     names_df["group_id"] = names_df[key] + \
         "-" + names_df["unidecode_first_name"]
@@ -176,7 +165,7 @@ def CoreBestName(
         names_df[~multi_last_name_mask][info_name_columns]
 
     # * Process case: 1 first_name - n last_name
-    print(">> Processing multi-key last name")
+    print(">> 1 first_name - n last_name")
 
     post_names_n_df = multi_last_names_df[
         multi_last_names_df["last_name"].isna()
@@ -192,8 +181,8 @@ def CoreBestName(
     map_names_n_df["num_word"] = map_names_n_df["raw_name"]\
         .str.split(" ").str.len()
     map_names_n_df["accented"] =\
-        (map_names_n_df["raw_name"]
-         != map_names_n_df["raw_name"].apply(unidecode))
+        (map_names_n_df["raw_name"] !=
+         map_names_n_df["raw_name"].apply(unidecode))
     map_names_n_df = map_names_n_df.sort_values(
         by=["group_id", "num_word", "num_char", "accented"], ascending=False
     )
@@ -209,7 +198,6 @@ def CoreBestName(
         how='left',
         sort=True
     ).reset_index()
-
     post_names_n_df = post_names_n_df[["group_id", "raw_name", "best_name"]]
 
     multi_last_names_df = pd.merge(
@@ -219,17 +207,15 @@ def CoreBestName(
         how='left',
         sort=True
     ).reset_index()
-
     multi_last_names_df.loc[multi_last_names_df["best_name"].isna(
     ), "best_name"] = multi_last_names_df["raw_name"]
     multi_last_names_df = multi_last_names_df[[
         "group_id", "raw_name", "best_name"]]
 
     # * Process case: 1 first_name - 1 last_name
-    print(">> Processing single-key last name")
+    print(">> 1 first_name - 1 last_name")
 
     map_single_name_df = single_last_name_df[["group_id"]].drop_duplicates()
-
     for element_name in ["last_name", "middle_name", "first_name"]:
         # filter data detail
         map_element_name = (
@@ -308,51 +294,89 @@ def CoreBestName(
         "group_id", "raw_name", "best_name"]]
 
     # Concat
-    print(">>> Concat to final name df")
-    names_df = pd.concat([
-        single_last_name_df,
-        multi_last_names_df
-    ], ignore_index=True)
+    names_df = pd.concat(
+        [single_last_name_df, multi_last_names_df], ignore_index=True)
 
     # Calculate simility_score
-    print(">>> Calculating similarity score")
-    names_df['similarity_score'] =\
-    parallelize_dataframe(
-        names_df,
-        generate_similarity,
-        n_cores=n_cores,
-        name_src_col='raw_name',
-        name_target_col='best_name'
+    name_list_1 = list(names_df["raw_name"].unique())
+    name_list_2 = list(names_df["best_name"].unique())
+    map_element_name = pd.DataFrame()
+    map_element_name["raw_name"] = list(set(name_list_1) | set(name_list_2))
+
+    with mp.Pool(n_cores) as pool:
+        map_element_name[["last_name", "middle_name", "first_name"]] =\
+            pool.map(name_process.SplitName, map_element_name["raw_name"])
+
+    for flag in ["raw", "best"]:
+        temp = map_element_name
+        temp.columns = [
+            f"{flag}_name",
+            f"{flag}_last_name",
+            f"{flag}_middle_name",
+            f"{flag}_first_name",
+        ]
+        names_df = pd.merge(
+            names_df.set_index(f'{flag}_name'),
+            temp.set_index(f'{flag}_name'),
+            left_index=True, right_index=True,
+            how='left',
+            sort=True
+        ).reset_index()
+
+    # similar score by element
+    for element_name in ["last_name", "middle_name", "first_name"]:
+        # split data to compare
+        condition_compare = (
+            names_df[f"raw_{element_name}"].notna()
+            & names_df[f"best_{element_name}"].notna()
+        )
+        compare_names_df = names_df[condition_compare]
+        not_compare_names_df = names_df[~condition_compare]
+
+        # compare raw with best
+        compare_names_df[f"similar_{element_name}"] = compare_names_df[
+            f"raw_{element_name}"
+        ].apply(unidecode) == compare_names_df[f"best_{element_name}"].apply(unidecode)
+        compare_names_df[f"similar_{element_name}"] = compare_names_df[
+            f"similar_{element_name}"
+        ].astype(int)
+
+        not_compare_names_df[f"similar_{element_name}"] = 1
+
+        # concat
+        names_df = pd.concat(
+            [compare_names_df, not_compare_names_df], ignore_index=True
+        )
+
+    weights = [0.25, 0.25, 0.5]
+    names_df["simility_score"] = (
+        weights[0] * names_df["similar_last_name"]
+        + weights[1] * names_df["similar_middle_name"]
+        + weights[2] * names_df["similar_first_name"]
     )
 
+    print(">> Simility_score")
+
     # Postprocess
-    print(">> Post-processing")
     pre_names_df = names_df[
-        ["group_id", "raw_name", "best_name", "similarity_score"]
+        ["group_id", "raw_name", "best_name", "simility_score"]
     ]
     pre_names_df[key] = pre_names_df["group_id"].str.split("-").str[0]
-
     pre_names_df = pre_names_df.drop(columns=["group_id"])
 
     pre_names_df = pd.concat([
         pre_names_df,
         skip_names_df
     ], ignore_index=True)
-
-    pre_names_df.loc[
-        pre_names_df["best_name"].isna(),
-        "best_name"
-    ] = pre_names_df[
+    pre_names_df.loc[pre_names_df["best_name"].isna(), "best_name"] = pre_names_df[
         "raw_name"
     ]
+    pre_names_df.loc[pre_names_df["simility_score"].isna(),
+                     "simility_score"] = 1
 
-    pre_names_df.loc[
-        pre_names_df["similarity_score"].isna(),
-        "similarity_score"
-    ] = 1
+    print(">> Postprocess")
 
-    # Merging with raw names
-    print(">>> Merging back to raw names")
+    # Merge
     pre_names_n = pd.merge(
         raw_names_n.set_index([key, 'raw_name']),
         pre_names_df.set_index([key, 'raw_name']),
@@ -360,30 +384,24 @@ def CoreBestName(
         how='left',
         sort=True
     ).reset_index()
-    pre_names_n.loc[
-        pre_names_n["best_name"].isna(),
-        "best_name"
-    ] = pre_names_n[
+    pre_names_n.loc[pre_names_n["best_name"].isna(), "best_name"] = pre_names_n[
         "raw_name"
     ]
-    pre_names_n.loc[
-        pre_names_n["similarity_score"].isna(),
-        "similarity_score"
-    ] = 1
+    pre_names_n.loc[pre_names_n["simility_score"].isna(), "simility_score"] = 1
 
-    # Find source best name
-    print(">>> Finding source best name")
+    # Find source best_name
+    pre_names_n["score_by_best"] = pre_names_n[["raw_name", "best_name"]].apply(
+        lambda row: SequenceMatcher(None, row.raw_name, row.best_name).ratio(), axis=1
+    )
     map_source_best_name = (
         pre_names_n.sort_values(
-            by=[key, "best_name", "similarity_score"], ascending=False)
+            by=[key, "best_name", "score_by_best"], ascending=False)
         .groupby(by=[key, "best_name"])
         .head(1)[[key, "best_name", "source_name"]]
     )
-
     map_source_best_name = map_source_best_name.rename(
         columns={"source_name": "source_best_name"}
     )
-
     pre_names_n = pd.merge(
         pre_names_n.set_index([key, 'best_name']),
         map_source_best_name.set_index([key, 'best_name']),
@@ -391,71 +409,10 @@ def CoreBestName(
         how='left',
         sort=True
     ).reset_index()
+    pre_names_n = pre_names_n.drop(columns=["score_by_best"])
 
     # Return
     return pre_names_n
-
-
-def UniqueBestName(
-    name_gender_by_key: pd.DataFrame,
-    key: str,
-) -> pd.DataFrame:
-    print(">>> Setting priority sorting")
-    priority_names = {
-        "FTEL": 1,
-        "SENDO": 2,
-        "FPLAY": 3,
-        "FO": 4,
-        "FSHOP": 5,
-        "LONGCHAU": 6,
-        "FSOFT": 7
-    }
-    if key == 'phone':
-        priority_names['CREDIT'] = 8
-
-    name_gender_by_key['priority'] = name_gender_by_key['source_best_name'].map(priority_names)
-
-    stats_best_name =\
-    name_gender_by_key.groupby(by=[key, 'best_name'])['best_name']\
-    .agg(num_overall='count')\
-    .reset_index()
-
-    name_gender_by_key = pd.merge(
-        name_gender_by_key.set_index([key, 'best_name']),
-        stats_best_name.set_index([key, 'best_name']),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index()
-
-    name_gender_by_key=\
-    name_gender_by_key.sort_values(
-        by=[key, 'num_overall', 'priority'],
-        ascending=[True, False, True]
-    )
-
-    unique_name_gender_by_key =\
-    name_gender_by_key.groupby(by=[key])\
-    .head(1)[[key, 'best_name', 'best_gender', 'source_best_name']]
-
-    unique_name_gender_by_key=\
-    unique_name_gender_by_key.rename(columns={
-        'best_name': 'unique_name',
-        'best_gender': 'unique_gender',
-        'source_best_name': 'source_unique_name'
-    })
-
-    name_gender_by_key = pd.merge(
-        name_gender_by_key.set_index(key),
-        unique_name_gender_by_key.set_index(key),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index()
-
-    name_gender_by_key = name_gender_by_key.drop(columns=['priority', 'num_overall'])
-
-    return name_gender_by_key
 
 
 def PipelineBestName(
@@ -482,63 +439,25 @@ def PipelineBestName(
     single_key_names = raw_names[~raw_names[key].isin(dup_keys)]
 
     # run pipeline best_name
-    print(">>> Process multi-key name")
     pre_multi_key_names = CoreBestName(multi_key_names, key, n_cores=n_cores)
 
     # fake best_name
-    print(">>> Process single-key name")
     pre_single_key_names = single_key_names
     pre_single_key_names["best_name"] = pre_single_key_names["raw_name"]
-    pre_single_key_names["similarity_score"] = 1
+    pre_single_key_names["simility_score"] = 1
     pre_single_key_names["source_best_name"] = pre_single_key_names["source_name"]
 
     # concat
     pre_names = pd.concat(
-        [pre_single_key_names, pre_multi_key_names],
-        ignore_index=True
-    )
+        [pre_single_key_names, pre_multi_key_names], ignore_index=True)
 
     # best gender
-    print(">>> Merging with dictionary to find gender")
-    pre_names_unique = pre_names[pre_names['gender'].isna()]['raw_name'].unique()
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest_new.parquet',
-        filters=[('enrich_name', 'in', pre_names_unique)],
-        filesystem=hdfs,
-        columns=['enrich_name', 'gender']
-    ).drop_duplicates(subset=['enrich_name'], keep='last')\
-    .rename(columns={
-        'gender': 'gender_dict'
-    })
-
-    pre_names = pd.merge(
-        pre_names.set_index('raw_name'),
-        dict_name_lst.set_index('enrich_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index()\
-    .rename(columns={
-        'index': 'raw_name'
-    })
-
-    pre_names.loc[
-        pre_names['gender'].isna(),
-        'gender'
-    ] = pre_names['gender_dict']
-
-    pre_names = pre_names.drop(columns=['gender_dict'])
-
-    print(">>> Finding best gender")
     best_name_gender = pre_names[
         (pre_names['best_name'].notna())
         & (pre_names['best_name'] == pre_names['raw_name'])
     ][['best_name', 'gender']].rename(columns={
         'gender': 'best_gender'
-    }).drop_duplicates()\
-    .dropna(subset=['best_gender'])\
-    .drop_duplicates(subset=['best_name'], keep='first')
-
+    }).drop_duplicates()
     pre_names = pd.merge(
         pre_names.set_index('best_name'),
         best_name_gender.set_index('best_name'),
@@ -550,17 +469,11 @@ def PipelineBestName(
         "best_gender"
     ] = None
 
+    # rename
     pre_names = pre_names.rename(
         columns={
             'raw_name': 'name'
         }
-    )
-
-    # UNIQUE BEST NAME
-    print(">>> Finding unique best name for key")
-    pre_names = UniqueBestName(
-        pre_names,
-        key=key
     )
 
     # Load & concat to new data

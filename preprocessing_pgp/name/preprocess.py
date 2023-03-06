@@ -36,6 +36,24 @@ def remove_special_chars(sentence: str) -> str:
     return sentence.translate(str.maketrans('', '', punctuation))
 
 
+def remove_non_word(sentence: str) -> str:
+    """
+    Removing all non-word character from sentence
+
+    Parameters
+    ----------
+    sentence : str
+        The input sentence can contains symbols, special non-utf8 characters
+
+    Returns
+    -------
+    str
+        The sentence not contain any special character
+    """
+    clean_sentence = re.sub(r'[^\w]', ' ', sentence)
+    return clean_sentence
+
+
 def remove_spare_spaces(sentence: str) -> str:
     """
     Removing spare spaces inside a sentence
@@ -99,11 +117,14 @@ def basic_preprocess_name(name: str) -> str:
     str
         The preprocessed name
     """
-    # Remove Spare Spaces
-    clean_name = remove_spare_spaces(name)
-
     # Remove Special Characters
-    clean_name = remove_special_chars(clean_name)
+    clean_name = remove_special_chars(name)
+
+    # Remove all non-word characters
+    clean_name = remove_non_word(clean_name)
+
+    # Remove Spare Spaces
+    clean_name = remove_spare_spaces(clean_name)
 
     # Format Caps
     caps_name = format_caps_word(clean_name)
@@ -180,12 +201,12 @@ def preprocess_df(
     cleaned_data[f'clean_{name_col}'] =\
         cleaned_data[name_col].apply(
             basic_preprocess_name
-        )
+    )
     name_process = NameProcess()
     cleaned_data[f'clean_{name_col}'] =\
         cleaned_data[f'clean_{name_col}'].apply(
             lambda name: name_process.CleanName(name)[0]
-        )
+    )
 
     cleaned_data = cleaned_data.drop(columns=[name_col])
     cleaned_data = cleaned_data.rename(columns={

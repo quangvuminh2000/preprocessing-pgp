@@ -21,12 +21,12 @@ hdfs = fs.HadoopFileSystem(
     host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
 sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+from filter_profile import get_difference_data
 from preprocess_profile import (
     remove_same_username_email,
     cleansing_profile_name,
     extracting_pronoun_from_name
 )
-from filter_profile import get_difference_data
 
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core'
 
@@ -263,13 +263,13 @@ def UnifyFo(
     profile_fo = profile_fo.rename(columns={'vne_id': 'vne_id_fo'})
     # Fill 'Ca nhan'
     profile_fo['customer_type'] =\
-    profile_fo['customer_type'].map({
-        'customer': 'Ca nhan',
-        'company': 'Cong ty',
-        'medical': 'Benh vien - Phong kham',
-        'edu': 'Giao duc',
-        'biz': 'Ho kinh doanh'
-    })
+        profile_fo['customer_type'].map({
+            'customer': 'Ca nhan',
+            'company': 'Cong ty',
+            'medical': 'Benh vien - Phong kham',
+            'edu': 'Giao duc',
+            'biz': 'Ho kinh doanh'
+        })
     profile_fo.loc[
         (profile_fo['name'].notna())
         & (profile_fo['customer_type'].isna()),
@@ -283,8 +283,8 @@ def UnifyFo(
 
 
 def UpdateUnifyFo(
-    now_str:str,
-    n_cores:int = 1
+    now_str: str,
+    n_cores: int = 1
 ):
     # VARIABLES
     raw_path = ROOT_PATH + '/raw'
