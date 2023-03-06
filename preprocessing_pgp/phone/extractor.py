@@ -68,22 +68,22 @@ def extract_valid_phone(
     origin_cols = f_phones.columns
 
     # ? Preprocess phone with basic phone string clean up
-    f_phones["clean_phone"] = f_phones[phone_col].apply(
+    f_phones["phone_clean"] = f_phones[phone_col].apply(
         basic_phone_preprocess)
 
     print(f_phones)
 
     if print_info:
         print(
-            f"# OF PHONE CLEAN : {f_phones.query(f'clean_phone != {phone_col}').shape[0]}",
+            f"# OF PHONE CLEAN : {f_phones.query(f'phone_clean != {phone_col}').shape[0]}",
             end="\n\n",
         )
 
         # print("Sample of non-clean phones:")
-        # print(f_phones.query(f"clean_phone != {phone_col}"), end="\n\n\n")
+        # print(f_phones.query(f"phone_clean != {phone_col}"), end="\n\n\n")
 
     # ? Calculate the phone length for further preprocessing
-    f_phones["phone_length"] = f_phones["clean_phone"].map(
+    f_phones["phone_length"] = f_phones["phone_clean"].map(
         lambda x: len(str(x))
     )
 
@@ -92,7 +92,7 @@ def extract_valid_phone(
 
     # * Length 10 - New
     mask_valid_new_sub_phone = (f_phones["phone_length"] == 10) & (
-        f_phones["clean_phone"].str[:3].isin(SUB_PHONE_10NUM)
+        f_phones["phone_clean"].str[:3].isin(SUB_PHONE_10NUM)
     )
     f_phones.loc[
         mask_valid_new_sub_phone,
@@ -107,7 +107,7 @@ def extract_valid_phone(
 
     # * Length 11 - Old
     mask_valid_old_sub_phone = (f_phones["phone_length"] == 11) & (
-        f_phones["clean_phone"].str[:4].isin(SUB_PHONE_11NUM)
+        f_phones["phone_clean"].str[:4].isin(SUB_PHONE_11NUM)
     )
     f_phones.loc[
         mask_valid_old_sub_phone,
@@ -124,7 +124,7 @@ def extract_valid_phone(
     mask_old_phone_format = f_phones["is_old_mobi"] == True
 
     f_phones.loc[mask_old_phone_format, "phone_convert"] = f_phones.loc[
-        mask_old_phone_format, "clean_phone"
+        mask_old_phone_format, "phone_clean"
     ].map(convert_mobi_phone)
 
     if print_info:
@@ -141,8 +141,8 @@ def extract_valid_phone(
     mask_valid_new_tele_phone = (
         (f_phones["phone_length"] == 11)
         & (
-            (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_11NUM))
-            | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_11NUM))
+            (f_phones["phone_clean"].str[:3].isin(SUB_TELEPHONE_11NUM))
+            | (f_phones["phone_clean"].str[:4].isin(SUB_TELEPHONE_11NUM))
         )
         & (f_phones["is_mobi"].isna())
     )
@@ -155,9 +155,9 @@ def extract_valid_phone(
     mask_valid_old_tele_phone = (
         (f_phones["phone_length"] == 10)
         & (
-            (f_phones["clean_phone"].str[:3].isin(SUB_TELEPHONE_10NUM))
-            | (f_phones["clean_phone"].str[:2].isin(SUB_TELEPHONE_10NUM))
-            | (f_phones["clean_phone"].str[:4].isin(SUB_TELEPHONE_10NUM))
+            (f_phones["phone_clean"].str[:3].isin(SUB_TELEPHONE_10NUM))
+            | (f_phones["phone_clean"].str[:2].isin(SUB_TELEPHONE_10NUM))
+            | (f_phones["phone_clean"].str[:4].isin(SUB_TELEPHONE_10NUM))
         )
         & (f_phones["is_mobi"].isna())
     )
@@ -174,7 +174,7 @@ def extract_valid_phone(
         print(f"# OF OLD REGION PHONE : {mask_old_region_phone.sum()}")
 
     f_phones.loc[mask_old_region_phone, "phone_convert"] = f_phones.loc[
-        mask_old_region_phone, "clean_phone"
+        mask_old_region_phone, "phone_clean"
     ].map(convert_phone_region)
 
     # if print_info:
@@ -185,6 +185,7 @@ def extract_valid_phone(
     # ? Filling NaNs in indicator columns
 
     fill_cols = [
+        "phone_clean",
         "is_phone_valid",
         "is_mobi",
         "is_new_mobi",
@@ -199,7 +200,7 @@ def extract_valid_phone(
     f_phones.loc[
         f_phones["is_phone_valid"] & f_phones["phone_convert"].isna(
         ), "phone_convert"
-    ] = f_phones["clean_phone"]
+    ] = f_phones["phone_clean"]
 
     if print_info:
         print(
@@ -213,8 +214,8 @@ def extract_valid_phone(
 
         # print("Sample of invalid phones:", end="\n\n")
 
-    f_phones.drop(phone_col, axis=1, inplace=True)
-    f_phones.rename(columns={"clean_phone": phone_col}, inplace=True)
+    # f_phones.drop(phone_col, axis=1, inplace=True)
+    # f_phones.rename(columns={"phone_clean": phone_col}, inplace=True)
     f_phones = f_phones[[*origin_cols, *fill_cols, 'phone_convert']]
     # if print_info:
     #     print(f_phones[~f_phones["is_phone_valid"]].head(10))
@@ -316,6 +317,7 @@ def process_convert_phone(
 
     # * Concat with original cols
     new_cols = [
+        'phone_clean',
         'is_phone_valid',
         'phone_type',
         'phone_convert',
