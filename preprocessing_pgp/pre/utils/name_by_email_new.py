@@ -7,7 +7,7 @@ import sys
 sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
 import pipeline_best
 from const import (
-    UTILS_PATH,
+    PREPROCESS_PATH,
     hdfs
 )
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # save
     data.to_parquet(
-        f'{UTILS_PATH}/name_by_email_latest_new.parquet',
+        f'{PREPROCESS_PATH}/name_by_email_latest_new.parquet',
         filesystem=hdfs,
         index=False
     )

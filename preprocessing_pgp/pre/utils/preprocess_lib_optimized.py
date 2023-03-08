@@ -1109,7 +1109,7 @@ def FindUniqueName(
         "longchau": ["name", "active_date", "last_active"],
     }
     raw_path = ROOT_PATH + "/raw"
-    utils_path = ROOT_PATH + "/utils"
+    PREPROCESS_PATH = ROOT_PATH + "/utils"
 
     raw_name = pd.DataFrame(
         columns=[key, "raw_name", "active_date",
@@ -1121,7 +1121,7 @@ def FindUniqueName(
 
         # load data
         valid_key = pd.read_parquet(
-            f"{utils_path}/valid_{key}_latest.parquet",
+            f"{PREPROCESS_PATH}/valid_{key}_latest.parquet",
             filters=[(f"is_{key}_valid", "=", True), (key, "in", dup_key_s)],
             columns=[f"{key}_raw", key],
             filesystem=hdfs,
@@ -1366,14 +1366,14 @@ def PipelineBestName(date_str, key="phone"):
 
 
 def DictNameGender():
-    utils_path = ROOT_PATH + "/utils"
+    PREPROCESS_PATH = ROOT_PATH + "/utils"
 
     # Load data CDP Profle
     data_name_cdp = pd.DataFrame()
     for key in ["phone", "email"]:
         print(key)
         data = pd.read_parquet(
-            f"{utils_path}/name_by_{key}_latest.parquet",
+            f"{PREPROCESS_PATH}/name_by_{key}_latest.parquet",
             filesystem=hdfs,
             columns=[
                 "name",
@@ -1462,5 +1462,5 @@ def DictNameGender():
 
     # Save
     data_name_cdp.to_parquet(
-        f"{utils_path}/track_name_gender_latest.parquet", filesystem=hdfs, index=False
+        f"{PREPROCESS_PATH}/track_name_gender_latest.parquet", filesystem=hdfs, index=False
     )

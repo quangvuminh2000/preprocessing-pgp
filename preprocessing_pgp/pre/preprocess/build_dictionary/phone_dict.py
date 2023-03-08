@@ -5,11 +5,11 @@ from tqdm import tqdm
 
 from preprocessing_pgp.phone.extractor import process_convert_phone
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from const import (
     hdfs,
-    RAW_PATH,
-    PREPROCESS_PATH,
+    CENTRALIZE_PATH,
+    UTILS_PATH,
     PRODUCT_PATH,
 )
 
@@ -19,7 +19,7 @@ def load_phone(
     day: str
 ) -> pd.DataFrame:
     phones = pd.read_parquet(
-        f'{RAW_PATH}/{cttv}.parquet/d={day}',
+        f'{CENTRALIZE_PATH}/{cttv}.parquet/d={day}',
         filesystem=hdfs,
         columns=['phone']  # Might change depends on each cttv
     ).drop_duplicates().dropna()
@@ -38,17 +38,6 @@ def load_phone_bank(
             phone_bank,
             cttv_phone
         ], ignore_index=True)
-
-    # Phone extracted from email
-    phone_email = pd.read_parquet(
-        f'{PREPROCESS_PATH}/valid_email_latest_new.parquet',
-        filesystem=hdfs,
-        columns=['phone']
-    ).drop_duplicates().dropna()
-    phone_bank = pd.concat([
-        phone_bank,
-        phone_email
-    ], ignore_index=True)
 
     phone_bank = phone_bank[~phone_bank.duplicated()]
     return phone_bank
@@ -103,7 +92,7 @@ def update_phone_dict(
 
     # Save to utils
     latest_check_phone.to_parquet(
-        f'{PREPROCESS_PATH}/valid_phone_latest_new.parquet',
+        f'{UTILS_PATH}/valid_phone_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -114,7 +103,7 @@ def update_phone_dict(
         'phone_type', 'tail_phone_type'
     ]
     latest_valid_phone[email_cols].to_parquet(
-        f'{PRODUCT_PATH}/valid_phone_latest_new.parquet',
+        f'{PRODUCT_PATH}/valid_phone_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -126,14 +115,14 @@ def daily_enhance_phone(
     n_cores: int = 1
 ):
     phone_cttv = [
-        'ftel',
-        'fo',
-        'fplay',
-        'fshop',
-        'longchau',
-        'sendo',
-        'fsoft',
-        'credit'
+        "fo_vne",
+        "ftel_fplay",
+        "ftel_internet",
+        "sendo_sendo",
+        "frt_fshop",
+        "frt_longchau",
+        "fsoft_vio",
+        'frt_credit'
     ]
 
     print(">>> Loading email from CTTV")
@@ -141,7 +130,7 @@ def daily_enhance_phone(
 
     print(">>> Loading dictionary email")
     latest_check_phone = pd.read_parquet(
-        f'{PREPROCESS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
+        f'{UTILS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
 
     print(">>> Filtering new email")
     new_phone = filter_difference_phone(
@@ -149,21 +138,25 @@ def daily_enhance_phone(
         latest_check_phone
     )
 
+    n_new_profile = new_phone.shape[0]
     print(f"Number of new profile: {new_phone.shape[0]}")
 
-    print(">>> Enhancing new email")
-    new_enhance_phone = enhance_phone(
-        new_phone,
-        phone_col='phone',
-        n_cores=n_cores
-    )
+    if n_new_profile != 0:
+        print(">>> Enhancing new email")
+        new_enhance_phone = enhance_phone(
+            new_phone,
+            phone_col='phone',
+            n_cores=n_cores
+        )
 
-    print(">>> Updating email dictionary")
-    update_phone_dict(
-        new_enhance_phone,
-        latest_check_phone,
-        day
-    )
+        print(">>> Updating email dictionary")
+        update_phone_dict(
+            new_enhance_phone,
+            latest_check_phone,
+            day
+        )
+    else:
+        print(">>> No new profile to update")
 
 
 if __name__ == '__main__':

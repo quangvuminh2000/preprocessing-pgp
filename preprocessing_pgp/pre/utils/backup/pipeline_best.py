@@ -17,7 +17,7 @@ from filter_profile import get_difference_data
 from const import (
     hdfs,
     ROOT_PATH,
-    UTILS_PATH
+    PREPROCESS_PATH
 )
 
 
@@ -479,7 +479,7 @@ def PipelineBestName(
     # Load & concat to new data
     try:
         old_best_name = pd.read_parquet(
-            f'{UTILS_PATH}/name_by_{key}_latest_new.parquet',
+            f'{PREPROCESS_PATH}/name_by_{key}_latest_new.parquet',
             filesystem=hdfs
         )
         pre_names = pd.concat([

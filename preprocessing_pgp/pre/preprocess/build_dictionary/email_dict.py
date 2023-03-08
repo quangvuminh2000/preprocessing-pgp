@@ -5,11 +5,11 @@ from tqdm import tqdm
 
 from preprocessing_pgp.email.info_extractor import process_extract_email_info
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
+sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from const import (
     hdfs,
-    RAW_PATH,
-    PREPROCESS_PATH,
+    CENTRALIZE_PATH,
+    UTILS_PATH,
     PRODUCT_PATH,
 )
 
@@ -20,9 +20,9 @@ def load_email(
 ) -> pd.DataFrame:
 
     emails = pd.read_parquet(
-        f'{RAW_PATH}/{cttv}.parquet/d={day}',
+        f'{CENTRALIZE_PATH}/{cttv}.parquet/d={day}',
         filesystem=hdfs,
-        columns=['email'] # Might change depends on each cttv
+        columns=['email']  # Might change depends on each cttv
     ).drop_duplicates().dropna()
 
     return emails
@@ -100,7 +100,7 @@ def update_email_dict(
 
     # Save to utils
     latest_check_email.to_parquet(
-        f'{PREPROCESS_PATH}/valid_email_latest_new.parquet',
+        f'{UTILS_PATH}/valid_email_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -112,7 +112,7 @@ def update_email_dict(
         'is_autoemail', 'gender', 'customer_type'
     ]
     latest_valid_email[email_cols].to_parquet(
-        f'{PRODUCT_PATH}/valid_email_latest_new.parquet',
+        f'{PRODUCT_PATH}/valid_email_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -124,13 +124,13 @@ def daily_enhance_email(
     n_cores: int = 1
 ):
     email_cttv = [
-        'ftel',
-        'fo',
-        'fplay',
-        'fshop',
-        'longchau',
-        'sendo',
-        'fsoft'
+        "fo_vne",
+        "ftel_fplay",
+        "ftel_internet",
+        "sendo_sendo",
+        "frt_fshop",
+        "frt_longchau",
+        "fsoft_vio"
     ]
 
     print(">>> Loading email from CTTV")
@@ -138,7 +138,7 @@ def daily_enhance_email(
 
     print(">>> Loading dictionary email")
     latest_check_emails = pd.read_parquet(
-        f'{PREPROCESS_PATH}/valid_email_latest.parquet', filesystem=hdfs)
+        f'{UTILS_PATH}/valid_email_latest.parquet', filesystem=hdfs)
 
     print(">>> Filtering new email")
     new_email = filter_difference_email(
@@ -146,21 +146,26 @@ def daily_enhance_email(
         latest_check_emails
     )
 
+    n_new_profile = new_email.shape[0]
     print(f"Number of new profile: {new_email.shape[0]}")
 
-    print(">>> Enhancing new email")
-    new_enhance_email = enhance_email(
-        new_email,
-        email_col='email',
-        n_cores=n_cores
-    )
+    if n_new_profile != 0:
+        print(">>> Enhancing new email")
+        new_enhance_email = enhance_email(
+            new_email,
+            email_col='email',
+            n_cores=n_cores
+        )
 
-    print(">>> Updating email dictionary")
-    update_email_dict(
-        new_enhance_email,
-        latest_check_emails,
-        day
-    )
+        print(">>> Updating email dictionary")
+        update_email_dict(
+            new_enhance_email,
+            latest_check_emails,
+            day
+        )
+    else:
+        print(">>> No new profile to update")
+
 
 if __name__ == '__main__':
     TODAY = sys.argv[1]

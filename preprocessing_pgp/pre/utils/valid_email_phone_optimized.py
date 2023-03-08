@@ -368,7 +368,7 @@ def FormatName(valid_email):
 
 def ValidPhoneEmail(date_str):
     raw_path = ROOT_PATH + '/raw'
-    utils_path = ROOT_PATH + '/utils'
+    PREPROCESS_PATH = ROOT_PATH + '/utils'
     today = date_str
 
     # VALID EMAIL
@@ -398,7 +398,7 @@ def ValidPhoneEmail(date_str):
             load_email(cttv, key), ignore_index=True)
 
     latest_check_emails = pd.read_parquet(
-        f'{utils_path}/valid_email_latest.parquet', filesystem=hdfs)
+        f'{PREPROCESS_PATH}/valid_email_latest.parquet', filesystem=hdfs)
     emails_bank = emails_bank.loc[~emails_bank['email'].isin(
         latest_check_emails['email_raw'])]  # Only check new emails
 
@@ -710,7 +710,7 @@ def ValidPhoneEmail(date_str):
         'phone']].drop_duplicates().copy()
 
     latest_check_phones = pd.read_parquet(
-        f'{utils_path}/valid_phone_latest.parquet', filesystem=hdfs)
+        f'{PREPROCESS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
     phones_bank = phones_bank[~phones_bank['phone'].isin(
         latest_check_phones['phone_raw'].unique())]  # Only check new phones
 
@@ -727,8 +727,8 @@ def ValidPhoneEmail(date_str):
         check_phones = pd.DataFrame()
 
     # UPDATE (lastest)
-#     latest_check_emails = pd.read_parquet(f'{utils_path}/valid_email_latest.parquet', filesystem=hdfs)
-#     latest_check_phones = pd.read_parquet(f'{utils_path}/valid_phone_latest.parquet', filesystem=hdfs)
+#     latest_check_emails = pd.read_parquet(f'{PREPROCESS_PATH}/valid_email_latest.parquet', filesystem=hdfs)
+#     latest_check_phones = pd.read_parquet(f'{PREPROCESS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
 
 #     new_check_emails = check_emails[~check_emails['email_raw'].isin(latest_check_emails['email_raw'].unique())]
 #     new_check_phones = check_phones[~check_phones['phone_raw'].isin(latest_check_phones['phone_raw'].unique())]
@@ -763,7 +763,7 @@ def ValidPhoneEmail(date_str):
 #         latest_check_emails = FormatName(latest_check_emails)
 
     if not check_phones.empty:
-    #     check_phones = MetaDataPhone(check_phones)
+        #     check_phones = MetaDataPhone(check_phones)
         check_phones['export_date'] = today
         check_phones.rename(columns={
             'phone': 'phone_raw',
@@ -778,12 +778,12 @@ def ValidPhoneEmail(date_str):
     latest_check_emails = latest_check_emails.drop_duplicates(
         subset=['email_raw'], keep='first')
     # latest_check_emails.to_parquet(
-    #     f'{utils_path}/valid_email_latest.parquet', filesystem=hdfs, index=False)
+    #     f'{PREPROCESS_PATH}/valid_email_latest.parquet', filesystem=hdfs, index=False)
 
     latest_check_phones = latest_check_phones.drop_duplicates(
         subset=['phone_raw'], keep='first')
     # latest_check_phones.to_parquet(
-    #     f'{utils_path}/valid_phone_latest.parquet', filesystem=hdfs, index=False)
+    #     f'{PREPROCESS_PATH}/valid_phone_latest.parquet', filesystem=hdfs, index=False)
 
     # PRODUCT
     product_path = '/data/fpt/ftel/cads/dep_solution/sa/cdp/data'

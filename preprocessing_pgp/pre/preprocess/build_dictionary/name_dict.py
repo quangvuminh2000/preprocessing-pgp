@@ -2,18 +2,17 @@ import sys
 
 import pandas as pd
 from tqdm import tqdm
-from unidecode import unidecode
 
 from preprocessing_pgp.name.enrich_name import process_enrich
 from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
 from preprocessing_pgp.utils import parallelize_dataframe
 from preprocessing_pgp.name.preprocess import preprocess_df
 
-sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new/')
+sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from const import (
     hdfs,
-    RAW_PATH,
-    PREPROCESS_PATH,
+    CENTRALIZE_PATH,
+    UTILS_PATH,
     PRODUCT_PATH
 )
 
@@ -24,7 +23,7 @@ def load_name_info(
 ) -> pd.DataFrame:
 
     name_info = pd.read_parquet(
-        f'{RAW_PATH}/{cttv}.parquet/d={day}',
+        f'{CENTRALIZE_PATH}/{cttv}.parquet/d={day}',
         filesystem=hdfs,
         columns=['name']
     )
@@ -161,7 +160,7 @@ def update_name_info_dict(
     ]
     dict_name = dict_name[dict_name_cols]
     dict_name.to_parquet(
-        f'{PREPROCESS_PATH}/dict_name_latest_new.parquet',
+        f'{UTILS_PATH}/dict_name_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -172,7 +171,7 @@ def update_name_info_dict(
     )
 
     dict_name_product.to_parquet(
-        f'{PRODUCT_PATH}/dict_name_latest_new.parquet',
+        f'{PRODUCT_PATH}/dict_name_latest.parquet',
         filesystem=hdfs,
         index=False
     )
@@ -183,14 +182,14 @@ def daily_enhance_name_info(
     n_cores: int = 1
 ):
     phone_cttv = [
-        'ftel',
-        'fo',
-        'fplay',
-        'fshop',
-        'longchau',
-        'sendo',
-        'fsoft',
-        'credit'
+        "fo_vne",
+        "ftel_fplay",
+        "ftel_internet",
+        "sendo_sendo",
+        "frt_fshop",
+        "frt_longchau",
+        "fsoft_vio",
+        "frt_credit"
     ]
 
     print(">>> Loading names from CTTV")
@@ -198,7 +197,7 @@ def daily_enhance_name_info(
 
     print(">>> Loading latest name dictionary")
     dict_name_latest = pd.read_parquet(
-        f'{PREPROCESS_PATH}/dict_name_latest_new.parquet',
+        f'{UTILS_PATH}/dict_name_latest.parquet',
         filesystem=hdfs
     )
 
@@ -215,21 +214,25 @@ def daily_enhance_name_info(
         bank_name_col='name',
         dict_name_col='enrich_name'
     )
+    n_new_profile = new_name_info.shape[0]
     print(f'Number of new profile: {new_name_info.shape[0]}')
 
-    print(">>> Enhancing new name")
-    new_enhance_name_info = enhance_name_info(
-        new_name_info,
-        name_col='name',
-        n_cores=n_cores
-    )
+    if n_new_profile != 0:
+        print(">>> Enhancing new name")
+        new_enhance_name_info = enhance_name_info(
+            new_name_info,
+            name_col='name',
+            n_cores=n_cores
+        )
 
-    print(">>> Update name dictionary")
-    update_name_info_dict(
-        new_enhance_name_info,
-        dict_name_latest,
-        day
-    )
+        print(">>> Update name dictionary")
+        update_name_info_dict(
+            new_enhance_name_info,
+            dict_name_latest,
+            day
+        )
+    else:
+        print(">>> No new profile to update")
 
 
 if __name__ == '__main__':

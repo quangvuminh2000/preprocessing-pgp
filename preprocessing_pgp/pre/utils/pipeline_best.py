@@ -17,7 +17,7 @@ sys.path.append('/bigdata/fdp/cdp/cdp_pages/scripts_hdfs/pre/utils/new')
 from const import (
     hdfs,
     ROOT_PATH,
-    UTILS_PATH
+    PREPROCESS_PATH
 )
 from filter_profile import get_difference_data
 
@@ -502,7 +502,7 @@ def PipelineBestName(
     print(">>> Merging with dictionary to find gender")
     pre_names_unique = pre_names[pre_names['gender'].isna()]['raw_name'].unique()
     dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest_new.parquet',
+        f'{PREPROCESS_PATH}/dict_name_latest_new.parquet',
         filters=[('enrich_name', 'in', pre_names_unique)],
         filesystem=hdfs,
         columns=['enrich_name', 'gender']
@@ -566,7 +566,7 @@ def PipelineBestName(
     # Load & concat to new data
     try:
         old_best_name = pd.read_parquet(
-            f'{UTILS_PATH}/name_by_{key}_latest_new.parquet',
+            f'{PREPROCESS_PATH}/name_by_{key}_latest_new.parquet',
             filesystem=hdfs
         )
         pre_names = pd.concat([
