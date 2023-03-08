@@ -364,7 +364,7 @@ def extract_vi_address_by_level(
 
     extractor = LevelExtractor()
 
-    extracted_data = data.copy()
+    extracted_data = data
 
     extracted_results =\
         extracted_data[address_col].apply(

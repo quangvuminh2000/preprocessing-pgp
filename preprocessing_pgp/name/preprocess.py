@@ -171,6 +171,7 @@ def preprocess_df(
     data: pd.DataFrame,
     # human_extractor: HumanNameExtractor,
     name_col: str = 'name',
+    clean_name: bool = True
     # extract_human: bool = False,
     # multiprocessing: bool = False,
     # n_cpu: int = None
@@ -184,6 +185,8 @@ def preprocess_df(
         The input data containing the columns with name records
     name_col : str, optional
         The column contains the name records, by default 'name'
+    clean_name : bool, optional
+        Whether to clean the name separated by space, by default True
 
     Returns
     -------
@@ -202,11 +205,12 @@ def preprocess_df(
         cleaned_data[name_col].apply(
             basic_preprocess_name
     )
-    name_process = NameProcess()
-    cleaned_data[f'clean_{name_col}'] =\
-        cleaned_data[f'clean_{name_col}'].apply(
-            lambda name: name_process.CleanName(name)[0]
-    )
+    if clean_name:
+        name_process = NameProcess()
+        cleaned_data[f'clean_{name_col}'] =\
+            cleaned_data[f'clean_{name_col}'].apply(
+                lambda name: name_process.CleanName(name)[0]
+        )
 
     cleaned_data = cleaned_data.drop(columns=[name_col])
     cleaned_data = cleaned_data.rename(columns={

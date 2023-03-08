@@ -137,7 +137,7 @@ def extract_ctype(
 
         * `customer_type` contains the type of customer extracted from name
     """
-    extracted_data = data.copy()
+    extracted_data = data
     # # ? KWS
     # type_extractor = TypeExtractor()
     # extracted_data['customer_type'] = extracted_data[name_col]\
@@ -200,7 +200,8 @@ def process_extract_name_type(
         data,
         preprocess_df,
         n_cores=n_cores,
-        name_col=name_col
+        name_col=name_col,
+        clean_name=False
     )
     clean_time = time() - start_time
     if logging_info:

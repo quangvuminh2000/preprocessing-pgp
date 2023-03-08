@@ -471,6 +471,6 @@ def process_verify_card(
 
     final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
 
-    final_card_df = final_card_df[orig_cols + new_cols]
+    final_card_df = final_card_df[[*orig_cols, *new_cols]]
 
     return final_card_df

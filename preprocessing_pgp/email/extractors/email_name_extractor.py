@@ -210,7 +210,7 @@ class EmailNameExtractor:
             * `gender_extracted` : The gender predicted from the extracted username
         """
 
-        extracted_data = data.copy()
+        extracted_data = data
         orig_cols = extracted_data.columns
 
         # * Clean the data

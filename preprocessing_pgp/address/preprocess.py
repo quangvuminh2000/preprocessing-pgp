@@ -263,7 +263,7 @@ def clean_vi_address(
     """
     cleaner = VietnameseAddressCleaner()
 
-    cleaned_data = data.copy()
+    cleaned_data = data
 
     cleaned_data[f'cleaned_{address_col}'] =\
         cleaned_data[address_col].apply(

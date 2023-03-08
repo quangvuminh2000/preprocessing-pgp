@@ -208,7 +208,7 @@ def validate_clean_email(
 
     validator = EmailValidator()
 
-    validated_data = data.copy()
+    validated_data = data
 
     validated_data['is_email_valid'] = validated_data[email_col].apply(
         validator.is_valid_email
@@ -291,15 +291,19 @@ def process_validate_email(
     sep_display()
 
     # * Get the domain of the email name & Check for private email
-    validated_data['email_domain'] = validated_data[email_col].str.split('@').str[1]
-    validated_data['email_domain'] = validated_data['email_domain'].replace(DOMAIN_GROUP_DICT)
-    validated_data['private_email'] = validated_data['email_domain'].isin(PRIVATE_EMAIL_DOMAINS)
+    validated_data['email_domain'] = validated_data[f'cleaned_{email_col}'].str.split(
+        '@').str[1]
+    validated_data['email_domain'] = validated_data['email_domain'].replace(
+        DOMAIN_GROUP_DICT)
+    validated_data['private_email'] = validated_data['email_domain'].isin(
+        PRIVATE_EMAIL_DOMAINS)
 
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])
 
     # * Filling na data to invalid email
     final_data['is_email_valid'].fillna(False, inplace=True)
+    final_data['is_email_valid'] = final_data['is_email_valid'].astype(bool)
 
     # * Concat with the origin cols
     new_cols = [

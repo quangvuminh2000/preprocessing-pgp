@@ -1,14 +1,11 @@
 """Module provides utils functions for card validation"""
 
 import re
-import multiprocessing as mp
-from typing import Tuple, Callable, List, Union
+from typing import List
 from string import ascii_lowercase
 from string import punctuation
 
 import pandas as pd
-import numpy as np
-from tqdm import tqdm
 
 
 def digit_to_year_string(digit: int) -> str:

@@ -100,9 +100,9 @@ def extract_null_values(
         Tuple of Non-Null DataFrame and Null DataFrame
     """
 
-    null_data = data[data[by_col].isna()].copy()
+    null_data = data[data[by_col].isna()]
 
-    non_null_data = data.dropna(subset=[by_col]).copy()
+    non_null_data = data.dropna(subset=[by_col])
 
     return non_null_data, null_data
 
@@ -129,7 +129,7 @@ def clean_card_data(
 
     card_cleaner = CardIDCleaner()
 
-    clean_data = data.copy()
+    clean_data = data
 
     print("Process cleaning card id...")
     clean_data[f'clean_{card_col}'] =\

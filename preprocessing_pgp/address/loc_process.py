@@ -67,7 +67,7 @@ class LocationCode:
         components : Dict
             `Dictionary` containing:
             * `key`: level
-            * `value`: best level name
+            * `value`: best_level_name
 
         Returns
         -------
@@ -149,7 +149,7 @@ def generate_loc_code(
 
     code_generator = LocationCode()
 
-    generated_data = data.copy()
+    generated_data = data
 
     row_codes = generated_data.apply(
         lambda row: code_generator.get_level_code(

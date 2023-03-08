@@ -117,8 +117,8 @@ def process_extract_email_info(
         email_col=email_col,
         n_cores=n_cores
     )
-    valid_email = validated_data.query('is_email_valid').copy()
-    invalid_email = validated_data.query('~is_email_valid').copy()
+    valid_email = validated_data.query('is_email_valid')
+    invalid_email = validated_data.query('~is_email_valid')
     # ? Separate email name and group
     valid_email[f'{email_col}_name'] =\
         valid_email[f'cleaned_{email_col}'].str.split('@').str[0]
