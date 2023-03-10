@@ -4,10 +4,7 @@ from abc import ABC, abstractmethod
 from time import time
 
 import pandas as pd
-import numpy as np
-import multiprocessing as mp
 from tqdm import tqdm
-from halo import Halo
 
 from preprocessing_pgp.card.preprocess import (
     clean_card_data
@@ -16,7 +13,7 @@ from preprocessing_pgp.card.utils import is_checker_valid
 from preprocessing_pgp.utils import (
     sep_display,
     # apply_multi_process,
-    apply_progress_bar,
+    # apply_progress_bar,
     extract_null_values,
     parallelize_dataframe
 )
@@ -27,6 +24,7 @@ from preprocessing_pgp.card.const import (
     POSSIBLE_GENDER_NUM,
     OLD_PID_REGION_CODE_NUMS,
     NEW_PID_REGION_CODE_NUMS,
+    REGION_CODE_DICT,
     GENDER_NUM_TO_CENTURY,
     VALID_PID_21_CENTURY_DOB,
     # Passport
@@ -340,12 +338,194 @@ class DriverLicenseValidator(CardValidator):
             and DriverLicenseValidator.is_real_driver_license(card_id)
 
 
-@Halo(
-    text='Verifying card id',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
+def parse_gender_from_card(
+    profile: pd.DataFrame,
+    card_col: str = 'card_id',
+) -> pd.DataFrame:
+    """
+    Parsing gender from new pid and driver license
+
+    Parameters
+    ----------
+    profile : pd.DataFrame
+        The input DF containing card id
+    card_col : str, optional
+        The column name that contain card data, by default 'card_id'
+
+    Returns
+    -------
+    pd.DataFrame
+        Data with extra info:
+        * `gender`: Gender extracted from new pid and driver license
+    """
+    gender_dict = {
+        '0': 'M',
+        '1': 'F',
+        '2': 'M',
+        '3': 'F'
+    }
+    # * Gender from new personal's id
+    profile['card_gender'] = None
+    new_pid_mask = (profile['is_personal_id'])\
+        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+    profile.loc[
+        new_pid_mask,
+        'gender'
+    ] = profile[card_col].str[3].map(gender_dict)
+
+    # * Gender from driver license
+    driver_license_mask = (profile['is_driver_license'])\
+        & (profile['gender'].notna())
+
+    profile.loc[
+        driver_license_mask,
+        'gender'
+    ] = profile[card_col].str[2].map(gender_dict)
+
+    return profile
+
+
+def parse_birthday_from_card(
+    profile: pd.DataFrame,
+    card_col: str = 'card_id',
+) -> pd.DataFrame:
+    """
+    Parsing birthday from new personal id
+
+    Parameters
+    ----------
+    profile : pd.DataFrame
+        The input DF containing card id
+    card_col : str, optional
+        The column name that contain card data, by default 'card_id'
+
+    Returns
+    -------
+    pd.DataFrame
+        Data with extra info:
+        * `year_of_birth`: YOB extracted from new pid
+    """
+    # * Can only get birthday from new personal's id
+    new_pid_mask = (profile['is_personal_id'])\
+        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+
+    gender_post_century = {
+        '0': '19',
+        '1': '19',
+        '2': '20',
+        '3': '20'
+    }
+    profile.loc[
+        new_pid_mask,
+        'post_cent'
+    ] = profile[card_col].str[3].map(gender_post_century)
+
+    profile.loc[
+        new_pid_mask,
+        'year_of_birth'
+    ] = profile['post_cent'] + profile[card_col].str[4:6]
+
+    profile = profile.drop(
+        columns=['post_cent']
+    )
+
+    return profile
+
+
+def parse_city_from_card(
+    profile: pd.DataFrame,
+    card_col: str = 'card_id',
+) -> pd.DataFrame:
+    """
+    Parsing city from new personal id and driver license
+
+    Parameters
+    ----------
+    profile : pd.DataFrame
+        The input DF containing card id
+    card_col : str, optional
+        The column name that contain card data, by default 'card_id'
+
+    Returns
+    -------
+    pd.DataFrame
+        Data with extra info:
+        * `city`: City extracted from new pid and driver license
+    """
+    # * New personal ID
+    new_pid_mask = (profile['is_personal_id'])\
+        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+    profile.loc[
+        new_pid_mask,
+        'code'
+    ] = profile[card_col].str[0:3]
+
+    # * Driver License
+    driver_license_mask = (profile['is_driver_license'])\
+        & (~profile['is_personal_id'])
+    profile.loc[
+        driver_license_mask,
+        'code'
+    ] = profile[card_col].str[0:2]
+
+    # * Merge to get city
+    profile = pd.merge(
+        profile.set_index('code'),
+        REGION_CODE_DICT.set_index('code'),
+        left_index=True, right_index=True,
+        how='left',
+        sort=False
+    )\
+        .reset_index()\
+        .drop(columns=['code'])
+
+    return profile
+
+
+def extract_card_info(
+    profile: pd.DataFrame,
+    card_col: str = 'card_id'
+) -> pd.DataFrame:
+    """
+    Parsing information from valid card id
+
+    Parameters
+    ----------
+    profile : pd.DataFrame
+        The input DF containing card id
+    card_col : str, optional
+        The column name that contain card data, by default 'card_id'
+
+    Returns
+    -------
+    pd.DataFrame
+        Data include extra info:
+        * `gender`: Gender parsed
+        * `year_of_birth`: YOB parsed
+        * `city`: City parsed
+    """
+
+    # * Parsing gender from card id
+    verified_data = parse_gender_from_card(
+        profile,
+        card_col=card_col
+    )
+
+    # * Parsing birthday from card id
+    verified_data = parse_birthday_from_card(
+        verified_data,
+        card_col=card_col
+    )
+
+    # * Parsing city from card_id
+    verified_data = parse_city_from_card(
+        verified_data,
+        card_col=card_col
+    )
+
+    return verified_data
+
+
 def verify_card(
     data: pd.DataFrame,
     card_col: str = "card_id",
@@ -433,6 +613,13 @@ def process_verify_card(
     -------
     pd.DataFrame
         The final DF contains the columns that verify whether the card id is valid or not
+        * `is_valid`: Card is valid
+        * `is_personal_id`: Card is personal id
+        * `is_passport`: Card is passport
+        * `is_driver_license`: Card is driver license
+        * `gender`: Gender parsed
+        * `year_of_birth`: YOB parsed
+        * `city`: City parsed
     """
     orig_cols = data.columns
     card_data = data[[card_col]]
@@ -442,11 +629,22 @@ def process_verify_card(
     clean_data, na_data = extract_null_values(card_data, card_col)
 
     # * Basic cleaning card_id
-    clean_data = clean_card_data(clean_data, card_col)
-
-    # ? VALIDATE CARD ID
+    print(">>> Cleansing card id: ", end='')
     start_time = time()
     clean_data = parallelize_dataframe(
+        clean_data,
+        clean_card_data,
+        n_cores=n_cores,
+        card_col=card_col
+    )
+    clean_time = time() - start_time
+    print(f"Time takes {int(clean_time)//60}m{int(clean_time)%60}s")
+    sep_display()
+
+    # ? VALIDATE CARD ID
+    print(">>> Verifying card id: ", end='')
+    start_time = time()
+    validated_data = parallelize_dataframe(
         clean_data,
         verify_card,
         n_cores=n_cores,
@@ -454,7 +652,20 @@ def process_verify_card(
         print_info=False
     )
     verify_time = time() - start_time
-    print(f"Verifying card id takes {int(verify_time)//60}m{int(verify_time)%60}s")
+    print(f"Time takes {int(verify_time)//60}m{int(verify_time)%60}s")
+    sep_display()
+
+    # ? PARSING INFO FROM CARD ID
+    print(">>> Extracting card info: ", end='')
+    start_time = time()
+    parsed_data = parallelize_dataframe(
+        validated_data,
+        extract_card_info,
+        n_cores=n_cores,
+        card_col=f'clean_{card_col}'
+    )
+    extract_time = time() - start_time
+    print(f"Time takes {int(extract_time)//60}m{int(extract_time)%60}s")
     sep_display()
 
     # ? CONCAT ALL SEP CARD IDS
@@ -464,10 +675,13 @@ def process_verify_card(
     ]
     new_cols = [
         f'clean_{card_col}',
-        *validator_cols
+        *validator_cols,
+        'gender',
+        'year_of_birth',
+        'city'
     ]
 
-    final_card_df = pd.concat([clean_data, na_data])
+    final_card_df = pd.concat([parsed_data, na_data])
 
     final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
 

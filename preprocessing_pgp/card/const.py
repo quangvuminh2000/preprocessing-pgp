@@ -18,6 +18,9 @@ __OLD_PID_CODE_PATH = os.path.join(
 __NEW_PID_CODE_PATH = os.path.join(
     os.path.dirname(__file__), os.pardir, "data", "new_codes.parquet"
 )
+__REGION_PID_CODE_PATH = os.path.join(
+    os.path.dirname(__file__), '../data/new_region_code.parquet'
+)
 
 POSSIBLE_GENDER_NUM = ['0', '1', '2', '3']
 GENDER_NUM_TO_CENTURY = {
@@ -26,6 +29,13 @@ GENDER_NUM_TO_CENTURY = {
 }
 OLD_PID_REGION_CODE_NUMS = pd.read_parquet(__OLD_PID_CODE_PATH)['code'].values
 NEW_PID_REGION_CODE_NUMS = pd.read_parquet(__NEW_PID_CODE_PATH)['code'].values
+_REGION_PID_CODE = pd.read_parquet(__REGION_PID_CODE_PATH)
+_DRIVER_LICENSE_CODE = _REGION_PID_CODE.copy()
+_DRIVER_LICENSE_CODE['code'] = _DRIVER_LICENSE_CODE['code'].str[1:]
+REGION_CODE_DICT = pd.concat([
+    _REGION_PID_CODE,
+    _DRIVER_LICENSE_CODE
+], ignore_index=True)
 OLD_PID_CODE_LENGTH = 9
 NEW_PID_CODE_LENGTH = 12
 LIMIT_DOB_PID = 14

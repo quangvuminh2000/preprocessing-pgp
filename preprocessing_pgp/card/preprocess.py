@@ -131,9 +131,7 @@ def clean_card_data(
 
     clean_data = data
 
-    print("Process cleaning card id...")
     clean_data[f'clean_{card_col}'] =\
         clean_data[card_col].apply(card_cleaner.clean_card)
-    sep_display()
 
     return clean_data
