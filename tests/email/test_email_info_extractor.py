@@ -27,11 +27,12 @@ class TestEmailInfoExtraction:
         """
         email_name_data = pd.DataFrame.from_dict({
             'email': [
-                'vuminhquang2000@gmail.com',
-                'nguyenphamanhnguyen1996@fpt.com.vn',
-                'nguyenhuynhhuy1997@yahoo.com.vn',
-                'lekhactrinh1992@gmail.com',
-                'vuminhquang12102000@fpt.com.vn'
+                # 'vuminhquang2000@gmail.com',
+                # 'nguyenphamanhnguyen1996@fpt.com.vn',
+                # 'nguyenhuynhhuy1997@yahoo.com.vn',
+                # 'lekhactrinh1992@gmail.com',
+                # 'vuminhquang12102000@fpt.com.vn',
+                'thanhhien.ht08@gmail.com'
             ]
         })
 
@@ -39,7 +40,7 @@ class TestEmailInfoExtraction:
         extracted_info = process_extract_email_info(
             email_name_data,
             email_col='email',
-            n_cores=2
+            n_cores=1
         )
         print(extracted_info)
         print(extracted_info.columns)

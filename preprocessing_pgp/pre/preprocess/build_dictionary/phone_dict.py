@@ -125,10 +125,10 @@ def daily_enhance_phone(
         'frt_credit'
     ]
 
-    print(">>> Loading email from CTTV")
+    print(">>> Loading phone from CTTV")
     phone_bank = load_phone_bank(phone_cttv, day)
 
-    print(">>> Loading dictionary email")
+    print(">>> Loading dictionary phone")
     latest_check_phone = pd.read_parquet(
         f'{UTILS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
 
@@ -140,14 +140,14 @@ def daily_enhance_phone(
 
     print(f"Number of new profile: {new_phone.shape[0]}")
 
-    print(">>> Enhancing new email")
+    print(">>> Enhancing new phone")
     new_enhance_phone = enhance_phone(
         new_phone,
         phone_col='phone',
         n_cores=n_cores
     )
 
-    print(">>> Updating email dictionary")
+    print(">>> Updating phone dictionary")
     update_phone_dict(
         new_enhance_phone,
         latest_check_phone,

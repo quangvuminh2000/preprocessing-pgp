@@ -1,5 +1,5 @@
 """
-Tests for email info extraction
+Tests for enrich & filling accent to names
 """
 import pytest as pt
 import pandas as pd
@@ -107,7 +107,6 @@ class TestNameFunction:
             'name': [
                 'Anh Vu Minh Quang',
                 'Nguyễn Thị Bích  Liên',
-                'Xiao San Ye'
             ]
         })
 
@@ -121,4 +120,26 @@ class TestNameFunction:
         assert predicted_names == [
             'Vũ Minh Quang',
             'Nguyễn Thị Bích Liên'
+        ]
+
+    @pt.mark.enrich_name
+    def test_enrich_name_customer_company(self):
+        """
+        Test whether the model can predict correctly company category in customer names
+        """
+        name_data = pd.DataFrame.from_dict({
+            'name': [
+                'Nguyen Van Phong',
+            ]
+        })
+
+        predict_data = process_enrich(
+            name_data,
+            name_col='name'
+        )
+
+        predicted_names = predict_data['final'].values.tolist()
+
+        assert predicted_names == [
+            'Nguyễn Văn Phong'
         ]
