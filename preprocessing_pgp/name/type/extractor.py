@@ -137,6 +137,8 @@ def extract_ctype(
 
         * `customer_type` contains the type of customer extracted from name
     """
+    if data.empty:
+        return data
     extracted_data = data
     # # ? KWS
     # type_extractor = TypeExtractor()
