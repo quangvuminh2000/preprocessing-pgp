@@ -121,6 +121,8 @@ def predict_gender_from_name(
         Data with additional columns:
         * `gender_predict`: Gender predicted from input names
     """
+    if data.empty:
+        return data
 
     gender_model = GenderModel(
         f'{GENDER_MODEL_PATH}/lstm/tokenizer.pkl',

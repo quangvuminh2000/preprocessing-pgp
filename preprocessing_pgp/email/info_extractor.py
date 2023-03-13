@@ -58,6 +58,8 @@ class EmailInfoExtractor:
             * `phone_extracted` : Extracted phone number from email name
             * `address_extracted` : Extracted address from email name
         """
+        if data.empty:
+            return data
         # * Extracting name & gender
         extracted_data =\
             self.name_extractor.extract_username(data, email_name_col)

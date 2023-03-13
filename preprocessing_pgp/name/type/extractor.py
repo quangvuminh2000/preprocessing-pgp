@@ -139,6 +139,7 @@ def extract_ctype(
     """
     if data.empty:
         return data
+
     extracted_data = data
     # # ? KWS
     # type_extractor = TypeExtractor()

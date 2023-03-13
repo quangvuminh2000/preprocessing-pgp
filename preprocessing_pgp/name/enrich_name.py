@@ -130,6 +130,8 @@ def enrich_clean_data(
         * `predict`: predicted names using model only
         * `final`: beautified version of prediction with additional rule-based approach
     """
+    if clean_df.empty:
+        return clean_df
     model_weight_path = f'{MODEL_PATH}/best_transformer_model.h5'
     vectorization_paths = (
         f'{MODEL_PATH}/vecs/source_vectorization_layer.pkl',
@@ -215,18 +217,12 @@ def process_enrich(
 
     # Enrich names
     start_time = time()
-    if n_cores == 1:
-        enriched_data = enrich_clean_data(
-            customer_data,
-            name_col=name_col
-        )
-    else:
-        enriched_data = parallelize_dataframe(
-            customer_data,
-            enrich_clean_data,
-            n_cores=n_cores,
-            name_col=name_col
-        )
+    enriched_data = parallelize_dataframe(
+        customer_data,
+        enrich_clean_data,
+        n_cores=n_cores,
+        name_col=name_col
+    )
     enrich_time = time() - start_time
     print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
     sep_display()

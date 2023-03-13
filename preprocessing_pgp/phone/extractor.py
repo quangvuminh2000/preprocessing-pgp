@@ -61,6 +61,8 @@ def extract_valid_phone(
     pd.DataFrame
         The DataFrame with converted phone column and check if valid or not
     """
+    if phones.empty:
+        return phones
     # * Split na phone
     na_phones = phones[phones[phone_col].isna()]
     #! Prevent override the origin DF
