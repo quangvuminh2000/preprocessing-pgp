@@ -409,6 +409,7 @@ def UniqueBestName(
     name_gender_by_key: pd.DataFrame,
     key: str,
 ) -> pd.DataFrame:
+    # * Choosing unique name by priority
     print(">>> Setting priority sorting")
     priority_names = {
         "FTEL": 1,
@@ -423,6 +424,10 @@ def UniqueBestName(
         priority_names['CREDIT'] = 8
 
     name_gender_by_key['priority'] = name_gender_by_key['source_best_name'].map(priority_names)
+    name_gender_by_key['is_customer'] =\
+        name_gender_by_key['customer_type'] == 'Ca nhan'
+    name_gender_by_key['is_good_length'] =\
+        name_gender_by_key['best_name'].str.split(" ").str.len() <= 4
 
     stats_best_name =\
     name_gender_by_key.groupby(by=[key, 'best_name'])['best_name']\
@@ -439,10 +444,15 @@ def UniqueBestName(
 
     name_gender_by_key=\
     name_gender_by_key.sort_values(
-        by=[key, 'num_overall', 'priority'],
-        ascending=[True, False, True]
+        by=[key, 'is_customer', 'is_good_length', 'num_overall', 'priority'],
+        ascending=[True, False, False, False, True]
     )
 
+    name_gender_by_key = name_gender_by_key.drop(
+        columns=['priority', 'num_overall', 'is_customer', 'is_good_length']
+    )
+
+    # * Generate unique name by key
     unique_name_gender_by_key =\
     name_gender_by_key.groupby(by=[key])\
     .head(1)[[key, 'best_name', 'best_gender', 'source_best_name']]
@@ -461,8 +471,6 @@ def UniqueBestName(
         how='left',
         sort=False
     ).reset_index()
-
-    name_gender_by_key = name_gender_by_key.drop(columns=['priority', 'num_overall'])
 
     return name_gender_by_key
 
