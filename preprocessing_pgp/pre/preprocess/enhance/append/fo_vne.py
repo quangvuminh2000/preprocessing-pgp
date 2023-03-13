@@ -5,29 +5,18 @@ from unidecode import unidecode
 from datetime import datetime, timedelta
 import sys
 
-import os
 import subprocess
 from pyarrow import fs
-
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
-
-os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
-os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
-os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
-os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output(
-    "$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(
-    host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from preprocess_profile import (
     remove_same_username_email,
-    cleansing_profile_name,
     extracting_pronoun_from_name
 )
+from enhance_profile import enhance_common_profile
 from filter_profile import get_difference_data
 from const import (
+    hdfs,
     UTILS_PATH,
     CENTRALIZE_PATH,
     PREPROCESS_PATH
@@ -45,133 +34,42 @@ from const import (
 
 
 def UnifyFo(
-    profile_fo: pd.DataFrame,
+    profile_vne: pd.DataFrame,
     n_cores: int = 1
 ):
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                  'none': None, 'Null': None, 'null': None, "''": None}
-    # * Cleansing
-    print(">>> Cleansing profile")
-    profile_fo = cleansing_profile_name(
-        profile_fo,
-        name_col='name',
+    #* Sorting by uid --> Remove duplicated uid
+    print(">>> Processing Info")
+    profile_vne = profile_vne.sort_values(
+        by=['uid'], ascending=False)
+    profile_vne = profile_vne.drop_duplicates(subset=['uid'], keep='first')
+
+    # * Enhancing common profile
+    profile_vne = enhance_common_profile(
+        profile_vne,
         n_cores=n_cores
     )
-    profile_fo.rename(columns={
-        'email': 'email_raw',
-        'phone': 'phone_raw',
-        'name': 'raw_name'
-    }, inplace=True)
-
-    # * Loading dictionary
-    print(">>> Loading dictionaries")
-    profile_phones = profile_fo['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_fo['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_fo['raw_name'].drop_duplicates().dropna()
-
-    # phone, email (valid)
-    valid_phone = pd.read_parquet(
-        f'{UTILS_PATH}/valid_phone_latest.parquet',
-        filters=[('phone_raw', 'in', profile_phones)],
-        filesystem=hdfs,
-        columns=['phone_raw', 'phone', 'is_phone_valid']
-    )
-    valid_email = pd.read_parquet(
-        f'{UTILS_PATH}/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest.parquet',
-        filters=[('raw_name', 'in', profile_names)],
-        filesystem=hdfs,
-        columns=[
-            'raw_name', 'enrich_name',
-            'last_name', 'middle_name', 'first_name',
-            'gender',
-            # 'customer_type'
-        ]
-    ).rename(columns={
-        'gender': 'gender_enrich'
-    })
-
-    # info
-    print(">>> Processing Info")
-    profile_fo = profile_fo.sort_values(
-        by=['uid'], ascending=False)
-    profile_fo = profile_fo.drop_duplicates(subset=['uid'], keep='first')
-
-    # merge get phone, email (valid) and names
-    print(">>> Merging phone, email, name")
-    profile_fo = pd.merge(
-        profile_fo.set_index('phone_raw'),
-        valid_phone.set_index('phone_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_fo = pd.merge(
-        profile_fo.set_index('email_raw'),
-        valid_email.set_index('email_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_fo = pd.merge(
-        profile_fo.set_index('raw_name'),
-        dict_name_lst.set_index('raw_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).rename(columns={
-        'enrich_name': 'name'
-    }).reset_index(drop=False)
-
-    # Refilling info
-    cant_predict_name_mask =\
-        (profile_fo['name'].isna()) & (profile_fo['raw_name'].notna())
-    profile_fo.loc[
-        cant_predict_name_mask,
-        'name'
-    ] = profile_fo.loc[
-        cant_predict_name_mask,
-        'raw_name'
-    ]
-    profile_fo['name'] = profile_fo['name'].replace(dict_trash)
 
     # birthday
     print(">>> Processing Birthday")
     now_year = datetime.today().year
-    profile_fo.loc[profile_fo['age'] < 0, 'age'] = np.nan
+    profile_vne.loc[profile_vne['age'] < 0, 'age'] = np.nan
     # profile_fo.loc[profile_fo['age'] > profile_fo['age'].quantile(0.99), 'age'] = np.nan
-    profile_fo.loc[profile_fo['age'] > 72, 'age'] = np.nan
-    profile_fo.loc[profile_fo['age'].notna(), 'birthday'] =\
-        (now_year - profile_fo[profile_fo['age'].notna()]['age'])\
+    profile_vne.loc[profile_vne['age'] > 72, 'age'] = np.nan
+    profile_vne.loc[profile_vne['age'].notna(), 'birthday'] =\
+        (now_year - profile_vne[profile_vne['age'].notna()]['age'])\
         .astype(str).str.replace('.0', '', regex=False)
-    profile_fo = profile_fo.drop(columns=['age'])
-    profile_fo.loc[profile_fo['birthday'].isna(), 'birthday'] = None
+    profile_vne = profile_vne.drop(columns=['age'])
+    profile_vne.loc[profile_vne['birthday'].isna(), 'birthday'] = None
 
     # gender
     print(">>> Processing Gender")
-    profile_fo['gender'] = profile_fo['gender'].replace(
+    profile_vne['gender'] = profile_vne['gender'].replace(
         {'Female': 'F', 'Male': 'M', 'Other': None})
-
-    # customer type from raw
-    print(">>> Extracting customer type")
-    profile_fo = process_extract_name_type(
-        profile_fo,
-        name_col='name',
-        n_cores=n_cores,
-        logging_info=False
-    )
 
     # drop name is username_email
     print(">>> Extra Cleansing Name")
-    profile_fo = remove_same_username_email(
-        profile_fo,
+    profile_vne = remove_same_username_email(
+        profile_vne,
         name_col='name',
         email_col='email'
     )
@@ -182,10 +80,10 @@ def UnifyFo(
 
     # clean name, extract pronoun
 
-    condition_name = (profile_fo['customer_type'] == 'customer')\
-        & (profile_fo['name'].notna())
-    profile_fo = extracting_pronoun_from_name(
-        profile_fo,
+    condition_name = (profile_vne['customer_type'] == 'Ca nhan')\
+        & (profile_vne['name'].notna())
+    profile_vne = extracting_pronoun_from_name(
+        profile_vne,
         condition_name,
         name_col='name',
     )
@@ -205,22 +103,22 @@ def UnifyFo(
 
     # is full name
     print(">>> Checking Full Name")
-    profile_fo.loc[profile_fo['last_name'].notna(
-    ) & profile_fo['first_name'].notna(), 'is_full_name'] = True
-    profile_fo['is_full_name'] = profile_fo['is_full_name'].fillna(False)
-    profile_fo = profile_fo.drop(
+    profile_vne.loc[profile_vne['last_name'].notna(
+    ) & profile_vne['first_name'].notna(), 'is_full_name'] = True
+    profile_vne['is_full_name'] = profile_vne['is_full_name'].fillna(False)
+    profile_vne = profile_vne.drop(
         columns=['last_name', 'middle_name', 'first_name'])
 
     # valid gender by model
     print(">>> Validating Gender")
-    profile_fo.loc[
-        profile_fo['customer_type'] != 'customer',
+    profile_vne.loc[
+        profile_vne['customer_type'] != 'customer',
         'gender'
     ] = None
     # profile_fo.loc[profile_fo['gender'].notna() & profile_fo['name'].isna(), 'gender'] = None
-    profile_fo.loc[
-        (profile_fo['gender'].notna())
-        & (profile_fo['gender'] != profile_fo['gender_enrich']),
+    profile_vne.loc[
+        (profile_vne['gender'].notna())
+        & (profile_vne['gender'] != profile_vne['gender_enrich']),
         'gender'
     ] = None
 
@@ -229,55 +127,48 @@ def UnifyFo(
     norm_fo_city = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/ftel_provinces.parquet',
                                    filesystem=hdfs)
     norm_fo_city.columns = ['city', 'norm_city']
-    profile_fo.loc[profile_fo['address'] == 'Not set', 'address'] = None
-    profile_fo.loc[profile_fo['address'].notna(
-    ), 'city'] = profile_fo.loc[profile_fo['address'].notna(), 'address'].apply(unidecode)
-    profile_fo['city'] = profile_fo['city'].replace({
+    profile_vne.loc[profile_vne['address'] == 'Not set', 'address'] = None
+    profile_vne.loc[profile_vne['address'].notna(
+    ), 'city'] = profile_vne.loc[profile_vne['address'].notna(), 'address'].apply(unidecode)
+    profile_vne['city'] = profile_vne['city'].replace({
         'Ba Ria - Vung Tau': 'Vung Tau',
         'Thua Thien Hue': 'Hue',
         'Bac Kan': 'Bac Can',
         'Dak Nong': 'Dac Nong'
     })
-    profile_fo = pd.merge(
-        profile_fo.set_index('city'),
+    profile_vne = pd.merge(
+        profile_vne.set_index('city'),
         norm_fo_city.set_index('city'),
         left_index=True, right_index=True,
         how='left',
         sort=False
     ).reset_index()
-    profile_fo['city'] = profile_fo['norm_city']
-    profile_fo = profile_fo.drop(columns=['norm_city'])
-    profile_fo.loc[profile_fo['city'].isna(), 'city'] = None
-    profile_fo['address'] = None
+    profile_vne['city'] = profile_vne['norm_city']
+    profile_vne = profile_vne.drop(columns=['norm_city'])
+    profile_vne.loc[profile_vne['city'].isna(), 'city'] = None
+    profile_vne['address'] = None
 
     # add info
     print(">>> Adding Temp Info")
-    profile_fo['unit_address'] = None
-    profile_fo['ward'] = None
-    profile_fo['district'] = None
+    profile_vne['unit_address'] = None
+    profile_vne['ward'] = None
+    profile_vne['district'] = None
     columns = ['uid', 'phone_raw', 'phone', 'is_phone_valid',
                'email_raw', 'email', 'is_email_valid',
                'name', 'pronoun', 'is_full_name', 'gender',
                'birthday', 'customer_type',  # 'customer_type_detail',
                'address', 'unit_address', 'ward', 'district', 'city']
-    profile_fo = profile_fo[columns]
-    # Fill 'Ca nhan'
-    profile_fo['customer_type'] =\
-    profile_fo['customer_type'].map({
-        'customer': 'Ca nhan',
-        'company': 'Cong ty',
-        'medical': 'Benh vien - Phong kham',
-        'edu': 'Giao duc',
-        'biz': 'Ho kinh doanh'
-    })
-    profile_fo.loc[
-        (profile_fo['name'].notna())
-        & (profile_fo['customer_type'].isna()),
+    profile_vne = profile_vne[columns]
+
+    # Fill customer type 'Ca nhan'
+    profile_vne.loc[
+        (profile_vne['name'].notna())
+        & (profile_vne['customer_type'].isna()),
         'customer_type'
     ] = 'Ca nhan'
 
     # return
-    return profile_fo
+    return profile_vne
 
 # function update profile (unify)
 
@@ -343,14 +234,28 @@ def UpdateUnifyFo(
         keep='first'
     )
 
+    # Type casting for saving
+    print(">>> Process casting columns...")
+    profile_unify['uid'] = profile_unify['uid'].astype(str)
+    profile_unify['birthday'] = profile_unify['birthday'].astype('datetime64[s]')
+
     # save
+    print(f'Checking {f_group} data for {now_str}...')
+    f_group_path = f'{PREPROCESS_PATH}/{f_group}.parquet'
+    proc = subprocess.Popen(['hdfs', 'dfs', '-test', '-e', f_group_path + f'/d={now_str}'])
+    proc.communicate()
+    if proc.returncode == 0:
+        print("Data already existed, Removing...")
+        subprocess.run(['hdfs', 'dfs', '-rm', '-r', f_group_path + f'/d={now_str}'])
+
     profile_unify['d'] = now_str
     profile_unify.to_parquet(
-        f'{PREPROCESS_PATH}/{f_group}.parquet',
+        f_group_path,
         filesystem=hdfs, index=False,
-        partition_cols='d'
+        partition_cols='d',
+        coerce_timestamps='us',
+        allow_truncated_timestamps=True
     )
-
 # function update ip (most)
 
 

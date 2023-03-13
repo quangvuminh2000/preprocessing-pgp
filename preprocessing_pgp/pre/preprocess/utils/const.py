@@ -17,21 +17,20 @@ hdfs = fs.HadoopFileSystem(
 
 # * NECESSARY PATHS
 ROOT_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core_profile'
-UTILS_PATH = f'{ROOT_PATH}/utils'
+UTILS_PATH =  f'{ROOT_PATH}/utils'
 CENTRALIZE_PATH = f'{ROOT_PATH}/centralize'
-PREPROCESS_PATH = f'{ROOT_PATH}/preprocess'
+PREPROCESS_PATH = f'{ROOT_PATH}/preprocess/enhance'
 PRODUCT_PATH = f'{ROOT_PATH}/utils/product'
 
-# * DICT PATH
-DICT_PHONE_PATH = f'{UTILS_PATH}/valid_phone_latest.parquet'
-DICT_EMAIL_PATH = f'{UTILS_PATH}/valid_email_latest.parquet'
-DICT_NAME_PATH = f'{UTILS_PATH}/dict_name_latest.parquet'
+# * DICT UTILS PATH
+DICT_PHONE_UTILS_PATH = f'{UTILS_PATH}/valid_phone_latest.parquet'
+DICT_EMAIL_UTILS_PATH = f'{UTILS_PATH}/valid_email_latest.parquet'
+DICT_NAME_UTILS_PATH = f'{UTILS_PATH}/dict_name_latest.parquet'
 
-# * CTTV PATH
-
-# * BEST NAME PATH
-EMAIL_BEST_NAME_PATH = f'{UTILS_PATH}/name_by_email_latest.parquet'
-PHONE_BEST_NAME_PATH = f'{UTILS_PATH}/name_by_phone_latest.parquet'
+# * DICT PRODUCT PATH
+DICT_PHONE_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_phone_latest.parquet'
+DICT_EMAIL_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_email_latest.parquet'
+DICT_NAME_PRODUCT_PATH = f'{PRODUCT_PATH}/dict_name_latest.parquet'
 
 # * REQUIRED DICTS
 # VALID_PHONE_DICT = pd.read_parquet(

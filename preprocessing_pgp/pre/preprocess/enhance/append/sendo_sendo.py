@@ -6,28 +6,17 @@ from difflib import SequenceMatcher
 import html
 import sys
 
-import os
 import subprocess
-from pyarrow import fs
-
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
-
-os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
-os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
-os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
-os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output("$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from preprocess_profile import (
     remove_same_username_email,
-    cleansing_profile_name,
     extracting_pronoun_from_name
 )
 from filter_profile import get_difference_data
+from enhance_profile import enhance_common_profile
 from const import (
-    UTILS_PATH,
+    hdfs,
     CENTRALIZE_PATH,
     PREPROCESS_PATH
 )
@@ -39,103 +28,11 @@ def UnifySendo(
     profile_sendo: pd.DataFrame,
     n_cores: int = 1
 ):
-    # VARIABLE
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                  'none': None, 'Null': None, 'null': None, "''": None}
-    # * Cleansing
-    print(">>> Cleansing profile")
-    profile_sendo = cleansing_profile_name(
+
+    # * Enhancing common profile
+    profile_sendo = enhance_common_profile(
         profile_sendo,
-        name_col='name',
         n_cores=n_cores
-    )
-    profile_sendo.rename(columns={
-        'email': 'email_raw',
-        'phone': 'phone_raw',
-        'name': 'raw_name'
-    }, inplace=True)
-
-    # * Loading dictionary
-    print(">>> Loading dictionaries")
-    profile_phones = profile_sendo['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_sendo['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_sendo['raw_name'].drop_duplicates().dropna()
-
-    dict_location = pd.read_parquet(
-        '/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/dict_location.parquet',
-        filesystem=hdfs
-    )
-
-    # phone, email (valid)
-    valid_phone = pd.read_parquet(
-        f'{UTILS_PATH}/valid_phone_latest.parquet',
-        filters=[('phone_raw', 'in', profile_phones)],
-        filesystem=hdfs,
-        columns=['phone_raw', 'phone', 'is_phone_valid']
-    )
-    valid_email = pd.read_parquet(
-        f'{UTILS_PATH}/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest.parquet',
-        filters=[('raw_name', 'in', profile_names)],
-        filesystem=hdfs,
-        columns=[
-            'raw_name', 'enrich_name',
-            'last_name', 'middle_name', 'first_name',
-            'gender'
-        ]
-    )
-
-    # merge get phone, email (valid)
-    print(">>> Merging phone, email, name")
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('phone_raw'),
-        valid_phone.set_index('phone_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('email_raw'),
-        valid_email.set_index('email_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('raw_name'),
-        dict_name_lst.set_index('raw_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).rename(columns={
-        'enrich_name': 'name'
-    }).reset_index(drop=False)
-
-    # Refilling info
-    cant_predict_name_mask = profile_sendo['name'].isna()
-    profile_sendo.loc[
-        cant_predict_name_mask,
-        'name'
-    ] = profile_sendo.loc[
-        cant_predict_name_mask,
-        'raw_name'
-    ]
-    profile_sendo['name'] = profile_sendo['name'].replace(dict_trash)
-
-    # customer type from raw
-    print(">>> Extracting customer type")
-    profile_sendo = process_extract_name_type(
-        profile_sendo,
-        name_col='name',
-        n_cores=n_cores,
-        logging_info=False
     )
 
     # drop name is username_email
@@ -145,9 +42,12 @@ def UnifySendo(
         name_col='name',
         email_col='email'
     )
+    profile_sendo = profile_sendo.rename(columns={
+        'gender_enrich': 'gender'
+    })
 
     # clean name, extract pronoun
-    condition_name = (profile_sendo['customer_type'] == 'customer')\
+    condition_name = (profile_sendo['customer_type'] == 'Ca nhan')\
         & (profile_sendo['name'].notna())
     profile_sendo = extracting_pronoun_from_name(
         profile_sendo,
@@ -377,7 +277,7 @@ def UnifySendo(
 
     condition_ward_error = profile_sendo['ward'].str.contains('0[1-9]', case=False, na=False)
     profile_sendo.loc[condition_ward_error, 'ward'] = profile_sendo.loc[condition_ward_error, 'ward'].str.replace('0', '')
-    
+
     # full_address
     profile_sendo['address'] = None
     columns = ['unit_address', 'ward', 'district', 'city']
@@ -394,13 +294,6 @@ def UnifySendo(
     profile_sendo = profile_sendo[columns]
 
     # Fill 'Ca nhan'
-    profile_sendo['customer_type'] = profile_sendo['customer_type'].map({
-        'customer': 'Ca nhan',
-        'company': 'Cong ty',
-        'medical': 'Benh vien - Phong kham',
-        'edu': 'Giao duc',
-        'biz': 'Ho kinh doanh'
-    })
     profile_sendo.loc[profile_sendo['name'].notna() & profile_sendo['customer_type'].isna(), 'customer_type'] = 'Ca nhan'
 
     # Create id_phone_sendo
@@ -424,7 +317,7 @@ def UpdateUnifySendo(
     n_cores: int = 1
 ):
     # VARIABLES
-    f_group = 'sendo'
+    f_group = 'sendo_sendo'
     yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
 
     # load profile (yesterday, now)
@@ -473,12 +366,27 @@ def UpdateUnifySendo(
     profile_unify['is_email_valid'] = profile_unify['is_email_valid'].fillna(False)
     profile_unify = profile_unify.drop_duplicates(subset=['uid', 'phone_raw', 'email_raw'], keep='first')
 
+    # Type casting for saving
+    print(">>> Process casting columns...")
+    profile_unify['uid'] = profile_unify['uid'].astype(str)
+    profile_unify['birthday'] = profile_unify['birthday'].astype('datetime64[s]')
+
     # save
+    print(f'Checking {f_group} data for {now_str}...')
+    f_group_path = f'{PREPROCESS_PATH}/{f_group}.parquet'
+    proc = subprocess.Popen(['hdfs', 'dfs', '-test', '-e', f_group_path + f'/d={now_str}'])
+    proc.communicate()
+    if proc.returncode == 0:
+        print("Data already existed, Removing...")
+        subprocess.run(['hdfs', 'dfs', '-rm', '-r', f_group_path + f'/d={now_str}'])
+
     profile_unify['d'] = now_str
     profile_unify.to_parquet(
-        f'{PREPROCESS_PATH}/{f_group}.parquet',
+        f_group_path,
         filesystem=hdfs, index=False,
-        partition_cols='d'
+        partition_cols='d',
+        coerce_timestamps='us',
+        allow_truncated_timestamps=True
     )
 
 if __name__ == '__main__':

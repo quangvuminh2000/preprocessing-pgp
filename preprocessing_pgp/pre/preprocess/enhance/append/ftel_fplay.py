@@ -3,29 +3,18 @@ import pandas as pd
 from datetime import datetime, timedelta
 import sys
 
-import os
 import subprocess
 from pyarrow import fs
-
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
-
-os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
-os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
-os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
-os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output(
-    "$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(
-    host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from preprocess_profile import (
     remove_same_username_email,
-    cleansing_profile_name,
     extracting_pronoun_from_name
 )
 from filter_profile import get_difference_data
+from enhance_profile import enhance_common_profile
 from const import (
+    hdfs,
     UTILS_PATH,
     CENTRALIZE_PATH,
     PREPROCESS_PATH
@@ -46,53 +35,7 @@ def UnifyFplay(
     profile_fplay: pd.DataFrame,
     n_cores: int = 1
 ):
-    # VARIABLE
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                  'none': None, 'Null': None, 'null': None, "''": None}
-
-    print(">>> Cleansing profile")
-    profile_fplay = cleansing_profile_name(
-        profile_fplay,
-        name_col='name',
-        n_cores=n_cores
-    )
-    profile_fplay.rename(columns={
-        'email': 'email_raw',
-        'phone': 'phone_raw',
-        'name': 'raw_name'
-    }, inplace=True)
-
-    # * Loading dictionary
-    print(">>> Loading dictionaries")
-    profile_phones = profile_fplay['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_fplay['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_fplay['raw_name'].drop_duplicates().dropna()
-
-    # phone, email (valid)
-    valid_phone = pd.read_parquet(
-        f'{UTILS_PATH}/valid_phone_latest.parquet',
-        filters=[('phone_raw', 'in', profile_phones)],
-        filesystem=hdfs,
-        columns=['phone_raw', 'phone', 'is_phone_valid']
-    )
-    valid_email = pd.read_parquet(
-        f'{UTILS_PATH}/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest.parquet',
-        filters=[('raw_name', 'in', profile_names)],
-        filesystem=hdfs,
-        columns=[
-            'raw_name', 'enrich_name',
-            'last_name', 'middle_name', 'first_name',
-            'gender'
-        ]
-    )
-
-    # info
+    # * Processing info
     print(">>> Processing Info")
     profile_fplay = profile_fplay.rename(columns={'uid': 'user_id'})
     profile_fplay = profile_fplay.sort_values(
@@ -100,52 +43,10 @@ def UnifyFplay(
     profile_fplay = profile_fplay.drop_duplicates(
         subset=['user_id'], keep='first')
 
-    # merge get phone, email (valid) and names
-    print(">>> Merging phone, email, name")
-    profile_fplay = pd.merge(
-        profile_fplay.set_index('phone_raw'),
-        valid_phone.set_index('phone_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_fplay = pd.merge(
-        profile_fplay.set_index('email_raw'),
-        valid_email.set_index('email_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_fplay = pd.merge(
-        profile_fplay.set_index('raw_name'),
-        dict_name_lst.set_index('raw_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).rename(columns={
-        'enrich_name': 'name'
-    }).reset_index(drop=False)
-
-    # Refilling info
-    cant_predict_name_mask = profile_fplay['name'].isna()
-    profile_fplay.loc[
-        cant_predict_name_mask,
-        'name'
-    ] = profile_fplay.loc[
-        cant_predict_name_mask,
-        'raw_name'
-    ]
-    profile_fplay['name'] = profile_fplay['name'].replace(dict_trash)
-
-    # customer type from raw
-    print(">>> Extracting customer type")
-    profile_fplay = process_extract_name_type(
+    # * Enhancing common profile
+    profile_fplay = enhance_common_profile(
         profile_fplay,
-        name_col='name',
-        n_cores=n_cores,
-        logging_info=False
+        n_cores=n_cores
     )
 
     # drop name is username_email
@@ -155,9 +56,12 @@ def UnifyFplay(
         name_col='name',
         email_col='email'
     )
+    profile_fplay = profile_fplay.rename(columns={
+        'gender_enrich': 'gender'
+    })
 
     # clean name, extract_pronoun
-    condition_name = (profile_fplay['customer_type'] == 'customer')\
+    condition_name = (profile_fplay['customer_type'] == 'Ca nhan')\
         & (profile_fplay['name'].notna())
 
     profile_fplay = extracting_pronoun_from_name(
@@ -190,15 +94,6 @@ def UnifyFplay(
     profile_fplay = profile_fplay[columns]
     profile_fplay = profile_fplay.rename(columns={'user_id': 'uid'})
 
-    # Map back customer type
-    profile_fplay['customer_type'] =\
-        profile_fplay['customer_type'].map({
-            'customer': 'Ca nhan',
-            'company': 'Cong ty',
-            'medical': 'Benh vien - Phong kham',
-            'edu': 'Giao duc',
-            'biz': 'Ho kinh doanh'
-        })
     # Fill 'Ca nhan'
     profile_fplay.loc[
         (profile_fplay['name'].notna())
@@ -217,14 +112,14 @@ def UpdateUnifyFplay(
     n_cores: int = 1
 ):
     # VARIABLES
-    f_group = 'fplay'
+    f_group = 'ftel_fplay'
     yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') -
                      timedelta(days=1)).strftime('%Y-%m-%d')
 
     # load profile (yesterday, now)
     print(">>> Loading today and yesterday profile")
     info_columns = ['uid', 'phone',
-                    'email', 'name', 'last_active', 'active_date']
+                    'email', 'name']
     now_profile = pd.read_parquet(
         f'{CENTRALIZE_PATH}/{f_group}.parquet/d={now_str}',
         filesystem=hdfs, columns=info_columns
@@ -254,8 +149,6 @@ def UpdateUnifyFplay(
             ignore_index=True
         )
 
-    # update valid: phone & email
-
     # arrange columns
     columns = ['uid', 'phone_raw', 'phone', 'is_phone_valid',
                'email_raw', 'email', 'is_email_valid',
@@ -271,12 +164,27 @@ def UpdateUnifyFplay(
     profile_unify = profile_unify.drop_duplicates(
         subset=['uid', 'phone_raw', 'email_raw'], keep='first')
 
+    # Type casting for saving
+    print(">>> Process casting columns...")
+    profile_unify['uid'] = profile_unify['uid'].astype(str)
+    profile_unify['birthday'] = profile_unify['birthday'].astype('datetime64[s]')
+
     # save
+    print(f'Checking {f_group} data for {now_str}...')
+    f_group_path = f'{PREPROCESS_PATH}/{f_group}.parquet'
+    proc = subprocess.Popen(['hdfs', 'dfs', '-test', '-e', f_group_path + f'/d={now_str}'])
+    proc.communicate()
+    if proc.returncode == 0:
+        print("Data already existed, Removing...")
+        subprocess.run(['hdfs', 'dfs', '-rm', '-r', f_group_path + f'/d={now_str}'])
+
     profile_unify['d'] = now_str
     profile_unify.to_parquet(
-        f'{PREPROCESS_PATH}/{f_group}.parquet',
+        f_group_path,
         filesystem=hdfs, index=False,
-        partition_cols='d'
+        partition_cols='d',
+        coerce_timestamps='us',
+        allow_truncated_timestamps=True
     )
 
 # function update ip (most)

@@ -5,30 +5,17 @@ from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 import sys
 
-import os
 import subprocess
-from pyarrow import fs
-
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
-
-os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
-os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
-os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
-os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output(
-    "$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(
-    host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
 from preprocess_profile import (
     remove_same_username_email,
-    cleansing_profile_name,
     extracting_pronoun_from_name
 )
+from enhance_profile import enhance_common_profile
 from filter_profile import get_difference_data
 from const import (
-    UTILS_PATH,
+    hdfs,
     CENTRALIZE_PATH,
     PREPROCESS_PATH
 )
@@ -45,99 +32,26 @@ from const import (
 
 
 def UnifyFtel(
-    profile_ftel: pd.DataFrame,
+    profile_internet: pd.DataFrame,
     n_cores: int = 1
 ):
-    # VARIABLE
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                  'none': None, 'Null': None, 'null': None, "''": None}
+    dict_trash = {
+        '': None, 'Nan': None, 'nan': None,
+        'None': None, 'none': None, 'Null': None,
+        'null': None, "''": None
+    }
     dict_location = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/dict_location.parquet',
                                     filesystem=hdfs)
 
-    print(">>> Cleansing profile")
-    profile_ftel = cleansing_profile_name(
-        profile_ftel,
-        name_col='name',
+    # * Processing info
+    print(">>> Processing Info")
+    profile_internet = profile_internet.rename(columns={'uid': 'contract'})
+
+    # * Enhancing common profile
+    profile_internet = enhance_common_profile(
+        profile_internet,
         n_cores=n_cores
     )
-    profile_ftel.rename(columns={
-        'email': 'email_raw',
-        'phone': 'phone_raw',
-        'name': 'raw_name'
-    }, inplace=True)
-
-    # * Loadding dictionary
-    print(">>> Loading dictionaries")
-    profile_phones = profile_ftel['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_ftel['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_ftel['raw_name'].drop_duplicates().dropna()
-
-    # phone, email (valid)
-    valid_phone = pd.read_parquet(
-        f'{UTILS_PATH}/valid_phone_latest.parquet',
-        filters=[('phone_raw', 'in', profile_phones)],
-        filesystem=hdfs,
-        columns=['phone_raw', 'phone', 'is_phone_valid']
-    )
-    valid_email = pd.read_parquet(
-        f'{UTILS_PATH}/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest.parquet',
-        filters=[('raw_name', 'in', profile_names)],
-        filesystem=hdfs,
-        columns=[
-            'raw_name', 'enrich_name',
-            'last_name', 'middle_name', 'first_name',
-            'gender'
-        ]
-    )
-
-    # info
-    print(">>> Processing Info")
-    profile_ftel = profile_ftel.rename(columns={'uid': 'contract'})
-
-    # merge get phone, email (valid)
-    print(">>> Merging phone, email, name")
-    profile_ftel = pd.merge(
-        profile_ftel.set_index('phone_raw'),
-        valid_phone.set_index('phone_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_ftel = pd.merge(
-        profile_ftel.set_index('email_raw'),
-        valid_email.set_index('email_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_ftel = pd.merge(
-        profile_ftel.set_index('raw_name'),
-        dict_name_lst.set_index('raw_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).rename(columns={
-        'enrich_name': 'name'
-    }).reset_index(drop=False)
-
-    # Refilling info
-    cant_predict_name_mask = profile_ftel['name'].isna()
-    profile_ftel.loc[
-        cant_predict_name_mask,
-        'name'
-    ] = profile_ftel.loc[
-        cant_predict_name_mask,
-        'raw_name'
-    ]
-    profile_ftel['name'] = profile_ftel['name'].replace(dict_trash)
 
     # load datapay => customer type
     # ds_contract = pd.read_parquet('/data/fpt/ftel/isc/dwh/ds_contract.parquet',
@@ -156,46 +70,40 @@ def UnifyFtel(
 
     # birthday
     print(">>> Processing Birthday")
-    condition_birthday = profile_ftel['birthday'].notna()
-    profile_ftel.loc[condition_birthday, 'birthday'] =\
+    condition_birthday = profile_internet['birthday'].notna()
+    profile_internet.loc[condition_birthday, 'birthday'] =\
         pd.to_datetime(
-            profile_ftel[condition_birthday]['birthday'].astype(str),
+            profile_internet[condition_birthday]['birthday'].astype(str),
             errors='coerce'
     ).dt.strftime('%d/%m/%Y')
-
-    # customer type from raw
-    print(">>> Extracting customer type")
-    profile_ftel = process_extract_name_type(
-        profile_ftel,
-        name_col='name',
-        n_cores=n_cores,
-        logging_info=False
-    )
 
     # drop name is username_email
     print(">>> Extra Cleansing Name")
 
-    profile_ftel = remove_same_username_email(
-        profile_ftel,
+    profile_internet = remove_same_username_email(
+        profile_internet,
         name_col='name',
         email_col='email'
     )
+    profile_internet = profile_internet.rename(columns={
+        'gender_enrich': 'gender'
+    })
 
     # clean name
-    condition_name = (profile_ftel['customer_type'] == 'customer')\
-        & (profile_ftel['name'].notna())
-    profile_ftel = extracting_pronoun_from_name(
-        profile_ftel,
+    condition_name = (profile_internet['customer_type'] == 'Ca nhan')\
+        & (profile_internet['name'].notna())
+    profile_internet = extracting_pronoun_from_name(
+        profile_internet,
         condition=condition_name,
         name_col='name',
     )
 
     # is full name
     print(">>> Checking Full Name")
-    profile_ftel.loc[profile_ftel['last_name'].notna(
-    ) & profile_ftel['first_name'].notna(), 'is_full_name'] = True
-    profile_ftel['is_full_name'] = profile_ftel['is_full_name'].fillna(False)
-    profile_ftel = profile_ftel.drop(
+    profile_internet.loc[profile_internet['last_name'].notna(
+    ) & profile_internet['first_name'].notna(), 'is_full_name'] = True
+    profile_internet['is_full_name'] = profile_internet['is_full_name'].fillna(False)
+    profile_internet = profile_internet.drop(
         columns=['last_name', 'middle_name', 'first_name'])
 
     # unify location
@@ -211,7 +119,7 @@ def UnifyFtel(
 
     # update miss district
     district_update = list(
-        set(profile_ftel['district']) - set(norm_ftel_district['district']))
+        set(profile_internet['district']) - set(norm_ftel_district['district']))
     location_dict = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/location_dict.parquet',
                                     filesystem=hdfs)
     location_dict.columns = ['city', 'district', 'norm_city', 'norm_district']
@@ -234,26 +142,26 @@ def UnifyFtel(
             miss_district[district] = result
 
     # merge city, district
-    profile_ftel = pd.merge(
-        profile_ftel.set_index('city'),
+    profile_internet = pd.merge(
+        profile_internet.set_index('city'),
         norm_ftel_city.set_index('city'),
         left_index=True, right_index=True,
         how='left',
         sort=False
     )
-    profile_ftel = profile_ftel.merge(
+    profile_internet = profile_internet.merge(
         norm_ftel_district[['district', 'norm_city', 'new_norm_district']],
         how='left', on=['district', 'norm_city']
     )
 
     # fix bugs location
-    profile_ftel.loc[profile_ftel['contract'].notna() &
-                     profile_ftel['phone'].notna(), 'contract_phone_ftel'] = profile_ftel['phone'] + '-' + profile_ftel['contract']
-    profile_ftel.loc[profile_ftel['contract'].notna() &
-                     profile_ftel['phone'].isna(), 'contract_phone_ftel'] = profile_ftel['contract']
+    profile_internet.loc[profile_internet['contract'].notna() &
+                     profile_internet['phone'].notna(), 'contract_phone_ftel'] = profile_internet['phone'] + '-' + profile_internet['contract']
+    profile_internet.loc[profile_internet['contract'].notna() &
+                     profile_internet['phone'].isna(), 'contract_phone_ftel'] = profile_internet['contract']
 
-    bug_location_ftel = profile_ftel[profile_ftel['norm_city'].isna(
-    ) | profile_ftel['new_norm_district'].isna()]
+    bug_location_ftel = profile_internet[profile_internet['norm_city'].isna(
+    ) | profile_internet['new_norm_district'].isna()]
     bug_location_ftel1 = bug_location_ftel[bug_location_ftel['norm_city'].notna(
     )]
     bug_location_ftel2 = bug_location_ftel[~bug_location_ftel['contract_phone_ftel'].isin(
@@ -275,16 +183,16 @@ def UnifyFtel(
     bug_location_ftel = bug_location_ftel1.append(
         bug_location_ftel2, ignore_index=True)
 
-    profile_ftel = profile_ftel[~profile_ftel['contract_phone_ftel'].isin(
+    profile_internet = profile_internet[~profile_internet['contract_phone_ftel'].isin(
         bug_location_ftel['contract_phone_ftel'])]
-    profile_ftel = profile_ftel.append(bug_location_ftel, ignore_index=True)
+    profile_internet = profile_internet.append(bug_location_ftel, ignore_index=True)
 
-    profile_ftel.loc[profile_ftel['district'].isin(miss_district.keys(
-    )), 'new_norm_district'] = profile_ftel['district'].map(miss_district)
+    profile_internet.loc[profile_internet['district'].isin(miss_district.keys(
+    )), 'new_norm_district'] = profile_internet['district'].map(miss_district)
 
-    profile_ftel['city'] = profile_ftel['norm_city']
-    profile_ftel['district'] = profile_ftel['new_norm_district']
-    profile_ftel = profile_ftel.drop(
+    profile_internet['city'] = profile_internet['norm_city']
+    profile_internet['district'] = profile_internet['new_norm_district']
+    profile_internet = profile_internet.drop(
         columns=['norm_city', 'new_norm_district'])
 
     # fix distric-city
@@ -302,10 +210,10 @@ def UnifyFtel(
                                           {'district': 'Quan 2', 'new_city': 'Thanh pho Ho Chi Minh'}],
                                          ignore_index=True)
 
-    profile_ftel = profile_ftel.merge(dict_district, how='left', on='district')
-    profile_ftel.loc[profile_ftel['new_city'].notna(
-    ), 'city'] = profile_ftel['new_city']
-    profile_ftel = profile_ftel.drop(columns=['new_city'])
+    profile_internet = profile_internet.merge(dict_district, how='left', on='district')
+    profile_internet.loc[profile_internet['new_city'].notna(
+    ), 'city'] = profile_internet['new_city']
+    profile_internet = profile_internet.drop(columns=['new_city'])
 
     # unify ward
     def UnifyWardFTel1(dict_location, ward, district, city):
@@ -442,7 +350,7 @@ def UnifyFtel(
 
         return unify_ward
 
-    stats_ward = profile_ftel.groupby(by=['ward', 'district', 'city'],
+    stats_ward = profile_internet.groupby(by=['ward', 'district', 'city'],
                                       dropna=False)['contract'].agg(num_customer='count').reset_index()
     stats_ward.loc[stats_ward['ward'].isna(), 'ward'] = None
     stats_ward.loc[stats_ward['district'].isna(), 'district'] = None
@@ -453,29 +361,29 @@ def UnifyFtel(
                                                     dict_location, x.ward, x.district, x.city),
                                                 axis=1)
 
-    profile_ftel = profile_ftel.merge(
+    profile_internet = profile_internet.merge(
         stats_ward[['ward', 'district', 'city', 'unify_ward']],
         how='left', on=['ward', 'district', 'city']
     )
-    profile_ftel['ward'] = profile_ftel['unify_ward']
-    profile_ftel = profile_ftel.drop(columns=['unify_ward'])
+    profile_internet['ward'] = profile_internet['unify_ward']
+    profile_internet = profile_internet.drop(columns=['unify_ward'])
 
     # unit_address
-    columns = ['house_number', 'street']
-    profile_ftel['unit_address'] = profile_ftel[columns].fillna('').agg(' '.join, axis=1).str.replace(
+    columns = ['street']
+    profile_internet['unit_address'] = profile_internet[columns].fillna('').agg(' '.join, axis=1).str.replace(
         '(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
-    profile_ftel['unit_address'] = profile_ftel['unit_address'].str.strip(
+    profile_internet['unit_address'] = profile_internet['unit_address'].str.strip(
     ).replace(dict_trash)
-    profile_ftel['unit_address'] = profile_ftel['unit_address'].str.title()
+    profile_internet['unit_address'] = profile_internet['unit_address'].str.title()
 
     # full_address
     columns = ['unit_address', 'ward', 'district', 'city']
-    profile_ftel['address'] = None
-    profile_ftel['address'] = profile_ftel[columns].fillna('').agg(', '.join, axis=1).str.replace(
+    profile_internet['address'] = None
+    profile_internet['address'] = profile_internet[columns].fillna('').agg(', '.join, axis=1).str.replace(
         '(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
-    profile_ftel['address'] = profile_ftel['address'].str.strip().replace(
+    profile_internet['address'] = profile_internet['address'].str.strip().replace(
         dict_trash)
-    profile_ftel = profile_ftel.drop(columns=['house_number', 'street'])
+    profile_internet = profile_internet.drop(columns=['street'])
 
     # add info
     print(">>> Filtering out info")
@@ -484,39 +392,30 @@ def UnifyFtel(
                'name', 'pronoun', 'is_full_name', 'gender',
                'birthday', 'customer_type',  # 'customer_type_detail',
                'address', 'unit_address', 'ward', 'district', 'city', 'source']
-    profile_ftel = profile_ftel[columns]
-    profile_ftel = profile_ftel.rename(columns={'contract': 'uid'})
+    profile_internet = profile_internet[columns]
+    profile_internet = profile_internet.rename(columns={'contract': 'uid'})
 
     # Create contract_phone_ftel
-    profile_ftel.loc[
-        (profile_ftel['uid'].notna())
-        & (profile_ftel['phone'].notna()),
+    profile_internet.loc[
+        (profile_internet['uid'].notna())
+        & (profile_internet['phone'].notna()),
         'contract_phone_ftel'
-    ] = profile_ftel['uid'] + '-' + profile_ftel['phone']
-    profile_ftel.loc[
-        (profile_ftel['uid'].notna())
-        & (profile_ftel['phone'].isna()),
+    ] = profile_internet['uid'] + '-' + profile_internet['phone']
+    profile_internet.loc[
+        (profile_internet['uid'].notna())
+        & (profile_internet['phone'].isna()),
         'contract_phone_ftel'
-    ] = profile_ftel['uid']
+    ] = profile_internet['uid']
 
-    # Map back customer type
-    profile_ftel['customer_type'] =\
-        profile_ftel['customer_type'].map({
-            'customer': 'Ca nhan',
-            'company': 'Cong ty',
-            'medical': 'Benh vien - Phong kham',
-            'edu': 'Giao duc',
-            'biz': 'Ho kinh doanh'
-        })
     # Fill 'Ca nhan'
-    profile_ftel.loc[
-        (profile_ftel['name'].notna())
-        & (profile_ftel['customer_type'].isna()),
+    profile_internet.loc[
+        (profile_internet['name'].notna())
+        & (profile_internet['customer_type'].isna()),
         'customer_type'
     ] = 'Ca nhan'
 
     # return
-    return profile_ftel
+    return profile_internet
 
 # function update profile (unify)
 
@@ -526,14 +425,14 @@ def UpdateUnifyFtel(
     n_cores: int = 1
 ):
     # VARIABLES
-    f_group = 'ftel'
+    f_group = 'ftel_internet'
     yesterday_str = (datetime.strptime(now_str, '%Y-%m-%d') -
                      timedelta(days=1)).strftime('%Y-%m-%d')
 
     # load profile (yesterday, now)
     print(">>> Loading today and yesterday profile")
     info_columns = ['uid', 'phone', 'email', 'name', 'birthday',
-                    'address', 'house_number', 'street', 'ward', 'district', 'city', 'source']
+                    'address', 'street', 'ward', 'district', 'city', 'source']
     now_profile = pd.read_parquet(
         f'{CENTRALIZE_PATH}/{f_group}.parquet/d={now_str}',
         filesystem=hdfs, columns=info_columns
@@ -578,15 +477,30 @@ def UpdateUnifyFtel(
     profile_unify = profile_unify.drop_duplicates(
         subset=['uid', 'phone_raw', 'email_raw'], keep='first')
 
+    # Type casting for saving
+    print(">>> Process casting columns...")
+    profile_unify['uid'] = profile_unify['uid'].astype(str)
+    profile_unify['birthday'] = profile_unify['birthday'].astype('datetime64[s]')
+
     # skip name (multi)
     profile_unify.loc[profile_unify['source'] == 'multi', 'name'] = None
 
     # save
+    print(f'Checking {f_group} data for {now_str}...')
+    f_group_path = f'{PREPROCESS_PATH}/{f_group}.parquet'
+    proc = subprocess.Popen(['hdfs', 'dfs', '-test', '-e', f_group_path + f'/d={now_str}'])
+    proc.communicate()
+    if proc.returncode == 0:
+        print("Data already existed, Removing...")
+        subprocess.run(['hdfs', 'dfs', '-rm', '-r', f_group_path + f'/d={now_str}'])
+
     profile_unify['d'] = now_str
     profile_unify.to_parquet(
-        f'{PREPROCESS_PATH}/{f_group}.parquet',
+        f_group_path,
         filesystem=hdfs, index=False,
-        partition_cols='d'
+        partition_cols='d',
+        coerce_timestamps='us',
+        allow_truncated_timestamps=True
     )
 
 
