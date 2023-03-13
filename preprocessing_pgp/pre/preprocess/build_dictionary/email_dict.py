@@ -1,3 +1,4 @@
+
 import sys
 
 import pandas as pd
@@ -146,25 +147,21 @@ def daily_enhance_email(
         latest_check_emails
     )
 
-    n_new_profile = new_email.shape[0]
     print(f"Number of new profile: {new_email.shape[0]}")
 
-    if n_new_profile != 0:
-        print(">>> Enhancing new email")
-        new_enhance_email = enhance_email(
-            new_email,
-            email_col='email',
-            n_cores=n_cores
-        )
+    print(">>> Enhancing new email")
+    new_enhance_email = enhance_email(
+        new_email,
+        email_col='email',
+        n_cores=n_cores
+    )
 
-        print(">>> Updating email dictionary")
-        update_email_dict(
-            new_enhance_email,
-            latest_check_emails,
-            day
-        )
-    else:
-        print(">>> No new profile to update")
+    print(">>> Updating email dictionary")
+    update_email_dict(
+        new_enhance_email,
+        latest_check_emails,
+        day
+    )
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+
 import sys
 
 import pandas as pd
@@ -214,25 +215,21 @@ def daily_enhance_name_info(
         bank_name_col='name',
         dict_name_col='enrich_name'
     )
-    n_new_profile = new_name_info.shape[0]
     print(f'Number of new profile: {new_name_info.shape[0]}')
 
-    if n_new_profile != 0:
-        print(">>> Enhancing new name")
-        new_enhance_name_info = enhance_name_info(
-            new_name_info,
-            name_col='name',
-            n_cores=n_cores
-        )
+    print(">>> Enhancing new name")
+    new_enhance_name_info = enhance_name_info(
+        new_name_info,
+        name_col='name',
+        n_cores=n_cores
+    )
 
-        print(">>> Update name dictionary")
-        update_name_info_dict(
-            new_enhance_name_info,
-            dict_name_latest,
-            day
-        )
-    else:
-        print(">>> No new profile to update")
+    print(">>> Update name dictionary")
+    update_name_info_dict(
+        new_enhance_name_info,
+        dict_name_latest,
+        day
+    )
 
 
 if __name__ == '__main__':
