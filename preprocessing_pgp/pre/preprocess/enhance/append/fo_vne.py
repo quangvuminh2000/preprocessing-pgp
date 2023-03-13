@@ -112,7 +112,7 @@ def UnifyFo(
     # valid gender by model
     print(">>> Validating Gender")
     profile_vne.loc[
-        profile_vne['customer_type'] != 'customer',
+        profile_vne['customer_type'] != 'Ca nhan',
         'gender'
     ] = None
     # profile_fo.loc[profile_fo['gender'].notna() & profile_fo['name'].isna(), 'gender'] = None
