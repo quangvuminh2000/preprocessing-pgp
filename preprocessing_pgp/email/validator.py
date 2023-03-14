@@ -205,6 +205,8 @@ def validate_clean_email(
     pd.DataFrame
         Validated data contains the email's valid indicator: `is_email_valid`
     """
+    if data.empty:
+        return data
 
     validator = EmailValidator()
 
@@ -251,18 +253,12 @@ def process_validate_email(
 
     # * Cleansing email
     start_time = time()
-    if n_cores == 1:
-        cleaned_data = clean_email(
-            email_data,
-            email_col=email_col
-        )
-    else:
-        cleaned_data = parallelize_dataframe(
-            email_data,
-            clean_email,
-            n_cores=n_cores,
-            email_col=email_col
-        )
+    cleaned_data = parallelize_dataframe(
+        email_data,
+        clean_email,
+        n_cores=n_cores,
+        email_col=email_col
+    )
     clean_time = time() - start_time
     print(f"Cleansing email takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
@@ -273,18 +269,12 @@ def process_validate_email(
 
     # * Validating email
     start_time = time()
-    if n_cores == 1:
-        validated_data = validate_clean_email(
-            non_na_data,
-            email_col=f'cleaned_{email_col}'
-        )
-    else:
-        validated_data = parallelize_dataframe(
-            non_na_data,
-            validate_clean_email,
-            n_cores=n_cores,
-            email_col=f'cleaned_{email_col}'
-        )
+    validated_data = parallelize_dataframe(
+        non_na_data,
+        validate_clean_email,
+        n_cores=n_cores,
+        email_col=f'cleaned_{email_col}'
+    )
     validate_time = time() - start_time
     print(
         f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")

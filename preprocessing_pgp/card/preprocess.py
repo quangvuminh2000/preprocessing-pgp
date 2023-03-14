@@ -126,6 +126,8 @@ def clean_card_data(
     pd.DataFrame
         Original DataFrame with a new columns named clean_<card_col>
     """
+    if data.empty:
+        return data
 
     card_cleaner = CardIDCleaner()
 

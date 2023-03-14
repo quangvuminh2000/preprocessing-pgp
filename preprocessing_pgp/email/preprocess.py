@@ -79,6 +79,8 @@ def clean_email(
     pd.DataFrame
         The original dataframe with an additional column contains cleaned email
     """
+    if data.empty:
+        return data
 
     cleaner = EmailCleaner()
 

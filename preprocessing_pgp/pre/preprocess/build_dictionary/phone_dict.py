@@ -11,6 +11,7 @@ from const import (
     CENTRALIZE_PATH,
     UTILS_PATH,
     PRODUCT_PATH,
+    PATH_DICT
 )
 
 
@@ -132,7 +133,7 @@ def daily_enhance_phone(
     latest_check_phone = pd.read_parquet(
         f'{UTILS_PATH}/valid_phone_latest.parquet', filesystem=hdfs)
 
-    print(">>> Filtering new email")
+    print(">>> Filtering new phone")
     new_phone = filter_difference_phone(
         phone_bank,
         latest_check_phone

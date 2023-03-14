@@ -2,7 +2,6 @@
 import os
 import subprocess
 
-import pandas as pd
 from pyarrow import fs
 
 os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
@@ -32,15 +31,38 @@ DICT_PHONE_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_phone_latest.parquet'
 DICT_EMAIL_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_email_latest.parquet'
 DICT_NAME_PRODUCT_PATH = f'{PRODUCT_PATH}/dict_name_latest.parquet'
 
-# * REQUIRED DICTS
-# VALID_PHONE_DICT = pd.read_parquet(
-#     VALID_PHONE_PATH,
-#     filesystem=hdfs
-# )
+# * RAW DWH PATH
+FO_VNE_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/fo_vne_raw.parquet'
+FRT_CREDIT_FE_CREDIT_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_fe_credit_raw.parquet'
+FRT_CREDIT_HOME_CREDIT_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_home_credit_raw.parquet'
+FRT_CREDIT_MIRAE_ONL_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_mirae_onl_raw.parquet'
+FRT_CREDIT_MIRAE_OFF_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_mirae_off_raw.parquet'
+FRT_CREDIT_FSHOP_FORM_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/devices/raw/fshop_registration_form_installment.parquet/d=2023-02-26'
+FRT_CREDIT_FSHOP_CUSTOMER_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/devices/raw/fshop_customer_installment.parquet/d=2023-02-26'
+FRT_FSHOP_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_fshop_raw.parquet'
+FRT_LONGCHAU_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_longchau_raw.parquet'
+FSOFT_VIO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/fsoft_vio_raw.parquet'
+FTEL_FPLAY_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_fplay_raw.parquet'
+FTEL_INTERNET_DEMO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_internet_demo_raw.parquet'
+FTEL_INTERNET_MULTI_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_internet_multi_raw.parquet'
+SENDO_SENDO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/sendo_sendo_raw.parquet'
 
-# VALID_EMAIL_DICT = pd.read_parquet(
-#     VALID_PHONE_PATH,
-#     filesystem=hdfs
-# )
+PATH_DICT = {
+    'fo_vne': FO_VNE_PATH,
+    'frt_credit_fe_credit': FRT_CREDIT_FE_CREDIT_PATH,
+    'frt_credit_home_credit': FRT_CREDIT_HOME_CREDIT_PATH,
+    'frt_credit_mirae_onl': FRT_CREDIT_MIRAE_ONL_PATH,
+    'frt_credit_mirae_off': FRT_CREDIT_MIRAE_OFF_PATH,
+    'frt_credit_fshop_form': FRT_CREDIT_FSHOP_FORM_PATH,
+    'frt_credit_fshop_customer': FRT_CREDIT_FSHOP_CUSTOMER_PATH,
+    'frt_fshop': FRT_FSHOP_PATH,
+    'frt_longchau': FRT_LONGCHAU_PATH,
+    'fsoft_vio': FSOFT_VIO_PATH,
+    'ftel_fplay': FTEL_FPLAY_PATH,
+    'ftel_internet_demo': FTEL_INTERNET_DEMO_PATH,
+    'ftel_internet_multi': FTEL_INTERNET_MULTI_PATH,
+    'sendo_sendo': SENDO_SENDO_PATH
+}
 
-# DICT_NAME_LATEST = pd.read_parquet()
+
+

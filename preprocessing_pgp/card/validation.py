@@ -504,6 +504,8 @@ def extract_card_info(
         * `year_of_birth`: YOB parsed
         * `city`: City parsed
     """
+    if profile.empty:
+        return profile
 
     # * Parsing gender from card id
     verified_data = parse_gender_from_card(
@@ -548,6 +550,9 @@ def verify_card(
     pd.DataFrame
         The final DF contains the columns that verify whether the card id is valid or not
     """
+    if data.empty:
+        return data
+
     # * Check for valid personal card id
     data['is_personal_id'] =\
         data[f"clean_{card_col}"]\
@@ -681,7 +686,7 @@ def process_verify_card(
         'city'
     ]
 
-    final_card_df = pd.concat([parsed_data, na_data])
+    final_card_df = pd.concat([parsed_data, na_data], ignore_index=True)
 
     final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
 
