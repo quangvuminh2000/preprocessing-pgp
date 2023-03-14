@@ -25,6 +25,9 @@ def basic_phone_preprocess(phone: str) -> str:
 
     clean_phone = re.sub(r"[^0-9]", "", phone)
     clean_phone = re.sub(r"\s+", "", clean_phone)
+    if len(clean_phone) < 9:
+        return clean_phone
+
     if len(clean_phone) != 9:
         clean_phone = re.sub(r"(?i)^84", "0", clean_phone)
     if clean_phone[0] != '0':

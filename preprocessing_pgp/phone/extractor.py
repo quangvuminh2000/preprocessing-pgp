@@ -73,8 +73,6 @@ def extract_valid_phone(
     f_phones["phone_clean"] = f_phones[phone_col].apply(
         basic_phone_preprocess)
 
-    print(f_phones)
-
     if print_info:
         print(
             f"# OF PHONE CLEAN : {f_phones.query(f'phone_clean != {phone_col}').shape[0]}",
