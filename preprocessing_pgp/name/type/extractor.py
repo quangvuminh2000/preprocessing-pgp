@@ -6,13 +6,11 @@ from time import time
 
 import pandas as pd
 from flashtext import KeywordProcessor
-from halo import Halo
 
 from preprocessing_pgp.name.preprocess import preprocess_df
 from preprocessing_pgp.name.accent_typing_formatter import remove_accent_typing
 from preprocessing_pgp.utils import (
     parallelize_dataframe,
-    sep_display
 )
 from preprocessing_pgp.name.type.const import (
     NAME_TYPE_REGEX_DATA
@@ -72,12 +70,6 @@ class TypeExtractor:
         return results[0]
 
 
-@Halo(
-    text='Formatting names',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def format_names(
     data: pd.DataFrame,
     name_col: str = 'name'
@@ -107,12 +99,6 @@ def format_names(
     return clean_data
 
 
-@Halo(
-    text='Extracting customer type',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def extract_ctype(
     data: pd.DataFrame,
     name_col: str = 'de_name',
@@ -198,6 +184,8 @@ def process_extract_name_type(
     orig_cols = data.columns
 
     # ? Preprocess data
+    if logging_info:
+        print(">>> Cleansing names: ", end='')
     start_time = time()
     data = parallelize_dataframe(
         data,
@@ -208,16 +196,15 @@ def process_extract_name_type(
     )
     clean_time = time() - start_time
     if logging_info:
-        sep_display()
-        print(
-            f"Cleansing names takes {int(clean_time)//60}m{int(clean_time)%60}s")
-        sep_display()
+        print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
 
     # * Remove NaNs and select only name col
     na_data = data[data[name_col].isna()][[name_col]]
     cleaned_data = data[data[name_col].notna()][[name_col]]
 
     # ? Format name
+    if logging_info:
+        print(">>> Formatting names: ", end='')
     start_time = time()
     formatted_data = parallelize_dataframe(
         cleaned_data,
@@ -227,11 +214,11 @@ def process_extract_name_type(
     )
     format_time = time() - start_time
     if logging_info:
-        print(
-            f"Formatting names takes {int(format_time)//60}m{int(format_time)%60}s")
-        sep_display()
+        print(f"{int(format_time)//60}m{int(format_time)%60}s")
 
     # ? Extract name type by kws
+    if logging_info:
+        print(">>> Extracting customer's type: ", end='')
     start_time = time()
     extracted_data = parallelize_dataframe(
         formatted_data,
@@ -242,18 +229,17 @@ def process_extract_name_type(
     )
     extract_time = time() - start_time
     if logging_info:
-        print(
-            f"Extracting customer's type takes {int(extract_time)//60}m{int(extract_time)%60}s")
-        sep_display()
+        print(f"{int(extract_time)//60}m{int(extract_time)%60}s")
 
     # ? Drop clean_name column
     extracted_data = extracted_data.drop(columns=[f'de_{name_col}'])
 
     # ? Combined with Na data
+    new_cols = ['customer_type']
+    na_data[new_cols] = None
     final_data = pd.concat([extracted_data, na_data])
 
     # ? Combined with the origin cols
-    new_cols = ['customer_type']
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

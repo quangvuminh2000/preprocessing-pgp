@@ -3,11 +3,8 @@ import re
 import os
 import sys
 from string import punctuation
-from typing import Tuple
 
 import pandas as pd
-from tqdm import tqdm
-from halo import Halo
 
 from preprocessing_pgp.accent_typing_formatter import reformat_vi_sentence_accent
 from preprocessing_pgp.name.unicode_converter import minimal_convert_unicode
@@ -161,12 +158,6 @@ def clean_name_cdp(name: str) -> str:
     return clean_name
 
 
-@Halo(
-    text='Preprocessing Names',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def preprocess_df(
     data: pd.DataFrame,
     # human_extractor: HumanNameExtractor,

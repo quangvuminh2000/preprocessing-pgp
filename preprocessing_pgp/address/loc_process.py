@@ -4,7 +4,6 @@ File support extracting code for each location extracted in extractor
 from typing import List, Dict
 
 import pandas as pd
-from halo import Halo
 
 from preprocessing_pgp.address.const import (
     LOCATION_CODE_DICT,
@@ -118,12 +117,6 @@ class LocationCode:
         return level_codes
 
 
-@Halo(
-    text='Generating location code',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def generate_loc_code(
     data: pd.DataFrame,
     best_lvl_cols: List[str]

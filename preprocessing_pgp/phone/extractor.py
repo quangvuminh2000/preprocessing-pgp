@@ -5,7 +5,6 @@ from time import time
 
 import pandas as pd
 from tqdm import tqdm
-from halo import Halo
 
 from preprocessing_pgp.phone.const import (
     SUB_PHONE_10NUM,
@@ -33,12 +32,6 @@ tqdm.pandas()
 
 
 # ? CHECK & EXTRACT FOR VALID PHONE
-@Halo(
-    text='Checking & Converting Valid Phone',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def extract_valid_phone(
     phones: pd.DataFrame,
     phone_col: str = "phone",
@@ -269,7 +262,8 @@ def extract_valid_phone(
 def process_convert_phone(
     data: pd.DataFrame,
     phone_col: str = 'phone',
-    n_cores: int = 1
+    n_cores: int = 1,
+    logging_info: bool = True
 ) -> pd.DataFrame:
     """
     Converting valid phone to new phone type
@@ -299,6 +293,8 @@ def process_convert_phone(
     phone_data = data[[phone_col]]
 
     # * Validate and convert phone
+    if logging_info:
+        print(">>> Converting phones: ")
     start_time = time()
 
     converted_data = parallelize_dataframe(
@@ -311,9 +307,8 @@ def process_convert_phone(
 
     convert_time = time()-start_time
 
-    print(
-        f"Converting phones takes {int(convert_time)//60}m{int(convert_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(f"{int(convert_time)//60}m{int(convert_time)%60}s")
 
     # * Concat with original cols
     new_cols = [

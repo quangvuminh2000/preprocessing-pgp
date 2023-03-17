@@ -10,7 +10,6 @@ from preprocessing_pgp.name.preprocess import preprocess_df
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
 from preprocessing_pgp.utils import (
     parallelize_dataframe,
-    sep_display
 )
 
 
@@ -45,6 +44,8 @@ def process_predict_gender(
     orig_cols = data.columns
 
     # * Clean name data
+    if logging_info:
+        print(">>> Cleansing name: ", end='')
     start_time = time()
     cleaned_name_data = parallelize_dataframe(
         name_data,
@@ -54,9 +55,7 @@ def process_predict_gender(
     )
     clean_time = time() - start_time
     if logging_info:
-        print(
-            f"Cleansing names takes {int(clean_time)//60}m{int(clean_time)%60}s")
-        sep_display()
+        print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
 
     # * Get customer type
     cleaned_name_data = process_extract_name_type(
@@ -72,6 +71,8 @@ def process_predict_gender(
     non_customer_name_data = cleaned_name_data[~customer_mask]
 
     # * Predict gender
+    if logging_info:
+        print(">>> Predicting gender: ", end='')
     start_time = time()
     predicted_name_data = parallelize_dataframe(
         customer_name_data,
@@ -81,14 +82,14 @@ def process_predict_gender(
     )
     predict_time = time() - start_time
     if logging_info:
-        print(
-            f"Predicting gender takes {int(predict_time)//60}m{int(predict_time)%60}s")
-        sep_display()
+        print(f"{int(predict_time)//60}m{int(predict_time)%60}s")
 
     # * Concat to generate final data
+    new_cols = ['gender_predict']
+    nan_data[new_cols] = None
     final_data = pd.concat(
         [predicted_name_data, nan_data, non_customer_name_data])
     final_data = pd.concat(
-        [data[orig_cols], final_data[['gender_predict']]], axis=1)
+        [data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

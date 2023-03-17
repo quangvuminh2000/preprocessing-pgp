@@ -31,7 +31,7 @@ RULE_BASED_PATH = os.path.join(
 
 NICKNAME_PATH = os.path.join(
     os.path.dirname(__file__),
-    '../data/name_split/nicknames.parquet'
+    '../data/name_split/nicknames_boundary.parquet'
 )
 
 GENDER_MODEL_PATH = os.path.join(

@@ -7,7 +7,6 @@ import logging
 import pandas as pd
 from tensorflow import keras
 from tqdm import tqdm
-from halo import Halo
 
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.model.transformers import TransformerModel
@@ -101,12 +100,6 @@ class EnrichName:
         })
 
 
-@Halo(
-    text='Enriching Names',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def enrich_clean_data(
     clean_df: pd.DataFrame,
     name_col: str,
@@ -157,7 +150,8 @@ def enrich_clean_data(
 def process_enrich(
     data: pd.DataFrame,
     name_col: str = 'name',
-    n_cores: int = 1
+    n_cores: int = 1,
+    logging_info: bool = True
 ) -> pd.DataFrame:
     """
     Applying the model of filling accent to non-accent Vietnamese names
@@ -171,6 +165,8 @@ def process_enrich(
         The column name that holds the raw names, by default 'name'
     n_cores : int
         The number of cores used to run parallel, by default 1 core is used
+    logging_info : bool
+        Whether to log info about run time, by default True
 
     Returns
     -------
@@ -191,8 +187,10 @@ def process_enrich(
     cleaned_data = process_extract_name_type(
         cleaned_data,
         name_col,
-        n_cores=n_cores
+        n_cores=n_cores,
+        logging_info=logging_info
     )
+    sep_display()
     customer_data = cleaned_data.query('customer_type == "customer"')
     #                    | (cleaned_data[name_col].str.split(' ').str.len() > 3))
     non_customer_data = cleaned_data.query('customer_type != "customer"')
@@ -216,6 +214,8 @@ def process_enrich(
     # sep_display()
 
     # Enrich names
+    if logging_info:
+        print(">>> Enriching names: ", end='')
     start_time = time()
     enriched_data = parallelize_dataframe(
         customer_data,
@@ -224,17 +224,10 @@ def process_enrich(
         name_col=name_col
     )
     enrich_time = time() - start_time
-    print(f"Enrich names takes {int(enrich_time)//60}m{int(enrich_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(f"{int(enrich_time)//60}m{int(enrich_time)%60}s")
 
     # * Concat na data
-    final_data = pd.concat([
-        enriched_data,
-        non_customer_data,
-        na_data
-    ])
-
-    # * Concat with original cols
     new_cols = [
         'customer_type',
         'predict',
@@ -243,6 +236,14 @@ def process_enrich(
         'middle_name',
         'first_name',
     ]
+    na_data[new_cols] = None
+    final_data = pd.concat([
+        enriched_data,
+        non_customer_data,
+        na_data
+    ])
+
+    # * Concat with original cols
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

@@ -7,7 +7,6 @@ import pickle5 as pickle
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from halo import Halo
 
 from preprocessing_pgp.name.const import GENDER_MODEL_PATH
 from preprocessing_pgp.utils import suppress_warnings
@@ -95,12 +94,6 @@ class GenderModel:
         return genders
 
 
-@Halo(
-    text='Predicting Genders',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def predict_gender_from_name(
     data: pd.DataFrame,
     name_col: str = 'name'

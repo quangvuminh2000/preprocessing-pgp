@@ -7,7 +7,6 @@ from copy import deepcopy
 
 import pandas as pd
 from flashtext import KeywordProcessor
-from halo import Halo
 
 from preprocessing_pgp.address.utils import (
     flatten_list,
@@ -328,12 +327,6 @@ class LevelExtractor:
         return found_terms[0]
 
 
-@Halo(
-    text='Extracting address',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def extract_vi_address_by_level(
     data:  pd.DataFrame,
     address_col: str

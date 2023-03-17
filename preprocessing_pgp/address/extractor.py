@@ -13,7 +13,6 @@ from preprocessing_pgp.address.loc_process import generate_loc_code
 from preprocessing_pgp.address.level_extractor import extract_vi_address_by_level
 from preprocessing_pgp.address.preprocess import clean_vi_address
 from preprocessing_pgp.utils import (
-    sep_display,
     parallelize_dataframe,
     extract_null_values
 )
@@ -23,7 +22,8 @@ from preprocessing_pgp.address.const import AVAIL_LEVELS
 def extract_vi_address(
     data: pd.DataFrame,
     address_col: str,
-    n_cores: int = 1
+    n_cores: int = 1,
+    logging_info: bool = True
 ) -> pd.DataFrame:
     """
     Extract Vietnamese address by pattern to find 3 levels of address
@@ -67,6 +67,8 @@ def extract_vi_address(
         )
 
     # * Cleanse the address
+    if logging_info:
+        print(">>> Cleansing address: ", end='')
     start_time = time()
     cleaned_data = parallelize_dataframe(
         clean_address_data,
@@ -75,10 +77,12 @@ def extract_vi_address(
         address_col=address_col
     )
     clean_time = time() - start_time
-    print(f"Cleansing takes {int(clean_time)//60}m{int(clean_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
 
     # * Feed the cleansed address to extract the level
+    if logging_info:
+        print(">>> Extract & Beautify address: ", end='')
     start_time = time()
     extracted_data = parallelize_dataframe(
         cleaned_data,
@@ -87,10 +91,12 @@ def extract_vi_address(
         address_col=f'cleaned_{address_col}'
     )
     extract_time = time() - start_time
-    print(f"Extracting takes {int(extract_time)//60}m{int(extract_time)%60}s")
-    sep_display()
+    if logging_info:
+        print(f"{int(extract_time)//60}m{int(extract_time)%60}s")
 
     # * Generate location code for best level found
+    if logging_info:
+        print(">>> Generating address code: ", end='')
     start_time = time()
     best_lvl_cols = [f'best_level_{i}' for i in AVAIL_LEVELS]
     generated_data = parallelize_dataframe(
@@ -100,8 +106,8 @@ def extract_vi_address(
         best_lvl_cols=best_lvl_cols
     )
     code_gen_time = time() - start_time
-    print(
-        f"Code generation takes {int(code_gen_time)//60}m{int(code_gen_time)%60}s")
+    if logging_info:
+        print(f"{int(code_gen_time)//60}m{int(code_gen_time)%60}s")
 
     # * Concat to original data
     final_data = pd.concat([generated_data, na_address_data])

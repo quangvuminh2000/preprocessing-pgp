@@ -9,7 +9,6 @@ from string import punctuation
 
 import pandas as pd
 from unidecode import unidecode
-from halo import Halo
 
 from preprocessing_pgp.address.utils import (
     number_pad_replace
@@ -236,12 +235,6 @@ class VietnameseAddressCleaner:
         return cleaned_address
 
 
-@Halo(
-    text='Cleansing address',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def clean_vi_address(
     data: pd.DataFrame,
     address_col: str
