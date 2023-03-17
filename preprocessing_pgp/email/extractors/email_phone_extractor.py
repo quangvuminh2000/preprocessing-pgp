@@ -6,6 +6,7 @@ import re
 import pandas as pd
 
 from preprocessing_pgp.email.extractors.const import VIETNAMESE_PHONE_REGEX
+from preprocessing_pgp.phone.extractor import process_convert_phone
 
 
 class EmailPhoneExtractor:
@@ -53,5 +54,12 @@ class EmailPhoneExtractor:
         # * Using regex to search for phone
         data['phone_extracted'] =\
             data[email_name_col].apply(self._get_phone)
+
+        # * Only take valid phone
+        data['phone_extracted'] = process_convert_phone(
+            data,
+            phone_col='phone_extracted',
+            logging_info=False
+        )['phone_convert']
 
         return data

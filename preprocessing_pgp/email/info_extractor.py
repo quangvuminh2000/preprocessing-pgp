@@ -5,7 +5,6 @@ Module contains objects and functions to support extracting information from ema
 from time import time
 
 import pandas as pd
-from halo import Halo
 
 from preprocessing_pgp.utils import parallelize_dataframe, sep_display
 from preprocessing_pgp.email.validator import process_validate_email
@@ -27,12 +26,6 @@ class EmailInfoExtractor:
         self.phone_extractor = EmailPhoneExtractor()
         self.address_extractor = EmailAddressExtractor()
 
-    @Halo(
-        text='Extracting information from email',
-        color='cyan',
-        spinner='dots7',
-        text_color='magenta',
-    )
     def extract_info(
         self,
         data: pd.DataFrame,
@@ -119,8 +112,12 @@ def process_extract_email_info(
         email_col=email_col,
         n_cores=n_cores
     )
+    sep_display()
     valid_email = validated_data.query('is_email_valid')
     invalid_email = validated_data.query('~is_email_valid')
+
+    if valid_email.empty:
+        return invalid_email
     # ? Separate email name and group
     valid_email[f'{email_col}_name'] =\
         valid_email[f'cleaned_{email_col}'].str.split('@').str[0]
@@ -134,12 +131,10 @@ def process_extract_email_info(
         email_name_col=f'{email_col}_name'
     )
     extract_time = time() - start_time
-    print(
-        f"Extracting information from email takes {int(extract_time)//60}m{int(extract_time)%60}s")
-    sep_display()
+    print(">>> Extracting information from email: ", end='')
+    print(f"{int(extract_time)//60}m{int(extract_time)%60}s")
 
     final_data = pd.concat([extracted_valid_email, invalid_email])
-
 
     # * Generate whether username is certain
     final_data['username_iscertain'] =\

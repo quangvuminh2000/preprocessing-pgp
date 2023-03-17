@@ -6,11 +6,11 @@ import re
 from time import time
 
 import pandas as pd
-from halo import Halo
 
 from preprocessing_pgp.email.utils import (
     split_email,
-    is_name_accented
+    is_name_accented,
+    is_valid_email_domain
 )
 from preprocessing_pgp.email.const import (
     AT_LEAST_ONE_CHAR_REGEX,
@@ -19,7 +19,8 @@ from preprocessing_pgp.email.const import (
     COMMON_EMAIL_REGEX,
     EDGE_AUTO_EMAIL_REGEX,
     PRIVATE_EMAIL_DOMAINS,
-    DOMAIN_GROUP_DICT
+    DOMAIN_GROUP_DICT,
+    EDU_EMAIL_REGEX
 )
 from preprocessing_pgp.email.preprocess import (
     clean_email
@@ -60,6 +61,10 @@ class EmailValidator:
             return False
 
         normed_email = email.lower()
+        _, email_group = split_email(email)
+
+        if not is_valid_email_domain(email_group):
+            return False
 
         if self.is_auto_email(normed_email):
             return False
@@ -90,9 +95,9 @@ class EmailValidator:
             Whether the email if valid large company email
         """
         for email_service in self.email_services:
-            _, email_group = split_email(email)
-            if email_group in email_service['domains']:
-                return bool(re.match(email_service['regex'], email))
+            email_name, email_group = split_email(email)
+            if re.match(email_service['domains'], email_group):
+                return bool(re.match(email_service['regex'], email_name))
 
         return False
 
@@ -105,8 +110,9 @@ class EmailValidator:
         """
 
         if re.match(COMMON_EMAIL_REGEX, email):
-            email_name, _ = split_email(email)
-            return self._is_valid_email_name(email_name)
+            # email_name, _ = split_email(email)
+            # return self._is_valid_email_name(email_name)
+            return True
         return False
 
     def is_student_email(
@@ -122,7 +128,7 @@ class EmailValidator:
             return False
 
         if re.search('edu', email_group):
-            return self._is_valid_email_name(email_name)
+            return re.match(EDU_EMAIL_REGEX, email_name) is not None
 
         return False
 
@@ -179,12 +185,6 @@ class EmailValidator:
         return bool(re.match(AT_LEAST_ONE_CHAR_REGEX, email_name))
 
 
-@Halo(
-    text='Validating email',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def validate_clean_email(
     data: pd.DataFrame,
     email_col: str = 'cleaned_email'
@@ -252,6 +252,7 @@ def process_validate_email(
     email_data = data[[email_col]]
 
     # * Cleansing email
+    print(">>> Cleansing email: ", end='')
     start_time = time()
     cleaned_data = parallelize_dataframe(
         email_data,
@@ -260,14 +261,14 @@ def process_validate_email(
         email_col=email_col
     )
     clean_time = time() - start_time
-    print(f"Cleansing email takes {int(clean_time)//60}m{int(clean_time)%60}s")
-    sep_display()
+    print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
 
     # * Separate na data
     na_data = cleaned_data[cleaned_data[f'cleaned_{email_col}'].isna()]
     non_na_data = cleaned_data[cleaned_data[f'cleaned_{email_col}'].notna()]
 
     # * Validating email
+    print(">>> Validating email: ", end='')
     start_time = time()
     validated_data = parallelize_dataframe(
         non_na_data,
@@ -276,17 +277,19 @@ def process_validate_email(
         email_col=f'cleaned_{email_col}'
     )
     validate_time = time() - start_time
-    print(
-        f"Validating email takes {int(validate_time)//60}m{int(validate_time)%60}s")
-    sep_display()
+    print(f"{int(validate_time)//60}m{int(validate_time)%60}s")
 
     # * Get the domain of the email name & Check for private email
+    print(">>> Get email domain: ", end='')
+    start_time = time()
     validated_data['email_domain'] = validated_data[f'cleaned_{email_col}'].str.split(
         '@').str[1]
     validated_data['email_domain'] = validated_data['email_domain'].replace(
-        DOMAIN_GROUP_DICT)
+        DOMAIN_GROUP_DICT, regex=True)
     validated_data['private_email'] = validated_data['email_domain'].isin(
         PRIVATE_EMAIL_DOMAINS)
+    domain_time = time() - start_time
+    print(f"{int(domain_time)//60}m{int(domain_time)%60}s")
 
     # * Concat with the nan data
     final_data = pd.concat([validated_data, na_data])

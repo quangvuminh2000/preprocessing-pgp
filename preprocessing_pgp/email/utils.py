@@ -6,8 +6,22 @@ import re
 from typing import List, Tuple
 
 import pandas as pd
+import dns.resolver
 
 from preprocessing_pgp.name.utils import is_name_accented
+
+
+def is_valid_email_domain(
+    domain: str
+) -> bool:
+    """
+    Check email domain using resolver
+    """
+    try:
+        dns.resolver.resolve(domain, 'MX')
+        return True
+    except:
+        return False
 
 
 def split_email(email: str) -> List[str]:
@@ -32,10 +46,11 @@ def split_email(email: str) -> List[str]:
     if len(split_result) == 2:
         return split_result
 
-    return [*split_result, None]
+    return [None, None]
+
 
 def clean_email_name(
-    data:pd.DataFrame,
+    data: pd.DataFrame,
     name_col: str = 'email_name'
 ) -> pd.DataFrame:
     """
@@ -87,6 +102,7 @@ def clean_email_name(
 
     return data
 
+
 def sort_series_by_appearance(
     series: pd.Series
 ) -> pd.Series:
@@ -111,6 +127,7 @@ def sort_series_by_appearance(
         .rename(columns={'index': name})[name]
 
     return sorted_series
+
 
 def extract_sub_string(
     sub_regex: str,

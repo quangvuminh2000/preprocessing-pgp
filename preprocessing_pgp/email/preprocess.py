@@ -4,7 +4,6 @@ Module to preprocess email before proceed more
 
 import re
 import pandas as pd
-from halo import Halo
 from preprocessing_pgp.email.const import NAN_EMAIL_LIST
 
 
@@ -53,12 +52,6 @@ class EmailCleaner:
         return cleaned_email
 
 
-@Halo(
-    text='Cleansing email',
-    color='cyan',
-    spinner='dots7',
-    text_color='magenta'
-)
 def clean_email(
     data: pd.DataFrame,
     email_col: str = 'email'

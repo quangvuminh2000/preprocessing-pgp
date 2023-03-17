@@ -2,11 +2,8 @@
 Module to extract name from email using rule-based
 """
 import math
-import re
-from typing import Tuple
 
 import pandas as pd
-from unidecode import unidecode
 
 from preprocessing_pgp.email.extractors.const import FULLNAME_DICT
 from preprocessing_pgp.email.utils import (
@@ -253,7 +250,8 @@ class EmailNameExtractor:
         proceed_data = process_enrich(
             proceed_data,
             name_col='username_extracted',
-            n_cores=1
+            n_cores=1,
+            logging_info=False
         )
 
         # * Predict gender from extracted username

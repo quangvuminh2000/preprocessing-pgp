@@ -11,34 +11,31 @@ AT_LEAST_ONE_CHAR_REGEX = r'(?=.*[a-z])'
 
 EMAIL_DOMAIN_REGEX = {
     'gmail': {
-        'domains': ['gmail.com', 'gmail.com.vn'],
-        'regex': r'^[a-z0-9][a-z0-9\.]{8,28}[a-z0-9]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
+        'domains': r'gmail.com([.][a-z]{2})?$',
+        'regex': r'^(?!.*google)[a-z][a-z0-9\.]{4,28}[a-z0-9]'
     },
     'yahoo': {
-        'domains': ['yahoo.com', 'yahoo.com.vn'],
-        'regex': r'^[a-z][a-z0-9_\.]{2,30}[a-z0-9]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
+        'domains': r'(yahoo|ymail|myyahoo).com([.][a-z]{2})?$',
+        'regex': r'^[a-z][a-z0-9_\.]{2,30}[a-z0-9]'
     },
     'ms': {
-        'domains': ['hotmail.com', 'outlook.com', 'outlook.com.vn'],
-        'regex': r'^[a-z][a-z0-9-_\.]{2,62}[a-z0-9-_]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
+        'domains': r'(hotmail|outlook).com([.][a-z]{2})?$',
+        'regex': r'^[a-z][a-z0-9-_\.]{0,30}[a-z0-9-_]?'
     },
     'fpt': {
-        'domains': ['fpt.com.vn', 'fpt.edu.vn',
-                    'hcm.fpt.vn', 'fpt.vn',
-                    'fpt.net', 'fpt.aptech.ac.vn'],
-        'regex': r'^[a-z0-9][a-z0-9_\.]{2,31}[a-z0-9]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
+        'domains': r'.*fpt.*$',
+        'regex': r'^[a-z0-9][a-z0-9_\.]{2,31}[a-z0-9]'
     }
 }
 
-COMMON_EMAIL_REGEX = r'^[a-z0-9][a-z0-9_\.]{4,31}[a-z0-9]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
+COMMON_EMAIL_REGEX = r'^[a-z0-9][a-z0-9_\.]{2,30}[a-z0-9]@[a-z0-9]{2,}(?:\.[a-z0-9]{2,12}){1,2}$'
 
-EDU_EMAIL_REGEX = r'^[0-9a-z]+@[0-9a-z\.]'
+EDU_EMAIL_REGEX = r'^[a-z0-9][a-z0-9_.]{4,30}[a-z0-9]'
 
 EDGE_AUTO_EMAIL_REGEX = r'@privaterelay.appleid.com|[0-9a-z]+\_autoemail'
 
 # ? EMAIL CONSTRAINTS
-_FLATTEN_DOMAIN_LIST = [(x, y['domains']) for (x, y) in EMAIL_DOMAIN_REGEX.items()]
-DOMAIN_GROUP_DICT = dict((x, v[0]) for v in _FLATTEN_DOMAIN_LIST for x in v[1])
+DOMAIN_GROUP_DICT = dict((reg_li['domains'], domain) for domain, reg_li in EMAIL_DOMAIN_REGEX.items())
 
 PRIVATE_EMAIL_DOMAINS = [
     'gmail.com', 'yahoo.com',
