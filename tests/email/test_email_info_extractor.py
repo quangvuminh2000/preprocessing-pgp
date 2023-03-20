@@ -11,6 +11,7 @@ from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExt
 from preprocessing_pgp.email.extractors.email_yob_extractor import EmailYOBExtractor
 from preprocessing_pgp.email.extractors.email_phone_extractor import EmailPhoneExtractor
 from preprocessing_pgp.email.extractors.email_address_extractor import EmailAddressExtractor
+from preprocessing_pgp.email.validator import process_validate_email
 from preprocessing_pgp.email.info_extractor import process_extract_email_info
 
 
@@ -356,4 +357,54 @@ class TestEmailInfoExtraction:
             'Tỉnh Hưng Yên',
             'Tỉnh Đồng Nai',
             'Tỉnh Long An'
+        ]
+
+    @pt.mark.email_valid
+    def test_validate_large_company_email(self):
+        """
+        Test whether the function can validate correctly for company email
+        """
+        email_data = pd.DataFrame.from_dict({
+            'email': [
+                'quangvm2000@gmail.com',
+                'vuminhquang2000@gmail.com',
+                '0889845985@gmail.com',
+                'quang0889845985@gmail.com'
+            ]
+        })
+
+        validated_email = process_validate_email(
+            email_data,
+            email_col='email'
+        )['is_email_valid'].tolist()
+
+        assert validated_email == [
+            True,
+            True,
+            False,
+            True
+        ]
+
+    @pt.mark.email_valid
+    def test_validate_edu_email(self):
+        """
+        Test whether the function can validate correctly for edu email
+        """
+        email_data = pd.DataFrame.from_dict({
+            'email': [
+                'quang.vuminh@hcmut.edu.vn',
+                '1852699@hcmut.edu.vn',
+                '6699@hcmut.edu.vn',
+            ]
+        })
+
+        validated_email = process_validate_email(
+            email_data,
+            email_col='email'
+        )['is_email_valid'].tolist()
+
+        assert validated_email == [
+            True,
+            True,
+            False,
         ]
