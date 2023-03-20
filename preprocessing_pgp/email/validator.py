@@ -26,9 +26,10 @@ from preprocessing_pgp.email.preprocess import (
     clean_email
 )
 from preprocessing_pgp.utils import (
-    sep_display,
     parallelize_dataframe
 )
+
+pd.options.mode.chained_assignment = None
 
 
 class EmailValidator:
@@ -36,8 +37,12 @@ class EmailValidator:
     Class contains building components for validating email
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        domain_dict: pd.DataFrame = None
+    ) -> None:
         self.email_services = EMAIL_DOMAIN_REGEX.values()
+        self.domain_dict = domain_dict
 
     def is_valid_email(
         self,
@@ -61,22 +66,43 @@ class EmailValidator:
             return False
 
         normed_email = email.lower()
-        _, email_group = split_email(email)
+        email_name, email_group = split_email(email)
 
-        if not is_valid_email_domain(email_group):
-            return False
+        # if not is_valid_email_domain(email_group):
+        #     return False
 
         if self.is_auto_email(normed_email):
             return False
 
-        return self.is_large_company_email(normed_email)\
-            or self.is_common_email(normed_email)\
-            or self.is_student_email(normed_email)
+        large_company_domain = self.get_large_company_domain(email_group)
+        if large_company_domain is not None:
+            return self._is_valid_email_regex(
+                email_name,
+                EMAIL_DOMAIN_REGEX[large_company_domain]['regex']
+            )
 
-    def is_large_company_email(
+        if self.is_student_email(email_group):
+            return self._is_valid_email_regex(
+                email_name,
+                EDU_EMAIL_REGEX
+            )
+
+        return self.is_common_email(normed_email)
+
+    def _is_valid_email_regex(
         self,
-        email: str
+        email: str,
+        email_regex: str
     ) -> bool:
+        """
+        Check whether the email match the regex
+        """
+        return bool(re.match(email_regex, email))
+
+    def get_large_company_domain(
+        self,
+        email_group: str
+    ) -> str:
         """
         Check whether the email is of large company email:
         1. gmail
@@ -86,20 +112,19 @@ class EmailValidator:
 
         Parameters
         ----------
-        email : str
-            The input email to validate for large company email
+        email_group : str
+            The input email_group to get the domain name
 
         Returns
         -------
-        bool
-            Whether the email if valid large company email
+        str
+            The email group that email was in
         """
-        for email_service in self.email_services:
-            email_name, email_group = split_email(email)
-            if re.match(email_service['domains'], email_group):
-                return bool(re.match(email_service['regex'], email_name))
+        for domain_regex, domain_name in DOMAIN_GROUP_DICT.items():
+            if re.match(domain_regex, email_group):
+                return domain_name
 
-        return False
+        return None
 
     def is_common_email(
         self,
@@ -117,20 +142,15 @@ class EmailValidator:
 
     def is_student_email(
         self,
-        email: str
+        email_group: str
     ) -> bool:
         """
         Check whether the email is of student email or not
         """
-        email_name, email_group = split_email(email)
-
         if not email_group:
             return False
 
-        if re.search('edu', email_group):
-            return re.match(EDU_EMAIL_REGEX, email_name) is not None
-
-        return False
+        return bool(re.search('edu', email_group))
 
     def is_auto_email(
         self,
@@ -184,10 +204,47 @@ class EmailValidator:
         """
         return bool(re.match(AT_LEAST_ONE_CHAR_REGEX, email_name))
 
+    def check_valid_email_domain(
+        self,
+        data: pd.DataFrame,
+        domain_col: str = 'email_domain'
+    ) -> pd.DataFrame:
+        """
+        Checking whether the email domain is valid or not
+        """
+        if self.domain_dict is None:
+            data['is_domain_valid'] =\
+                data[domain_col].apply(is_valid_email_domain)
+            return data
+
+        if not self.domain_dict.columns.isin(['email_domain', 'is_domain_valid']).all():
+            print("Domain dictionary not match schema, re-running all domains")
+            data['is_domain_valid'] =\
+                data[domain_col].apply(is_valid_email_domain)
+            return data
+
+        new_domains = list(set(data[domain_col].unique())-set(self.domain_dict['email_domain']))
+        new_domain_df = pd.DataFrame({
+            'email_domain': new_domains
+        })
+        new_domain_df['is_domain_valid'] \
+            = new_domain_df['email_domain'].apply(is_valid_email_domain)
+
+        domain_mapper = pd.concat([self.domain_dict, new_domain_df], ignore_index=True)
+        data = pd.merge(
+            data.set_index('email_domain'),
+            domain_mapper.set_index('email_domain'),
+            left_index=True, right_index=True,
+            how='left', sort=False
+        ).reset_index()
+
+        return data
+
 
 def validate_clean_email(
     data: pd.DataFrame,
-    email_col: str = 'cleaned_email'
+    email_col: str = 'cleaned_email',
+    domain_dict: pd.DataFrame = None
 ) -> pd.DataFrame:
     """
     Process validating for cleaned email
@@ -199,6 +256,8 @@ def validate_clean_email(
         The dataframe contains cleaned email column
     email_col : str, optional
         The cleaned email column name, by default 'cleaned_email'
+    domain_dict : pd.DataFrame, optional
+        The domain dictionary to use for faster reference, by default None
 
     Returns
     -------
@@ -208,13 +267,30 @@ def validate_clean_email(
     if data.empty:
         return data
 
-    validator = EmailValidator()
+    validator = EmailValidator(domain_dict=domain_dict)
 
     validated_data = data
 
-    validated_data['is_email_valid'] = validated_data[email_col].apply(
+    # * Check for email domain
+    validated_data['email_domain'] =\
+        validated_data[email_col]\
+        .str.split('@').str[1]
+    validated_data = validator.check_valid_email_domain(
+        validated_data,
+        domain_col='email_domain'
+    )
+    valid_domain_data = validated_data.query('is_domain_valid')
+    invalid_domain_data = validated_data.query('~is_domain_valid')
+
+    # * Check for email regex
+    valid_domain_data['is_email_valid'] = valid_domain_data[email_col].apply(
         validator.is_valid_email
     )
+
+    # * Concat with invalid domain data
+    invalid_domain_data['is_email_valid'] = False
+    validated_data = pd.concat([valid_domain_data, invalid_domain_data])
+
     # * Check for autoemail
     validated_data['is_autoemail'] = validated_data[email_col].apply(
         validator.is_auto_email
@@ -226,7 +302,8 @@ def validate_clean_email(
 def process_validate_email(
     data: pd.DataFrame,
     email_col: str = 'email',
-    n_cores: int = 1
+    n_cores: int = 1,
+    domain_dict: pd.DataFrame = None
 ) -> pd.DataFrame:
     """
     Process validating email address
@@ -239,6 +316,8 @@ def process_validate_email(
         The column name that hold email records, by default 'email'
     n_cores : int, optional
         The number of cores used to run parallel, by default 1 core will be used
+    domain_dict : pd.DataFrame, optional
+        The domain dictionary to use for faster reference, by default None
 
     Returns
     -------
@@ -274,7 +353,8 @@ def process_validate_email(
         non_na_data,
         validate_clean_email,
         n_cores=n_cores,
-        email_col=f'cleaned_{email_col}'
+        email_col=f'cleaned_{email_col}',
+        domain_dict=domain_dict
     )
     validate_time = time() - start_time
     print(f"{int(validate_time)//60}m{int(validate_time)%60}s")
@@ -282,8 +362,6 @@ def process_validate_email(
     # * Get the domain of the email name & Check for private email
     print(">>> Get email domain: ", end='')
     start_time = time()
-    validated_data['email_domain'] = validated_data[f'cleaned_{email_col}'].str.split(
-        '@').str[1]
     validated_data['email_domain'] = validated_data['email_domain'].replace(
         DOMAIN_GROUP_DICT, regex=True)
     validated_data['private_email'] = validated_data['email_domain'].isin(
@@ -304,6 +382,7 @@ def process_validate_email(
         'is_email_valid',
         'is_autoemail',
         'email_domain',
+        'is_domain_valid',
         'private_email'
     ]
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
