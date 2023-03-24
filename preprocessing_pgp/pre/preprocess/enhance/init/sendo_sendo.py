@@ -1,442 +1,471 @@
-
-import pandas as pd
-from unidecode import unidecode
-from difflib import SequenceMatcher
-import multiprocessing as mp
-import html
+import subprocess
 import sys
 
-import os
-import subprocess
-from pyarrow import fs
+import pandas as pd
 
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
-
-os.environ['HADOOP_CONF_DIR'] = "/etc/hadoop/conf/"
-os.environ['JAVA_HOME'] = "/usr/jdk64/jdk1.8.0_112"
-os.environ['HADOOP_HOME'] = "/usr/hdp/3.1.0.0-78/hadoop"
-os.environ['ARROW_LIBHDFS_DIR'] = "/usr/hdp/3.1.0.0-78/usr/lib/"
-os.environ['CLASSPATH'] = subprocess.check_output(
-    "$HADOOP_HOME/bin/hadoop classpath --glob", shell=True).decode('utf-8')
-hdfs = fs.HadoopFileSystem(
-    host="hdfs://hdfs-cluster.datalake.bigdata.local", port=8020)
-
-sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
-from preprocess_profile import (
-    remove_same_username_email,
-    cleansing_profile_name,
-    extracting_pronoun_from_name
-)
-from const import (
-    UTILS_PATH,
-    CENTRALIZE_PATH,
-    PREPROCESS_PATH
-)
+sys.path.append("/bigdata/fdp/cdp/source/core_profile/preprocess/utils")
+from const import CENTRALIZE_PATH, PREPROCESS_PATH, hdfs
 
 
-def UnifySendo(
-    date_str: str,
-    n_cores: int = 1
-):
+def UnifySendo(date_str: str, n_cores: int = 1):
     # VARIABLES
-    f_group = 'sendo'
+    f_group = "sendo"
 
-    dict_trash = {'': None, 'Nan': None, 'nan': None, 'None': None,
-                  'none': None, 'Null': None, 'null': None, "''": None}
-    dict_location = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/dict_location.parquet',
-                                    filesystem=hdfs)
     # load profile psendo
-    profile_sendo = pd.read_parquet(
-        f'{CENTRALIZE_PATH}/{f_group}.parquet/d={date_str}', filesystem=hdfs)
-    # * Cleansing
-    print(">>> Cleansing profile")
-    profile_sendo = cleansing_profile_name(
-        profile_sendo,
-        name_col='name',
-        n_cores=n_cores
-    )
-    profile_sendo.rename(columns={
-        'email': 'email_raw',
-        'phone': 'phone_raw',
-        'name': 'raw_name'
-    }, inplace=True)
-
-    # * Loading dictionary
-    print(">>> Loading dictionaries")
-    profile_phones = profile_sendo['phone_raw'].drop_duplicates().dropna()
-    profile_emails = profile_sendo['email_raw'].drop_duplicates().dropna()
-    profile_names = profile_sendo['raw_name'].drop_duplicates().dropna()
-
-    # phone, email (valid)
-    valid_phone = pd.read_parquet(
-        f'{UTILS_PATH}/valid_phone_latest.parquet',
-        filters=[('phone_raw', 'in', profile_phones)],
-        filesystem=hdfs,
-        columns=['phone_raw', 'phone', 'is_phone_valid']
-    )
-    valid_email = pd.read_parquet(
-        f'{UTILS_PATH}/valid_email_latest.parquet',
-        filters=[('email_raw', 'in', profile_emails)],
-        filesystem=hdfs,
-        columns=['email_raw', 'email', 'is_email_valid']
-    )
-    dict_name_lst = pd.read_parquet(
-        f'{UTILS_PATH}/dict_name_latest.parquet',
-        filters=[('raw_name', 'in', profile_names)],
-        filesystem=hdfs,
-        columns=[
-            'raw_name', 'enrich_name',
-            'last_name', 'middle_name', 'first_name',
-            'gender'
-        ]
-    )
-
-    # info
-    profile_sendo = profile_sendo[['uid', 'phone', 'email', 'name',
-                                   'address', 'ward', 'district', 'city', 'source']]
-
-    # merge get phone, email (valid)
-    print(">>> Merging phone, email, name")
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('phone_raw'),
-        valid_phone.set_index('phone_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('email_raw'),
-        valid_email.set_index('email_raw'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).reset_index(drop=False)
-
-    profile_sendo = pd.merge(
-        profile_sendo.set_index('raw_name'),
-        dict_name_lst.set_index('raw_name'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    ).rename(columns={
-        'enrich_name': 'name'
-    }).reset_index(drop=False)
-
-    # Refilling info
-    cant_predict_name_mask = profile_sendo['name'].isna()
-    profile_sendo.loc[
-        cant_predict_name_mask,
-        'name'
-    ] = profile_sendo.loc[
-        cant_predict_name_mask,
-        'raw_name'
+    info_columns = [
+        "uid",
+        "phone",
+        "email",
+        "card",
+        "name",
+        "gender",
+        "birthday",
+        "age",
+        "customer_type",
+        "address",
+        "city",
+        "district",
+        "ward",
+        "street",
+        "source",
     ]
-    profile_sendo['name'] = profile_sendo['name'].replace(dict_trash)
-
-    # customer_type
-    print(">>> Extracting customer type")
-    profile_sendo = process_extract_name_type(
-        profile_sendo,
-        name_col='name',
-        n_cores=n_cores,
-        logging_info=False
+    profile_sendo = pd.read_parquet(
+        f"{CENTRALIZE_PATH}/{f_group}.parquet/d={date_str}",
+        filesystem=hdfs,
+        columns=info_columns,
     )
 
-    # drop name is username_email
-    print(">>> Extra Cleansing Name")
-    profile_sendo = remove_same_username_email(
-        profile_sendo,
-        name_col='name',
-        email_col='email'
-    )
+    # # * Cleansing
+    # print(">>> Cleansing profile")
+    # profile_sendo = cleansing_profile_name(
+    #     profile_sendo,
+    #     name_col='name',
+    #     n_cores=n_cores
+    # )
+    # profile_sendo.rename(columns={
+    #     'email': 'email_raw',
+    #     'phone': 'phone_raw',
+    #     'name': 'raw_name'
+    # }, inplace=True)
 
-    # clean name, extract pronoun
-    condition_name = (profile_sendo['customer_type'] == 'customer')\
-        & (profile_sendo['name'].notna())
-    profile_sendo = extracting_pronoun_from_name(
-        profile_sendo,
-        condition=condition_name,
-        name_col='name',
-    )
+    # # * Loading dictionary
+    # print(">>> Loading dictionaries")
+    # profile_phones = profile_sendo['phone_raw'].drop_duplicates().dropna()
+    # profile_emails = profile_sendo['email_raw'].drop_duplicates().dropna()
+    # profile_names = profile_sendo['raw_name'].drop_duplicates().dropna()
 
-    # is full name
-    print(">>> Checking Full Name")
-    profile_sendo.loc[profile_sendo['last_name'].notna() & profile_sendo['first_name'].notna(), 'is_full_name'] = True
-    profile_sendo['is_full_name'] = profile_sendo['is_full_name'].fillna(False)
-    profile_sendo = profile_sendo.drop(columns=['last_name', 'middle_name', 'first_name'])
+    # # phone, email (valid)
+    # valid_phone = pd.read_parquet(
+    #     f'{UTILS_PATH}/valid_phone_latest.parquet',
+    #     filters=[('phone_raw', 'in', profile_phones)],
+    #     filesystem=hdfs,
+    #     columns=['phone_raw', 'phone', 'is_phone_valid']
+    # )
+    # valid_email = pd.read_parquet(
+    #     f'{UTILS_PATH}/valid_email_latest.parquet',
+    #     filters=[('email_raw', 'in', profile_emails)],
+    #     filesystem=hdfs,
+    #     columns=['email_raw', 'email', 'is_email_valid']
+    # )
+    # dict_name_lst = pd.read_parquet(
+    #     f'{UTILS_PATH}/dict_name_latest.parquet',
+    #     filters=[('raw_name', 'in', profile_names)],
+    #     filesystem=hdfs,
+    #     columns=[
+    #         'raw_name', 'enrich_name',
+    #         'last_name', 'middle_name', 'first_name',
+    #         'gender'
+    #     ]
+    # )
 
-    # spare unit_address
-    print(">>> Processing Address")
-    def SparseUnitAddress(address, ward, district, city):
-        result = address.title()
+    # # info
+    # profile_sendo = profile_sendo[['uid', 'phone', 'email', 'name',
+    #                                'address', 'ward', 'district', 'city', 'source']]
 
-        if ward != None:
-            ward = ward.title()
+    # # merge get phone, email (valid)
+    # print(">>> Merging phone, email, name")
+    # profile_sendo = pd.merge(
+    #     profile_sendo.set_index('phone_raw'),
+    #     valid_phone.set_index('phone_raw'),
+    #     left_index=True, right_index=True,
+    #     how='left',
+    #     sort=False
+    # ).reset_index(drop=False)
 
-            if 'Xa' in ward:
-                for key in ['Xa ', 'Xa', ',', '.', '']:
-                    key_ward = ward.replace('Xa ', key).strip()
-                    result = result.split(key_ward)[0]
-            if 'Phuong' in ward:
-                for key in ['Phuong ', 'Phuong', 'P', 'F', 'P.', 'F.', 'F ', 'P ', ',', '.', '']:
-                    key_ward = ward.replace(
-                        'Phuong ', key).strip().replace('0', '')
-                    if key_ward.isdigit():
-                        continue
-                    result = result.split(key_ward)[0]
-            elif 'Thi Tran' in ward:
-                for key in ['Thi Tran ', 'Thi Tran', 'Tt ', 'Tt.', ',', '.', '']:
-                    key_ward = ward.replace('Thi Tran ', key).strip()
-                    result = result.split(key_ward)[0]
+    # profile_sendo = pd.merge(
+    #     profile_sendo.set_index('email_raw'),
+    #     valid_email.set_index('email_raw'),
+    #     left_index=True, right_index=True,
+    #     how='left',
+    #     sort=False
+    # ).reset_index(drop=False)
 
-        # district
-        if district != None:
-            district = district.title()
+    # profile_sendo = pd.merge(
+    #     profile_sendo.set_index('raw_name'),
+    #     dict_name_lst.set_index('raw_name'),
+    #     left_index=True, right_index=True,
+    #     how='left',
+    #     sort=False
+    # ).rename(columns={
+    #     'enrich_name': 'name'
+    # }).reset_index(drop=False)
 
-            if 'Huyen' in district:
-                for key in ['Huyen ', 'Huyen', 'H ', 'H.', ',', '.', '']:
-                    key_district = district.replace('Huyen ', key).strip()
-                    result = result.split(key_district)[0]
-            elif 'Thi Xa' in district:
-                for key in ['Thi Xa ', 'Thi xa', 'Tx ', 'Tx.', ',', '.', '']:
-                    key_district = district.replace('Thi Xa ', key).strip()
-                    result = result.split(key_district)[0]
-            elif 'Quan' in district:
-                for key in ['Quan ', 'Quan', 'Q', 'Q.', ',', '.', '']:
-                    key_district = district.replace(
-                        'Quan ', key).strip().replace('0', '')
-                    if key_district.isdigit():
-                        continue
-                    result = result.split(key_district)[0]
-            elif 'Thanh Pho' in district:
-                for key in ['Thanh Pho ', 'Thanh Pho', 'Tp ', 'Tp.', ',', '.', '']:
-                    key_district = district.replace('Thanh Pho ', key).strip()
-                    result = result.split(key_district)[0]
+    # # Refilling info
+    # cant_predict_name_mask = profile_sendo['name'].isna()
+    # profile_sendo.loc[
+    #     cant_predict_name_mask,
+    #     'name'
+    # ] = profile_sendo.loc[
+    #     cant_predict_name_mask,
+    #     'raw_name'
+    # ]
+    # profile_sendo['name'] = profile_sendo['name'].replace(dict_trash)
 
-        # city
-        if city != None:
-            city = city.title()
-            for key in ['Tinh ', 'Tinh', 'Thanh Pho ', 'Thanh Pho', 'T.', 'Tp', 'Tp.', ',', '.', '']:
-                key_city = (key + city).strip()
-                result = result.split(key_city)[0]
+    # # customer_type
+    # print(">>> Extracting customer type")
+    # profile_sendo = process_extract_name_type(
+    #     profile_sendo,
+    #     name_col='name',
+    #     n_cores=n_cores,
+    #     logging_info=False
+    # )
 
-        # Normalize
-        result = result.strip()
-        if result in [None, '']:
-            result = None
-        else:
-            result = result[:-1].strip() if (result[-1]
-                                             in [',', '.']) else result
+    # # drop name is username_email
+    # print(">>> Extra Cleansing Name")
+    # profile_sendo = remove_same_username_email(
+    #     profile_sendo,
+    #     name_col='name',
+    #     email_col='email'
+    # )
 
-        # Fix UnitAdress is FullAddress
-        if (result != None) & (district != None) & (city != None):
-            have_district = False
-            for key_district in [' Huyen ', ' Thi Xa ', ' Quan ', ' Thanh Pho ']:
-                if key_district.lower() in result.lower():
-                    have_district = True
-                    break
+    # # clean name, extract pronoun
+    # condition_name = (profile_sendo['customer_type'] == 'customer')\
+    #     & (profile_sendo['name'].notna())
+    # profile_sendo = extracting_pronoun_from_name(
+    #     profile_sendo,
+    #     condition=condition_name,
+    #     name_col='name',
+    # )
 
-            have_city = False
-            for key_city in [' Tinh ', ' Thanh Pho ']:
-                if key_city.lower() in result.lower():
-                    have_city = True
-                    break
+    # # is full name
+    # print(">>> Checking Full Name")
+    # profile_sendo.loc[profile_sendo['last_name'].notna() & profile_sendo['first_name'].notna(), 'is_full_name'] = True
+    # profile_sendo['is_full_name'] = profile_sendo['is_full_name'].fillna(False)
+    # profile_sendo = profile_sendo.drop(columns=['last_name', 'middle_name', 'first_name'])
 
-            if (have_district == True) & (have_city == True):
-                result = None
+    # # spare unit_address
+    # print(">>> Processing Address")
+    # def SparseUnitAddress(address, ward, district, city):
+    #     result = address.title()
 
-        if (result != None) & (district != None):
-            for key_district in [' Huyen ', ' Thi Xa ', ' Quan ', ' Thanh Pho ']:
-                if key_district.lower() in result.lower():
-                    result = result.split(',')[0].strip()
-                    if len(result.split(' ')) > 5:
-                        result = None
-                    break
+    #     if ward != None:
+    #         ward = ward.title()
 
-        return result
+    #         if 'Xa' in ward:
+    #             for key in ['Xa ', 'Xa', ',', '.', '']:
+    #                 key_ward = ward.replace('Xa ', key).strip()
+    #                 result = result.split(key_ward)[0]
+    #         if 'Phuong' in ward:
+    #             for key in ['Phuong ', 'Phuong', 'P', 'F', 'P.', 'F.', 'F ', 'P ', ',', '.', '']:
+    #                 key_ward = ward.replace(
+    #                     'Phuong ', key).strip().replace('0', '')
+    #                 if key_ward.isdigit():
+    #                     continue
+    #                 result = result.split(key_ward)[0]
+    #         elif 'Thi Tran' in ward:
+    #             for key in ['Thi Tran ', 'Thi Tran', 'Tt ', 'Tt.', ',', '.', '']:
+    #                 key_ward = ward.replace('Thi Tran ', key).strip()
+    #                 result = result.split(key_ward)[0]
 
-    def UltimatelyUnescape(s: str) -> str:
-        unescaped = ""
-        while unescaped != s:
-            s = html.unescape(s)
-            unescaped = html.unescape(s)
+    #     # district
+    #     if district != None:
+    #         district = district.title()
 
-        return s
+    #         if 'Huyen' in district:
+    #             for key in ['Huyen ', 'Huyen', 'H ', 'H.', ',', '.', '']:
+    #                 key_district = district.replace('Huyen ', key).strip()
+    #                 result = result.split(key_district)[0]
+    #         elif 'Thi Xa' in district:
+    #             for key in ['Thi Xa ', 'Thi xa', 'Tx ', 'Tx.', ',', '.', '']:
+    #                 key_district = district.replace('Thi Xa ', key).strip()
+    #                 result = result.split(key_district)[0]
+    #         elif 'Quan' in district:
+    #             for key in ['Quan ', 'Quan', 'Q', 'Q.', ',', '.', '']:
+    #                 key_district = district.replace(
+    #                     'Quan ', key).strip().replace('0', '')
+    #                 if key_district.isdigit():
+    #                     continue
+    #                 result = result.split(key_district)[0]
+    #         elif 'Thanh Pho' in district:
+    #             for key in ['Thanh Pho ', 'Thanh Pho', 'Tp ', 'Tp.', ',', '.', '']:
+    #                 key_district = district.replace('Thanh Pho ', key).strip()
+    #                 result = result.split(key_district)[0]
 
-    condition_address = profile_sendo['address'].notna()
-    profile_sendo.loc[condition_address, 'address'] = profile_sendo.loc[condition_address,
-                                                                        'address'].str.lower().apply(UltimatelyUnescape).str.title()
-    profile_sendo['address'] = profile_sendo['address'].replace(
-        {'[0-9]{6,}': ''}, regex=True)
+    #     # city
+    #     if city != None:
+    #         city = city.title()
+    #         for key in ['Tinh ', 'Tinh', 'Thanh Pho ', 'Thanh Pho', 'T.', 'Tp', 'Tp.', ',', '.', '']:
+    #             key_city = (key + city).strip()
+    #             result = result.split(key_city)[0]
 
-    profile_sendo.loc[condition_address, 'unit_address'] = profile_sendo[condition_address].apply(
-        lambda x: SparseUnitAddress(x.address, x.ward, x.district, x.city), axis=1)
-    profile_sendo.loc[profile_sendo['unit_address'].isna(),
-                      'unit_address'] = None
-    # profile_sendo['unit_address'] = profile_sendo['unit_address'].str.replace('. ', ', ').str.replace('; ', ',')
+    #     # Normalize
+    #     result = result.strip()
+    #     if result in [None, '']:
+    #         result = None
+    #     else:
+    #         result = result[:-1].strip() if (result[-1]
+    #                                          in [',', '.']) else result
 
-    # unify city
-    profile_sendo['city'] = profile_sendo['city'].replace({'Ba Ria-Vung Tau': 'Vung Tau',
-                                                           'Dak Nong': 'Dac Nong',
-                                                           'Bac Kan': 'Bac Can'})
+    #     # Fix UnitAdress is FullAddress
+    #     if (result != None) & (district != None) & (city != None):
+    #         have_district = False
+    #         for key_district in [' Huyen ', ' Thi Xa ', ' Quan ', ' Thanh Pho ']:
+    #             if key_district.lower() in result.lower():
+    #                 have_district = True
+    #                 break
 
-    norm_sendo_city = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/ftel_provinces.parquet',
-                                      filesystem=hdfs)
-    norm_sendo_city.columns = ['city', 'norm_city']
-    profile_sendo = profile_sendo.merge(norm_sendo_city, how='left', on='city')
-    profile_sendo['city'] = profile_sendo['norm_city']
-    profile_sendo = profile_sendo.drop(columns=['norm_city'])
+    #         have_city = False
+    #         for key_city in [' Tinh ', ' Thanh Pho ']:
+    #             if key_city.lower() in result.lower():
+    #                 have_city = True
+    #                 break
 
-    # unify district
-    def UnifyDistrictSendo(dict_location, district, city):
-        if district == None:
-            return None
+    #         if (have_district == True) & (have_city == True):
+    #             result = None
 
-        district = unidecode(district)
-        location = dict_location[['district', 'city']].drop_duplicates().copy()
+    #     if (result != None) & (district != None):
+    #         for key_district in [' Huyen ', ' Thi Xa ', ' Quan ', ' Thanh Pho ']:
+    #             if key_district.lower() in result.lower():
+    #                 result = result.split(',')[0].strip()
+    #                 if len(result.split(' ')) > 5:
+    #                     result = None
+    #                 break
 
-        if city != None:
-            location = location[location['city'] == city]
-        if district in ['Quan Thu Duc', 'Quan 9', 'Quan 2', 'Thanh pho Thu Duc']:
-            return district
+    #     return result
 
-        temp_district = district.title().replace('Huyen ', '').replace(
-            'Thi Xa ', '').replace('Thanh Pho ', '').strip()
-        location['district_temp'] = location['district'].str.title().replace({'Huyen ': '',
-                                                                              'Thi Xa': '',
-                                                                              'Thanh Pho ': '',
-                                                                              'Quan ': ''}, regex=True).str.strip()
-        location['similar'] = location['district_temp'].apply(
-            lambda x: SequenceMatcher(None, temp_district.lower(), x.lower()).ratio())
+    # def UltimatelyUnescape(s: str) -> str:
+    #     unescaped = ""
+    #     while unescaped != s:
+    #         s = html.unescape(s)
+    #         unescaped = html.unescape(s)
 
-        location = location[(location['similar'] == location['similar'].max()) &
-                            (location['similar'] >= 0.8)]
+    #     return s
 
-        unify_district = None
-        if location.empty == False:
-            unify_district = location['district'].values[0]
+    # condition_address = profile_sendo['address'].notna()
+    # profile_sendo.loc[condition_address, 'address'] = profile_sendo.loc[condition_address,
+    #                                                                     'address'].str.lower().apply(UltimatelyUnescape).str.title()
+    # profile_sendo['address'] = profile_sendo['address'].replace(
+    #     {'[0-9]{6,}': ''}, regex=True)
 
-        if unify_district == None:
-            unify_district = district
+    # profile_sendo.loc[condition_address, 'unit_address'] = profile_sendo[condition_address].apply(
+    #     lambda x: SparseUnitAddress(x.address, x.ward, x.district, x.city), axis=1)
+    # profile_sendo.loc[profile_sendo['unit_address'].isna(),
+    #                   'unit_address'] = None
+    # # profile_sendo['unit_address'] = profile_sendo['unit_address'].str.replace('. ', ', ').str.replace('; ', ',')
 
-        return unify_district
+    # # unify city
+    # profile_sendo['city'] = profile_sendo['city'].replace({'Ba Ria-Vung Tau': 'Vung Tau',
+    #                                                        'Dak Nong': 'Dac Nong',
+    #                                                        'Bac Kan': 'Bac Can'})
 
-    stats_district_sendo = profile_sendo.groupby(by=['district', 'city'])[
-        'uid'].agg(num_customer='count').reset_index()
-    dict_district = dict_location[[
-        'district', 'city']].drop_duplicates().copy()
-    dict_district['new_district'] = dict_district['district']
-    stats_district_sendo = stats_district_sendo.merge(
-        dict_district, how='left', on=['district', 'city'])
+    # norm_sendo_city = pd.read_parquet('/data/fpt/ftel/cads/dep_solution/user/namdp11/scross_fill/runner/refactor/material/ftel_provinces.parquet',
+    #                                   filesystem=hdfs)
+    # norm_sendo_city.columns = ['city', 'norm_city']
+    # profile_sendo = profile_sendo.merge(norm_sendo_city, how='left', on='city')
+    # profile_sendo['city'] = profile_sendo['norm_city']
+    # profile_sendo = profile_sendo.drop(columns=['norm_city'])
 
-    condition_district = stats_district_sendo['new_district'].isna()
-    stats_district_sendo.loc[condition_district, 'new_district'] = stats_district_sendo[condition_district].apply(
-        lambda x: UnifyDistrictSendo(dict_location, x.district, x.city), axis=1)
-    stats_district_sendo = stats_district_sendo.drop(columns=['num_customer'])
+    # # unify district
+    # def UnifyDistrictSendo(dict_location, district, city):
+    #     if district == None:
+    #         return None
 
-    profile_sendo = profile_sendo.merge(
-        stats_district_sendo, how='left', on=['district', 'city'])
-    profile_sendo['district'] = profile_sendo['new_district']
-    profile_sendo = profile_sendo.drop(columns=['new_district'])
+    #     district = unidecode(district)
+    #     location = dict_location[['district', 'city']].drop_duplicates().copy()
 
-    # unify ward
-    def UnifyWardSendo(dict_location, ward, district, city):
-        if ward == None:
-            return None
+    #     if city != None:
+    #         location = location[location['city'] == city]
+    #     if district in ['Quan Thu Duc', 'Quan 9', 'Quan 2', 'Thanh pho Thu Duc']:
+    #         return district
 
-        ward = unidecode(ward).title()
-        location = dict_location[['ward', 'district',
-                                  'city']].drop_duplicates().copy()
+    #     temp_district = district.title().replace('Huyen ', '').replace(
+    #         'Thi Xa ', '').replace('Thanh Pho ', '').strip()
+    #     location['district_temp'] = location['district'].str.title().replace({'Huyen ': '',
+    #                                                                           'Thi Xa': '',
+    #                                                                           'Thanh Pho ': '',
+    #                                                                           'Quan ': ''}, regex=True).str.strip()
+    #     location['similar'] = location['district_temp'].apply(
+    #         lambda x: SequenceMatcher(None, temp_district.lower(), x.lower()).ratio())
 
-        if city != None:
-            location = location[location['city'] == city]
-        if district != None:
-            if district in ['Quan Thu Duc', 'Quan 9', 'Quan 2']:
-                district = 'Thanh pho Thu Duc'
-            location = location[location['district'] == district]
+    #     location = location[(location['similar'] == location['similar'].max()) &
+    #                         (location['similar'] >= 0.8)]
 
-        temp_ward = ward.title().replace('Xa ', '').replace(
-            'Phuong ', '').replace('Thi Tran ', '').replace('0', '').strip()
-        location['ward_temp'] = location['ward'].str.title().replace({'Xa ': '',
-                                                                      'Phuong ': '',
-                                                                      'Thi Tran ': '',
-                                                                      '0': ''}, regex=True).str.strip()
-        location['similar'] = location['ward_temp'].apply(
-            lambda x: SequenceMatcher(None, temp_ward.lower(), x.lower()).ratio())
+    #     unify_district = None
+    #     if location.empty == False:
+    #         unify_district = location['district'].values[0]
 
-        location = location[(location['similar'] == location['similar'].max()) &
-                            (location['similar'] >= 0.8)]
+    #     if unify_district == None:
+    #         unify_district = district
 
-        unify_ward = None
-        if location.empty == False:
-            unify_ward = location['ward'].values[0]
+    #     return unify_district
 
-        if unify_ward == None:
-            unify_ward = ward
+    # stats_district_sendo = profile_sendo.groupby(by=['district', 'city'])[
+    #     'uid'].agg(num_customer='count').reset_index()
+    # dict_district = dict_location[[
+    #     'district', 'city']].drop_duplicates().copy()
+    # dict_district['new_district'] = dict_district['district']
+    # stats_district_sendo = stats_district_sendo.merge(
+    #     dict_district, how='left', on=['district', 'city'])
 
-        return unify_ward
+    # condition_district = stats_district_sendo['new_district'].isna()
+    # stats_district_sendo.loc[condition_district, 'new_district'] = stats_district_sendo[condition_district].apply(
+    #     lambda x: UnifyDistrictSendo(dict_location, x.district, x.city), axis=1)
+    # stats_district_sendo = stats_district_sendo.drop(columns=['num_customer'])
 
-    stats_ward_sendo = profile_sendo.groupby(by=['ward', 'district', 'city'])[
-        'uid'].agg(num_customer='count').reset_index()
+    # profile_sendo = profile_sendo.merge(
+    #     stats_district_sendo, how='left', on=['district', 'city'])
+    # profile_sendo['district'] = profile_sendo['new_district']
+    # profile_sendo = profile_sendo.drop(columns=['new_district'])
 
-    dict_ward = dict_location[['ward', 'district',
-                               'city']].drop_duplicates().copy()
-    dict_ward['new_ward'] = dict_ward['ward']
-    stats_ward_sendo = stats_ward_sendo.merge(
-        dict_ward, how='left', on=['ward', 'district', 'city'])
+    # # unify ward
+    # def UnifyWardSendo(dict_location, ward, district, city):
+    #     if ward == None:
+    #         return None
 
-    condition_ward = stats_ward_sendo['new_ward'].isna()
-    stats_ward_sendo.loc[condition_ward, 'new_ward'] = stats_ward_sendo[condition_ward].apply(
-        lambda x: UnifyWardSendo(dict_location, x.ward, x.district, x.city), axis=1)
-    stats_ward_sendo = stats_ward_sendo.drop(columns=['num_customer'])
+    #     ward = unidecode(ward).title()
+    #     location = dict_location[['ward', 'district',
+    #                               'city']].drop_duplicates().copy()
 
-    profile_sendo = profile_sendo.merge(stats_ward_sendo, how='left', on=[
-                                        'ward', 'district', 'city'])
-    profile_sendo['ward'] = profile_sendo['new_ward']
-    profile_sendo = profile_sendo.drop(columns=['new_ward'])
+    #     if city != None:
+    #         location = location[location['city'] == city]
+    #     if district != None:
+    #         if district in ['Quan Thu Duc', 'Quan 9', 'Quan 2']:
+    #             district = 'Thanh pho Thu Duc'
+    #         location = location[location['district'] == district]
 
-    condition_ward_error = profile_sendo['ward'].str.contains(
-        '0[1-9]', case=False, na=False)
-    profile_sendo.loc[condition_ward_error,
-                      'ward'] = profile_sendo.loc[condition_ward_error, 'ward'].str.replace('0', '')
+    #     temp_ward = ward.title().replace('Xa ', '').replace(
+    #         'Phuong ', '').replace('Thi Tran ', '').replace('0', '').strip()
+    #     location['ward_temp'] = location['ward'].str.title().replace({'Xa ': '',
+    #                                                                   'Phuong ': '',
+    #                                                                   'Thi Tran ': '',
+    #                                                                   '0': ''}, regex=True).str.strip()
+    #     location['similar'] = location['ward_temp'].apply(
+    #         lambda x: SequenceMatcher(None, temp_ward.lower(), x.lower()).ratio())
 
-    # full_address
-    profile_sendo['address'] = None
-    columns = ['unit_address', 'ward', 'district', 'city']
-    profile_sendo['address'] = profile_sendo[columns].fillna('').agg(', '.join, axis=1).str.replace(
-        '(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
+    #     location = location[(location['similar'] == location['similar'].max()) &
+    #                         (location['similar'] >= 0.8)]
+
+    #     unify_ward = None
+    #     if location.empty == False:
+    #         unify_ward = location['ward'].values[0]
+
+    #     if unify_ward == None:
+    #         unify_ward = ward
+
+    #     return unify_ward
+
+    # stats_ward_sendo = profile_sendo.groupby(by=['ward', 'district', 'city'])[
+    #     'uid'].agg(num_customer='count').reset_index()
+
+    # dict_ward = dict_location[['ward', 'district',
+    #                            'city']].drop_duplicates().copy()
+    # dict_ward['new_ward'] = dict_ward['ward']
+    # stats_ward_sendo = stats_ward_sendo.merge(
+    #     dict_ward, how='left', on=['ward', 'district', 'city'])
+
+    # condition_ward = stats_ward_sendo['new_ward'].isna()
+    # stats_ward_sendo.loc[condition_ward, 'new_ward'] = stats_ward_sendo[condition_ward].apply(
+    #     lambda x: UnifyWardSendo(dict_location, x.ward, x.district, x.city), axis=1)
+    # stats_ward_sendo = stats_ward_sendo.drop(columns=['num_customer'])
+
+    # profile_sendo = profile_sendo.merge(stats_ward_sendo, how='left', on=[
+    #                                     'ward', 'district', 'city'])
+    # profile_sendo['ward'] = profile_sendo['new_ward']
+    # profile_sendo = profile_sendo.drop(columns=['new_ward'])
+
+    # condition_ward_error = profile_sendo['ward'].str.contains(
+    #     '0[1-9]', case=False, na=False)
+    # profile_sendo.loc[condition_ward_error,
+    #                   'ward'] = profile_sendo.loc[condition_ward_error, 'ward'].str.replace('0', '')
+
+    # # full_address
+    # profile_sendo['address'] = None
+    # columns = ['unit_address', 'ward', 'district', 'city']
+    # profile_sendo['address'] = profile_sendo[columns].fillna('').agg(', '.join, axis=1).str.replace(
+    #     '(?<![a-zA-Z0-9]),', '', regex=True).str.replace('-(?![a-zA-Z0-9])', '', regex=True)
 
     # add info
     print(">>> Adding Temp Info")
-    profile_sendo['birthday'] = None
-    columns = ['uid', 'phone_raw', 'phone', 'is_phone_valid',
-               'email_raw', 'email', 'is_email_valid',
-               'name', 'pronoun', 'is_full_name', 'gender',
-               'birthday', 'customer_type',  # 'customer_type_detail',
-               'address', 'unit_address', 'ward', 'district', 'city', 'source']
+    profile_sendo[
+        [
+            "source_address",
+            "source_city",
+            "source_district",
+            "source_ward",
+            "source_street",
+        ]
+    ] = None
+    columns = [
+        "uid",
+        "phone",
+        "email",
+        "card",
+        "name",
+        "gender",
+        "birthday",
+        "age",
+        "customer_type",
+        "address",
+        "city",
+        "district",
+        "ward",
+        "street",
+        "source_address",
+        "source_city",
+        "source_district",
+        "source_ward",
+        "source_street",
+        "source",
+    ]
     profile_sendo = profile_sendo[columns]
+    profile_sendo["birthday"] = profile_sendo["birthday"].astype(
+        "datetime64[s]"
+    )
 
     # Fill 'Ca nhan'
-    profile_sendo.loc[profile_sendo['name'].notna(
-    ) & profile_sendo['customer_type'].isna(), 'customer_type'] = 'Ca nhan'
+    # profile_sendo.loc[profile_sendo['name'].notna(
+    # ) & profile_sendo['customer_type'].isna(), 'customer_type'] = 'Ca nhan'
 
-    # Create id_phone_sendo
-    profile_sendo.loc[profile_sendo['uid'].notna() &
-                      profile_sendo['phone'].notna(), 'id_phone_sendo'] = profile_sendo['uid'] + '-' + profile_sendo['phone']
-    profile_sendo.loc[profile_sendo['uid'].notna() &
-                      profile_sendo['phone'].isna(), 'id_phone_sendo'] = profile_sendo['uid']
+    # # Create id_phone_sendo
+    # profile_sendo.loc[profile_sendo['uid'].notna() &
+    #                   profile_sendo['phone'].notna(), 'id_phone_sendo'] = profile_sendo['uid'] + '-' + profile_sendo['phone']
+    # profile_sendo.loc[profile_sendo['uid'].notna() &
+    #                   profile_sendo['phone'].isna(), 'id_phone_sendo'] = profile_sendo['uid']
 
     # Save
-    profile_sendo['d'] = date_str
+    print(f"Checking {f_group} data for {date_str}...")
+    f_group_path = f"{PREPROCESS_PATH}/{f_group}.parquet"
+    proc = subprocess.Popen(
+        ["hdfs", "dfs", "-test", "-e", f_group_path + f"/d={date_str}"]
+    )
+    proc.communicate()
+    if proc.returncode == 0:
+        print("Data already existed, Removing...")
+        subprocess.run(
+            ["hdfs", "dfs", "-rm", "-r", f_group_path + f"/d={date_str}"]
+        )
+
+    profile_sendo["d"] = date_str
     profile_sendo.to_parquet(
-        f'{PREPROCESS_PATH}/{f_group}.parquet',
-        filesystem=hdfs, index=False,
-        partition_cols='d'
+        f"{PREPROCESS_PATH}/{f_group}.parquet",
+        filesystem=hdfs,
+        index=False,
+        partition_cols="d",
+        coerce_timestamps="us",
+        allow_truncated_timestamps=True,
     )
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     DAY = sys.argv[1]
     UnifySendo(DAY, n_cores=5)
