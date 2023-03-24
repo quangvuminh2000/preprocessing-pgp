@@ -1,3 +1,14 @@
+from dict_utils import load_hdfs_data
+from const import (
+    hdfs,
+    CENTRALIZE_PATH,
+    UTILS_PATH,
+    PRODUCT_PATH,
+    PHONE_PATH_DICT,
+    RAW_PHONE_COLS,
+    OLD_DICT_RAW_PATH,
+    OLD_DICT_CLEAN_PATH
+)
 import sys
 
 import pandas as pd
@@ -6,13 +17,6 @@ from tqdm import tqdm
 from preprocessing_pgp.phone.extractor import process_convert_phone
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
-from const import (
-    hdfs,
-    CENTRALIZE_PATH,
-    UTILS_PATH,
-    PRODUCT_PATH,
-    PATH_DICT
-)
 
 
 def load_phone(
@@ -42,6 +46,21 @@ def load_phone_bank(
 
     phone_bank = phone_bank[~phone_bank.duplicated()]
     return phone_bank
+
+
+def load_phone_data(
+    date: str
+) -> dict:
+    phone_df_dict = {}
+    for df_name in PHONE_PATH_DICT.keys():
+        print(f"\t{df_name}")
+        phone_df_dict[df_name] = load_hdfs_data(
+            PHONE_PATH_DICT[df_name],
+            date=date,
+            cols=RAW_PHONE_COLS[df_name]
+        )
+
+    return phone_df_dict
 
 
 def filter_difference_phone(
@@ -110,6 +129,7 @@ def update_phone_dict(
     )
 
 
+
 # ? MAIN FUNCTION
 def daily_enhance_phone(
     day: str,
@@ -125,7 +145,7 @@ def daily_enhance_phone(
         "fsoft_vio",
         'frt_credit'
     ]
-
+    # ? OLD FLOW
     print(">>> Loading phone from CTTV")
     phone_bank = load_phone_bank(phone_cttv, day)
 
