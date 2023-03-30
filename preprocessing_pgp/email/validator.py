@@ -223,20 +223,25 @@ class EmailValidator:
                 data[domain_col].apply(is_valid_email_domain)
             return data
 
-        new_domains = list(set(data[domain_col].unique())-set(self.domain_dict['email_domain']))
+        data_domains = data[data[domain_col].notna()][domain_col].unique()
+        new_domains = list(set(data_domains)-set(self.domain_dict['email_domain'].unique()))
         new_domain_df = pd.DataFrame({
             'email_domain': new_domains
         })
         new_domain_df['is_domain_valid'] \
             = new_domain_df['email_domain'].apply(is_valid_email_domain)
 
-        domain_mapper = pd.concat([self.domain_dict, new_domain_df], ignore_index=True)
-        data = pd.merge(
-            data.set_index('email_domain'),
-            domain_mapper.set_index('email_domain'),
-            left_index=True, right_index=True,
-            how='left', sort=False
-        ).reset_index()
+        domain_data = pd.concat([
+            self.domain_dict.drop_duplicates(subset='email_domain', keep='last'),
+            new_domain_df
+        ], ignore_index=True)
+        domain_mapper = dict(zip(
+            domain_data['email_domain'],
+            domain_data['is_domain_valid']
+        ))
+        data['is_domain_valid'] = data[domain_col].map(domain_mapper)
+        data['is_domain_valid'] = data['is_domain_valid'].fillna(False)
+        data['is_domain_valid'] = data['is_domain_valid'].astype(bool)
 
         return data
 
@@ -382,7 +387,6 @@ def process_validate_email(
         'is_email_valid',
         'is_autoemail',
         'email_domain',
-        'is_domain_valid',
         'private_email'
     ]
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)

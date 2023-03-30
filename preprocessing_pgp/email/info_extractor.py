@@ -6,7 +6,7 @@ from time import time
 
 import pandas as pd
 
-from preprocessing_pgp.utils import parallelize_dataframe, sep_display
+from preprocessing_pgp.utils import parallelize_dataframe
 from preprocessing_pgp.email.validator import process_validate_email
 from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
 from preprocessing_pgp.email.extractors.email_yob_extractor import EmailYOBExtractor
@@ -76,7 +76,8 @@ class EmailInfoExtractor:
 def process_extract_email_info(
     data: pd.DataFrame,
     email_col: str = 'email',
-    n_cores: int = 1
+    n_cores: int = 1,
+    domain_dict: pd.DataFrame = None
 ) -> pd.DataFrame:
     """
     Process extracting information from email, extracted information may conclude:
@@ -93,7 +94,8 @@ def process_extract_email_info(
         The input data contains an email column
     email_col : str
         The name of the column contains email's records, by default `email`
-    n_cores
+    n_cores : int
+        The number of core to process
 
     Returns
     -------
@@ -110,9 +112,9 @@ def process_extract_email_info(
     validated_data = process_validate_email(
         email_data,
         email_col=email_col,
-        n_cores=n_cores
+        n_cores=n_cores,
+        domain_dict=domain_dict
     )
-    sep_display()
     valid_email = validated_data.query('is_email_valid')
     invalid_email = validated_data.query('~is_email_valid')
 

@@ -23,7 +23,7 @@ class EmailAddressExtractor:
 
         location_norm = LOCATION_ENRICH_DICT.copy()
 
-        city_mask = LOCATION_ENRICH_DICT['lv1_norm'].str.contains(r'\btinh')
+        city_mask = LOCATION_ENRICH_DICT['lv1_norm'].str.contains(r'\bTinh')
 
         location_norm.loc[
             city_mask,
@@ -33,7 +33,8 @@ class EmailAddressExtractor:
             'lv1_norm'
         ].str.extract(r'\s(.*)')[0]\
             .str.replace(r'\s+', '', regex=True)\
-            .str.replace('-', '', regex=False)
+            .str.replace('-', '', regex=False)\
+            .str.lower()
 
         location_norm.loc[
             ~city_mask,
@@ -43,7 +44,8 @@ class EmailAddressExtractor:
             'lv1_norm'
         ].str.extract(r'\s\S*\s(.*)')[0]\
             .str.replace(r'\s+', '', regex=True)\
-            .str.replace('-', '', regex=False)
+            .str.replace('-', '', regex=False)\
+            .str.lower()
 
         self.location_norm_dict = location_norm.set_index('norm_city')[
             'lv1'].to_dict()
