@@ -2,6 +2,7 @@
 File containing code that related to n-level extraction of address
 """
 
+import re
 from typing import List, Tuple, Dict
 from copy import deepcopy
 
@@ -15,7 +16,7 @@ from preprocessing_pgp.address.utils import (
 )
 from preprocessing_pgp.address.const import (
     METHOD_REFER_DICT,
-    LOCATION_ENRICH_DICT
+    LOCATION_ENRICH_DICT,
 )
 
 
@@ -166,6 +167,13 @@ class LevelExtractor:
             best_patterns[level] = level_best_pattern
             dependents.append((level_pattern, level_method))
 
+        # * Remove non-street characters
+        remained_address = re.sub(
+            r'(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 /-]',
+            '',
+            remained_address
+        ).strip()
+
         return found_patterns, remained_address, best_patterns
 
     def __is_query_exist(
@@ -245,6 +253,8 @@ class LevelExtractor:
         for method in level_methods:
             pattern_found, remained_address =\
                 self._extract_by_method(address, method)
+            # if remained_address:
+            #     print(remained_address)
 
             # Found something then return
             if (pattern_found is not None)\

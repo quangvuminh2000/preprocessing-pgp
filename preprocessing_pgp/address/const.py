@@ -18,19 +18,30 @@ DICT_NORM_ABBREV_REGEX_KW = {
 }
 
 DICT_NORM_CITY_DASH_REGEX = {
-    'ba ria - vung tau': ['ba ria vung tau'],
-    'br-vt': ['brvt'],
-    'phan rang - thap cham': ['phan rang thap cham'],
-    'pr-tc': ['prtc'],
-    'thua thien hue': ['thua thien - hue']
+    'Bà Rịa - Vũng Tàu': ['Ba Ria Vung Tau', 'Bà Rịa-Vũng Tàu', 'Ba Ria-Vung Tau'],
+    'Br-Vt': ['Brvt', 'Br - Vt'],
+    'Phan Rang-Tháp Chàm': [
+        'Phan Rang Thap Cham',
+        'Phan Rang - Tháp Chàm',
+        'Phan Rang - Thap Cham'
+    ],
+    'Pr-Tc': ['Prtc', 'Pr - Tc'],
+    'Thua Thien Hue': ['Thua Thien - Hue', 'Hue'],
+    'Hồ Chí Minh': ['Sài Gòn', 'Sai Gon'],
+    'Đà Nẵng': [
+        'Quang Nam-Da Nang',
+        'Quảng Nam-Đà Nẵng',
+        'Quang Nam - Da Nang',
+        'Quảng Nam - Đà Nẵng',
+    ]
 }
 
-ADDRESS_PUNCTUATIONS = ['-', '/']
+ADDRESS_PUNCTUATIONS = ['-', '/', ',']
 
 # ? LEVEL METHODS
-LV1_METHODS = ['lv1_norm', 'lv1_abbrev', 'lv1_prefix_im', 'lv1_nprefix_im']
-LV2_METHODS = ['lv2_norm', 'lv2_abbrev', 'lv2_prefix_im', 'lv2_nprefix_im']
-LV3_METHODS = ['lv3_norm', 'lv3_abbrev', 'lv3_prefix_im', 'lv3_nprefix_im']
+LV1_METHODS = ['lv1_title', 'lv1_title_norm', 'lv1_norm', 'lv1_abbrev', 'lv1_prefix_im', 'lv1_nprefix_im']
+LV2_METHODS = ['lv2_title', 'lv2_norm', 'lv2_prefix_im']
+LV3_METHODS = ['lv3_title', 'lv3_norm', 'lv3_prefix_im']
 METHOD_REFER_DICT = {
     1: LV1_METHODS,
     2: LV2_METHODS,

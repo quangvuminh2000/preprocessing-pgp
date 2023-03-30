@@ -108,9 +108,9 @@ class VietnameseAddressCleaner:
         """
         Helper function to unify address to lower words and unidecode
         """
-        unified_address = deepcopy(address)
-        unified_address = unified_address.lower()
-        unified_address = unidecode(unified_address)
+        unified_address = address.title()
+        # unified_address = unified_address.lower()
+        # unified_address = unidecode(unified_address)
 
         return unified_address
 
