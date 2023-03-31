@@ -336,10 +336,13 @@ def UnifyFshop(profile_fshop: pd.DataFrame, n_cores: int = 1):
     profile_fshop["address"] = (
         profile_fshop["address"].str.strip().replace(dict_trash)
     )
-    profile_fshop = profile_fshop.drop(columns=["city"])
-    profile_fshop = profile_fshop.merge(
-        profile_location_fshop, how="left", on=["uid", "address"]
-    )
+    profile_fshop = profile_fshop.drop(columns=['city', 'street', 'ward', 'district'])
+    profile_fshop = pd.merge(
+        profile_fshop.set_index(['uid', 'address']),
+        profile_location_fshop.set_index(['uid', 'address']),
+        left_index=True, right_index=True,
+        how='left', sort=False
+    ).reset_index()
 
     profile_fshop.loc[profile_fshop["street"].isna(), "street"] = None
     profile_fshop.loc[profile_fshop["ward"].isna(), "ward"] = None

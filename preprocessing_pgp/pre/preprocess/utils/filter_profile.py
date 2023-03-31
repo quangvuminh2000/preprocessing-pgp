@@ -3,11 +3,6 @@
 Module for filtering dataframe
 """
 
-from const import (
-    CENTRALIZE_PATH,
-    PREPROCESS_PATH,
-    hdfs
-)
 from typing import List, Tuple
 from datetime import datetime, timedelta
 
@@ -15,6 +10,11 @@ import pandas as pd
 import sys
 
 sys.path.append('/bigdata/fdp/cdp/source/core_profile/preprocess/utils')
+from const import (
+    CENTRALIZE_PATH,
+    PREPROCESS_PATH,
+    hdfs
+)
 
 
 def get_difference_data(

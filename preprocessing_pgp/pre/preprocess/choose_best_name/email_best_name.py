@@ -19,7 +19,7 @@ if __name__ == '__main__':
     DAY = sys.argv[1]
 
     # run
-    data = pipeline.PipelineBestName(DAY, key='email', n_cores=20)
+    data = pipeline.PipelineBestName(DAY, key='email', n_cores=20, init=True)
 
     # save
     data.to_parquet(

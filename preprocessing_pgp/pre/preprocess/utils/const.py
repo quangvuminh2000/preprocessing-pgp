@@ -32,23 +32,25 @@ DICT_EMAIL_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_email_latest.parquet'
 DICT_NAME_PRODUCT_PATH = f'{PRODUCT_PATH}/dict_name_latest.parquet'
 
 # * RAW DWH PATH
-OLD_DICT_RAW_PATH = '/data/fpt/ftel/cads/dep_solution/user/quangvm9/migrate/rst/raw'
-OLD_DICT_CLEAN_PATH = '/data/fpt/ftel/cads/dep_solution/user/quangvm9/migrate/rst/clean'
+OLD_DICT_RAW_PATH = '/data/fpt/ftel/cads/dep_solution/sa/rst/raw'
+OLD_DICT_CLEAN_PATH = '/data/fpt/ftel/cads/dep_solution/sa/rst/clean'
 
-FO_VNE_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/fo_vne_raw.parquet'
-FRT_CREDIT_FE_CREDIT_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_fe_credit_raw.parquet'
-FRT_CREDIT_HOME_CREDIT_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_home_credit_raw.parquet'
-FRT_CREDIT_MIRAE_ONL_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_mirae_onl_raw.parquet'
-FRT_CREDIT_MIRAE_OFF_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_credit_mirae_off_raw.parquet'
-FRT_CREDIT_FSHOP_FORM_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/devices/raw/fshop_registration_form_installment.parquet/d=2023-02-26'
-FRT_CREDIT_FSHOP_CUSTOMER_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/devices/raw/fshop_customer_installment.parquet/d=2023-02-26'
-FRT_FSHOP_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_fshop_raw.parquet'
-FRT_LONGCHAU_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/frt_longchau_raw.parquet'
-FSOFT_VIO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/fsoft_vio_raw.parquet'
-FTEL_FPLAY_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_fplay_raw.parquet'
-FTEL_INTERNET_DEMO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_internet_demo_raw.parquet'
-FTEL_INTERNET_MULTI_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/ftel_internet_multi_raw.parquet'
-SENDO_SENDO_PATH = '/data/fpt/ftel/cads/dep_solution/user/trinhlk2/core_profile/build_dict/sendo_sendo_raw.parquet'
+
+# ? EMAIL DICT
+FO_VNE_PATH = '/data/fpt/fo/dwh/stag_user_profile.parquet' # run_date
+FRT_CREDIT_FE_CREDIT_PATH = '/data/fpt/frt/fshop/dwh/fact_fe_credit_installment.parquet' # run_date
+FRT_CREDIT_HOME_CREDIT_PATH = '/data/fpt/frt/fshop/dwh/fact_homecredit_installment.parquet' # run_date
+FRT_CREDIT_MIRAE_ONL_PATH = '/data/fpt/frt/fshop/dwh/fact_mirae_credit_online_installment.parquet' # run_date
+FRT_CREDIT_MIRAE_OFF_PATH = '/data/fpt/frt/fshop/dwh/fact_mirae_credit_offline_installment.parquet' # run_date
+FRT_CREDIT_FSHOP_FORM_PATH = '/data/fpt/frt/fshop/dwh/fact_installment_registration_form.parquet' # run_date
+FRT_CREDIT_FSHOP_CUSTOMER_PATH = '/data/fpt/frt/fshop/dwh/dim_fshop_installment_customer.parquet'# run_date
+FRT_FSHOP_PATH = '/bigdata/fdp/frt/data/posdata/ict/pos_ocrd/' # month
+FRT_LONGCHAU_PATH = '/bigdata/fdp/frt/data/posdata/pharmacy/posthuoc_ocrd/' # month
+FSOFT_VIO_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core_profile/get_active_status/fsoft_vio/dim_user.parquet' # p_date - 1(all)
+FTEL_FPLAY_PATH = '/data/fpt/ftel/fplay/dwh/dim_user.parquet' # run_date
+FTEL_INTERNET_DEMO_PATH = '/data/fpt/ftel/cads/dep_solution/sa/ftel/internet/data/rst_demographics.parquet' # run_date
+FTEL_INTERNET_MULTI_PATH = '/data/fpt/ftel/cads/dep_solution/sa/ftel/internet/data/rst_multiphone.parquet' # run_date
+SENDO_SENDO_PATH = '/data/fpt/sendo/dwh/stag_sale_order.parquet' # p_date
 
 PATH_DICT = {
     'fo_vne': FO_VNE_PATH,

@@ -1,5 +1,5 @@
 """
-File containing code that related to n-level extraction of address
+file containing code that related to n-level extraction of address
 """
 
 import re
@@ -167,14 +167,61 @@ class LevelExtractor:
             best_patterns[level] = level_best_pattern
             dependents.append((level_pattern, level_method))
 
+        # * Relation filtering for level 1, 2
+        if best_patterns[1] is None:
+            if best_patterns[2] is None:
+                best_patterns[1] = self.__relation_filtering(
+                    'lv1',
+                    (best_patterns[3], 'lv3'),
+                )
+                best_patterns[2] = self.__relation_filtering(
+                    'lv2',
+                    (best_patterns[3], 'lv3'),
+                    (best_patterns[1], 'lv1'),
+                )
+            else:
+                best_patterns[1] = self.__relation_filtering(
+                    'lv1',
+                    (best_patterns[2], 'lv2'),
+                    (best_patterns[3], 'lv3'),
+                )
+        if best_patterns[2] is None:
+            if best_patterns[1] is not None:
+                best_patterns[2] = self.__relation_filtering(
+                    'lv2',
+                    (best_patterns[1], 'lv1'),
+                    (best_patterns[3], 'lv3'),
+                )
+
         # * Remove non-street characters
         remained_address = re.sub(
             r'(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 /-]',
             '',
             remained_address
-        ).strip()
+        )
+        remained_address = re.sub(r'\s+', ' ', remained_address).strip()
 
         return found_patterns, remained_address, best_patterns
+
+    def __relation_filtering(
+        self,
+        level: str,
+        *dependents
+    ) -> str:
+        """
+        Relation filtering to track back for higher level
+        """
+        dep_query = self.__make_dependent_query(*dependents)
+        if dep_query == '':
+            return None
+
+        pattern_result = LOCATION_ENRICH_DICT.query(dep_query)[level].unique()
+
+        if pattern_result.shape[0] != 1:
+            return None
+
+        return pattern_result[0]
+
 
     def __is_query_exist(
         self,

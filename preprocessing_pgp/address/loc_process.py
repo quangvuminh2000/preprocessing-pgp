@@ -80,7 +80,7 @@ class LocationCode:
             level_col = self.__get_level_col(level)
             best_lvl_name = components[level]
             if best_lvl_name is not None:
-                level_query = f'{level_col} == "{best_lvl_name.title()}"'
+                level_query = f'{level_col} == "{best_lvl_name}"'
                 component_queries.append(level_query)
 
         trace_loc_id_query = create_dependent_query(*component_queries)

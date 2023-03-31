@@ -29,14 +29,16 @@ class TestLevelExtraction:
         * The address not containing any abbreviation
         """
 
-        address_data = '''658/11 Trương Công Định,
-        Phường Nguyễn An Ninh,
-        Thành Phố Vũng Tàu, Tỉnh Bà Rịa - Vũng Tàu'''
+        address_data = '''658/11 Trương Công Định, Phường Nguyễn An Ninh, Thành Phố Vũng Tàu, Tỉnh Bà Rịa - Vũng Tàu'''
 
         cleaned_addr = self.cleaner.clean_address(address_data)
 
-        _, _, best_lvs = self.extractor.extract_all_levels(
-            cleaned_addr)
+        _, remained, best_lvs =\
+            self.extractor.extract_all_levels(cleaned_addr)
+        print()
+        # print(pattern)
+        print(best_lvs)
+        print(remained)
 
         assert best_lvs[1] == 'Tỉnh Bà Rịa - Vũng Tàu'
 
@@ -48,9 +50,7 @@ class TestLevelExtraction:
         * The address not containing any abbreviation
         """
 
-        address_data = '''658/11 Truong Cong Dinh,
-        Phuong Nguyen An Ninh,
-        Thanh Pho Vung Tau, Tinh Ba Ria - Vung Tau'''
+        address_data = '658/11 Truong Cong Dinh, Phuong Nguyen An Ninh, Thanh Pho Vung Tau, Tinh Ba Ria - Vung Tau'
 
         cleaned_addr = self.cleaner.clean_address(address_data)
 
@@ -153,7 +153,7 @@ class TestLevelExtraction:
             cleaned_addr)
 
         # assert remained_address.find('658/11 truong cong dinh') != -1
-        assert remained_address == '658/11 truong cong dinh'
+        assert remained_address == '658/11 Trương Công Định'
 
     def test_non_accented_remained_addr_extraction(self):
         """
@@ -172,4 +172,4 @@ class TestLevelExtraction:
         _, remained_address, _ = self.extractor.extract_all_levels(
             cleaned_addr)
 
-        assert remained_address.find('658/11 truong cong dinh') != -1
+        assert remained_address == '658/11 Truong Cong Dinh'

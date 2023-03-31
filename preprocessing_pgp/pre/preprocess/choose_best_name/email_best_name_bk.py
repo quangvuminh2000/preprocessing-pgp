@@ -1,5 +1,6 @@
+
 """
-Module to choose best name based on phone
+Module to choose best name based on email
 """
 
 import sys
@@ -18,11 +19,11 @@ if __name__ == '__main__':
     DAY = sys.argv[1]
 
     # run
-    data = pipeline.PipelineBestName(DAY, key='phone', n_cores=20)
+    data = pipeline.PipelineBestName(DAY, key='email', n_cores=20)
 
     # save
     data.to_parquet(
-        f'{UTILS_PATH}/name_by_phone_latest.parquet',
+        f'{UTILS_PATH}/name_by_email_latest.parquet',
         filesystem=hdfs,
         index=False
     )

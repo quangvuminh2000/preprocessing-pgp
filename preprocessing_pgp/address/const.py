@@ -9,39 +9,40 @@ import pandas as pd
 
 # ? REGEX FOR ADDRESS
 DICT_NORM_ABBREV_REGEX_KW = {
-    'tp ': ['tp.', 'tp:'],
-    'tt ': ['tt.', 'tt:'],
-    'q ': ['q.', 'q:'],
-    'h ': ['h.', 'h:'],
-    'x ': ['x.', 'x:'],
-    'p ': ['p.', 'p:']
+    'Tp ': ['Tp.', 'Tp:'],
+    'Tt ': ['Tt.', 'Tt:'],
+    'Q ': ['Q.', 'Q:'],
+    'H ': ['H.', 'H:'],
+    'X ': ['X.', 'X:'],
+    'P ': ['P.', 'P:']
 }
 
 DICT_NORM_CITY_DASH_REGEX = {
-    'Bà Rịa - Vũng Tàu': ['Ba Ria Vung Tau', 'Bà Rịa-Vũng Tàu', 'Ba Ria-Vung Tau'],
-    'Br-Vt': ['Brvt', 'Br - Vt'],
-    'Phan Rang-Tháp Chàm': [
+    ' Bà Rịa - Vũng Tàu ': ['Ba Ria Vung Tau', 'Bà Rịa-Vũng Tàu', 'Ba Ria-Vung Tau'],
+    ' Br-Vt ': ['Brvt', 'Br - Vt'],
+    ' Phan Rang-Tháp Chàm ': [
         'Phan Rang Thap Cham',
         'Phan Rang - Tháp Chàm',
         'Phan Rang - Thap Cham'
     ],
-    'Pr-Tc': ['Prtc', 'Pr - Tc'],
-    'Thua Thien Hue': ['Thua Thien - Hue', 'Hue'],
-    'Hồ Chí Minh': ['Sài Gòn', 'Sai Gon'],
-    'Đà Nẵng': [
+    ' Pr-Tc ': ['Prtc', 'Pr - Tc'],
+    ' Thua Thien Hue ': ['Thua Thien - Hue', 'Hue'],
+    ' Hồ Chí Minh ': ['Sài Gòn', 'Sai Gon', 'Tphcm', 'Hcm', 'Sg'],
+    ' Đà Nẵng ': [
         'Quang Nam-Da Nang',
         'Quảng Nam-Đà Nẵng',
         'Quang Nam - Da Nang',
         'Quảng Nam - Đà Nẵng',
-    ]
+    ],
+    ' Thành Phố ': ['Tp'],
 }
 
 ADDRESS_PUNCTUATIONS = ['-', '/', ',']
 
 # ? LEVEL METHODS
 LV1_METHODS = ['lv1_title', 'lv1_title_norm', 'lv1_norm', 'lv1_abbrev', 'lv1_prefix_im', 'lv1_nprefix_im']
-LV2_METHODS = ['lv2_title', 'lv2_norm', 'lv2_prefix_im']
-LV3_METHODS = ['lv3_title', 'lv3_norm', 'lv3_prefix_im']
+LV2_METHODS = ['lv2_title', 'lv2_norm', 'lv2_prefix_im', 'lv2_title_norm']
+LV3_METHODS = ['lv3_title', 'lv3_norm', 'lv3_prefix_im', 'lv3_title_norm']
 METHOD_REFER_DICT = {
     1: LV1_METHODS,
     2: LV2_METHODS,

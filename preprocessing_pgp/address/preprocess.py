@@ -52,9 +52,11 @@ class VietnameseAddressCleaner:
 
         for replace_txt, target_subs in keywords.items():
             reg_target = re.compile('|'.join(map(re.escape, target_subs)))
-            replaced_address = re.sub(reg_target,
-                                      replace_txt,
-                                      replaced_address)
+            replaced_address = re.sub(
+                reg_target,
+                replace_txt,
+                replaced_address
+            )
 
             if replaced_address != address:
                 return replaced_address
