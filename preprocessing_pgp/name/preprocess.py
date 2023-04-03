@@ -16,6 +16,31 @@ if _dir not in sys.path:
     sys.path.append(_dir)
 
 
+def separate_pronoun(
+    data: pd.DataFrame,
+    name_col: str
+) -> pd.Series:
+    """
+    Separate pronoun from name
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data contains name records
+    name_col : str
+        The column name that hold the names
+
+    Returns
+    -------
+    pd.Series
+        The series of pronoun
+    """
+    name_process = NameProcess()
+    return data[name_col].apply(
+        lambda name: name_process.CleanName(name)[1]
+    )
+
+
 def remove_special_chars(sentence: str) -> str:
     """
     Removing special characters from sentence

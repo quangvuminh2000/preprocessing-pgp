@@ -39,6 +39,17 @@ GENDER_MODEL_PATH = os.path.join(
     '../data/gender_model'
 )
 
+# ? RULE-BASED PATH
+PRONOUN_GENDER_RB_PATH = os.path.join(
+    os.path.dirname(__file__),
+    '../data/gender_model/rule_base/pronoun_gender_dict.parquet'
+)
+PRONOUN_GENDER_DF = pd.read_parquet(PRONOUN_GENDER_RB_PATH)
+PRONOUN_GENDER_MAP = dict(zip(
+    PRONOUN_GENDER_DF['pronoun'],
+    PRONOUN_GENDER_DF['gender']
+))
+
 # ? PREPROCESS CONSTANTS
 NON_HUMAN_REG_LIST = [
     # Companies
