@@ -41,8 +41,8 @@ ADDRESS_PUNCTUATIONS = ['-', '/', ',']
 
 # ? LEVEL METHODS
 LV1_METHODS = ['lv1_title', 'lv1_title_norm', 'lv1_norm', 'lv1_abbrev', 'lv1_prefix_im', 'lv1_nprefix_im']
-LV2_METHODS = ['lv2_title', 'lv2_norm', 'lv2_prefix_im', 'lv2_title_norm']
-LV3_METHODS = ['lv3_title', 'lv3_norm', 'lv3_prefix_im', 'lv3_title_norm']
+LV2_METHODS = ['lv2_title', 'lv2_norm', 'lv2_prefix_im', 'lv2_title_norm', 'lv2_abbrev']
+LV3_METHODS = ['lv3_title', 'lv3_norm', 'lv3_prefix_im', 'lv3_title_norm', 'lv3_abbrev']
 METHOD_REFER_DICT = {
     1: LV1_METHODS,
     2: LV2_METHODS,
