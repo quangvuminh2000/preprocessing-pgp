@@ -5,7 +5,7 @@ from time import time
 
 import pandas as pd
 
-from preprocessing_pgp.name.preprocess import separate_pronoun
+from preprocessing_pgp.name.preprocess import get_name_pronoun
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
 from preprocessing_pgp.utils import (
@@ -63,7 +63,7 @@ def process_predict_gender(
     start_time = time()
     name_data['pronoun'] = parallelize_dataframe(
         name_data,
-        separate_pronoun,
+        get_name_pronoun,
         n_cores=n_cores,
         name_col=name_col
     )

@@ -192,7 +192,8 @@ def process_extract_name_type(
         preprocess_df,
         n_cores=n_cores,
         name_col=name_col,
-        clean_name=False
+        clean_name=False,
+        remove_pronoun=True
     )
     clean_time = time() - start_time
     if logging_info:

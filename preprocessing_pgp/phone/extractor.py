@@ -15,7 +15,6 @@ from preprocessing_pgp.phone.const import (
 from preprocessing_pgp.phone.utils import basic_phone_preprocess
 from preprocessing_pgp.utils import (
     parallelize_dataframe,
-    sep_display
 )
 from preprocessing_pgp.phone.converter import (
     convert_mobi_phone,

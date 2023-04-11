@@ -22,16 +22,16 @@ class LocationCode:
         self.loc_code_dict = LOCATION_CODE_DICT.copy()
         self.avail_levels = LEVEL_VI_COLUMN_DICT.keys()
 
-        self.__unify_dictionary()
+        # self.__unify_dictionary()
 
-    def __unify_dictionary(self):
-        """
-        Unifying location code dict to titled names
-        """
-        for level in self.avail_levels:
-            level_col = LEVEL_VI_COLUMN_DICT[level]
-            self.loc_code_dict[level_col] = self.loc_code_dict[level_col].str.title(
-            )
+    # def __unify_dictionary(self):
+    #     """
+    #     Unifying location code dict to titled names
+    #     """
+    #     for level in self.avail_levels:
+    #         level_col = LEVEL_VI_COLUMN_DICT[level]
+    #         self.loc_code_dict[level_col] = self.loc_code_dict[level_col].str.title(
+    #         )
 
     def __get_level_col(
         self,

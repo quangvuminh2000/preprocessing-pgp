@@ -170,8 +170,11 @@ class NameProcess:
 
             # pronoun
             regex_pronoun1 = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b|\ba\.|\bc\.)\s+'
-            regex_pronoun2 = r'^(?:\bnội\b|\bngoại\b)\s+'
-            regex_pronoun3 = r'^(?:\bvo anh\b|\bvo a\b|\bvo chu\b|\bbo anh\b|\bme anh\b|\bem anh\b|\bbo a\b|\bban chi\b|\bbo chi\b|\bban\b|\bck\b|\bvk\b)\s+'
+            regex_pronoun2 = r'^(?:\bnội\b|\bngoại\b|\bbc\b)\s+'
+            regex_pronoun3 = r'^(?:\bvo anh\b|\bvo a\b|\bvo chu\b|\bbo anh\b|\bme anh\b|\bem anh\b|\bbo a\b|\bban\b|\bck\b|\bvk\b)\s+'
+            regex_pronoun_remove = r'(?:\bbo chi\b).+'
+            if len(process_name.split(' ')) > 4:
+                process_name = re.sub(regex_pronoun_remove, '', process_name).strip()
             try:
                 pronouns = re.findall(regex_pronoun1, process_name)
                 pronoun = pronouns[0].strip()
@@ -195,13 +198,13 @@ class NameProcess:
             # print(f'remove noun char: {process_name}')
 
             # is dict name VN
-            pct_vn = self.CountNameVN(process_name) / \
-                len(process_name.split(' '))
+            # pct_vn = self.CountNameVN(process_name) / \
+            #     len(process_name.split(' '))
 #             print(pct_vn)
-            process_name = None if ((pct_vn < 0.5) |
-                                    (len(process_name) == 1) |
-                                    (len(process_name.split(' ')) > 6)
-                                    ) else process_name
+            # process_name = None if ((pct_vn < 0.5) |
+            #                         (len(process_name) == 1) |
+            #                         (len(process_name.split(' ')) > 6)
+            #                         ) else process_name
             # print(f'check VN char: {process_name}')
 
             # * Replace brief terms
@@ -211,6 +214,9 @@ class NameProcess:
 
             # title
             process_name = process_name.title()
+
+            if process_name == '':
+                return None, pronoun
 
             return process_name, pronoun
         except:

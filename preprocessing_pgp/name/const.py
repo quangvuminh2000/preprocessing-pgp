@@ -21,6 +21,7 @@ MODEL_PATH = os.path.join(
     'trial-25'
 )
 
+# ? RULE-BASED PATH
 RULE_BASED_PATH = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
@@ -39,7 +40,6 @@ GENDER_MODEL_PATH = os.path.join(
     '../data/gender_model'
 )
 
-# ? RULE-BASED PATH
 PRONOUN_GENDER_RB_PATH = os.path.join(
     os.path.dirname(__file__),
     '../data/gender_model/rule_base/pronoun_gender_dict.parquet'
@@ -49,6 +49,11 @@ PRONOUN_GENDER_MAP = dict(zip(
     PRONOUN_GENDER_DF['pronoun'],
     PRONOUN_GENDER_DF['gender']
 ))
+
+NAME_ELEMENT_PATH = os.path.join(
+    os.path.dirname(__file__),
+    '../data/name_split/name_elements.parquet'
+)
 
 # ? PREPROCESS CONSTANTS
 NON_HUMAN_REG_LIST = [
@@ -62,6 +67,8 @@ NON_HUMAN_REG_LIST = [
     # Others
     'Ca Bong', 'Ca Chep'
 ]
+
+PRONOUN_REGEX = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b|\ba\.|\bc\.)\s+'
 
 '''
 NON-OFFICIAL NAMES : Ref from 'JOURNAL OF ETHNIC MINORITIES RESEARCH - 2019'
@@ -142,3 +149,8 @@ NICKNAME_REGEX = '|'.join(
     [*NICKNAMES['name'].to_list(),
      *NICKNAMES[NICKNAMES['de_name'].str.split().str.len() > 1]['de_name'].to_list()]
 )
+
+# * NAME POSSIBLE ELEMENTS
+NAME_ELEMENTS = pd.read_parquet(NAME_ELEMENT_PATH)
+WITHOUT_ACCENT_ELEMENTS = set(NAME_ELEMENTS['without_accent'].unique())
+WITH_ACCENT_ELEMENTS = set(NAME_ELEMENTS['with_accent'].unique())

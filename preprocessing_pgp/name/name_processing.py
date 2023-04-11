@@ -1,20 +1,15 @@
-import os
-import json
-import argparse
-from time import time
 from string import capwords
 from typing import List
-import multiprocessing as mp
 
 import pandas as pd
 from tqdm import tqdm
-from unidecode import unidecode
-from tensorflow import keras
+# from unidecode import unidecode
 
 from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
 from preprocessing_pgp.name.utils import remove_nicknames, is_name_accented
+from preprocessing_pgp.name.preprocess import preprocess_df, remove_invalid_element
 from preprocessing_pgp.utils import replace_trash_string
 
 tqdm.pandas()
@@ -44,23 +39,27 @@ class NameProcessor:
         # * Enrich wrong
         if len(raw_components) != len(enrich_components):
             return None
+
+        best_name_components = []
         for i, component in enumerate(raw_components):
             if is_name_accented(enrich_components[i]) and not is_name_accented(component):
-                return enrich_name
+                best_name_components.append(enrich_components[i])
+            else:
+                best_name_components.append(component)
 
-        return raw_name
+        return ' '.join(best_name_components).strip()
 
     def predict_non_accent(self, name: str):
         if name is None:
             return None
-        de_name = unidecode(name)
+        # de_name = unidecode(name)
 
         # Keep case already have accent
-        if name != de_name:
-            return name
+        # if name != de_name:
+        #     return name
 
-        # Only apply to case not having accent
-        predicted_name = capwords(self.model.predict(de_name))
+        # Predict name
+        predicted_name = capwords(self.model.predict(name))
 
         return predicted_name
 
@@ -71,12 +70,13 @@ class NameProcessor:
     ):
         orig_cols = name_df.columns
 
-        # n_names = predicted_name.shape[0]
         # * Clean name before processing
-        name_df[f'clean_{name_col}'] =\
-            name_df[name_col].apply(
-                lambda name: self.name_process.CleanName(name)[0]
-        )
+        name_df[f'clean_{name_col}'] = preprocess_df(
+            name_df,
+            name_col=name_col,
+            clean_name=True,
+            remove_pronoun=True
+        )[name_col]
 
         # * Separate 1-word strange name
         one_word_mask = name_df[f'clean_{name_col}'].str.split(
@@ -136,10 +136,12 @@ class NameProcessor:
             predicted_name['final'].apply(
                 self.name_process.SplitName).tolist()
 
+        # * Final postprocess
         predicted_name['final'] = replace_trash_string(
             predicted_name,
             replace_col='final'
         )
+        predicted_name['final'] = predicted_name['final'].apply(remove_invalid_element)
 
         # * Full fill the data
         predicted_name = pd.concat([predicted_name, one_word_strange_names])
