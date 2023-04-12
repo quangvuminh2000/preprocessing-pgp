@@ -9,7 +9,12 @@ from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
 from preprocessing_pgp.name.utils import remove_nicknames, is_name_accented
-from preprocessing_pgp.name.preprocess import preprocess_df, remove_invalid_element
+from preprocessing_pgp.name.preprocess import (
+    preprocess_df,
+    remove_invalid_element,
+    remove_duplicated_name,
+    get_name_pronoun
+)
 from preprocessing_pgp.utils import replace_trash_string
 
 tqdm.pandas()
@@ -132,15 +137,13 @@ class NameProcessor:
         #     ),
         #     axis=1
         # )
-        predicted_name[['last_name', 'middle_name', 'first_name']] =\
-            predicted_name['final'].apply(
-                self.name_process.SplitName).tolist()
 
         # * Final postprocess
         predicted_name['final'] = replace_trash_string(
             predicted_name,
             replace_col='final'
         )
+        predicted_name['final'] = predicted_name['final'].apply(remove_duplicated_name)
         predicted_name['final'] = predicted_name['final'].apply(remove_invalid_element)
 
         # * Full fill the data
@@ -149,11 +152,15 @@ class NameProcessor:
         # mean_rb_time = (time() - start_time) / n_names
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
+        # * Extract name element
+        predicted_name[['last_name', 'middle_name', 'first_name']] =\
+            predicted_name['final'].apply(
+                self.name_process.SplitName).tolist()
 
         # print('\n\n')
         out_cols = [
             'final', 'predict',
-            'last_name', 'middle_name', 'first_name',
+            'last_name', 'middle_name', 'first_name'
         ]
 
         return predicted_name[[*orig_cols, *out_cols]]

@@ -87,11 +87,12 @@ class GenderModel:
                 padding='post'
             )
 
+        scores = self.model.predict(padded_encode_names, verbose=0)
         genders = tf.cast(
-            self.model.predict(padded_encode_names, verbose=0) > 0.5,
+            scores > 0.5,
             dtype=tf.float32
         )
-        return genders
+        return genders, scores
 
 
 def predict_gender_from_name(
@@ -122,9 +123,10 @@ def predict_gender_from_name(
         f'{GENDER_MODEL_PATH}/lstm/gender_lstm.h5'
     )
 
-    data['gender_predict'] = gender_model.predict_gender(
+    data['gender_predict'], data['gender_score'] = gender_model.predict_gender(
         data[name_col].values
     )
+    print(data['gender_score'])
     data['gender_predict'] = data['gender_predict'].map({
         0: 'F',
         1: 'M'

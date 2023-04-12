@@ -97,9 +97,9 @@ def extract_null_values(
         Tuple of Non-Null DataFrame and Null DataFrame
     """
 
-    null_data = data[data[by_col].isna()].copy()
+    null_data = data[data[by_col].isna()]
 
-    non_null_data = data.dropna(subset=[by_col]).copy()
+    non_null_data = data.dropna(subset=[by_col])
 
     return non_null_data, null_data
 

@@ -109,6 +109,7 @@ def remove_special_cases(name: str) -> str:
     """
     clean_name = re.sub(r'(?i)\(.*\)', ' ', name)
     clean_name = re.sub(r'(?i)\[.*\]', ' ', clean_name)
+    clean_name = re.sub(r'(?i)-.*', ' ', clean_name)
 
     return clean_name.strip()
 
@@ -154,7 +155,10 @@ def basic_preprocess_name(name: str) -> str:
 
     old_unicode_clean_name = format_caps_word(old_unicode_clean_name)
 
-    return old_unicode_clean_name
+    # Remove glue name
+    non_glue_name = upper_first(split_upper(old_unicode_clean_name))
+
+    return non_glue_name
 
 
 def clean_name_cdp(name: str) -> str:
@@ -256,6 +260,46 @@ def remove_invalid_element(name: str) -> str:
         part for part in name.lower().split(' ')
         if part in WITH_ACCENT_ELEMENTS
     ).title()
+
+
+def remove_duplicated_name(name: str) -> str:
+    """
+    Remove part of name that is duplicated
+    """
+    if name is None:
+        return None
+
+    name_parts = name.split(' ')
+    unique_parts = []
+
+    for part in name_parts:
+        if part not in unique_parts:
+            unique_parts.append(part)
+
+    return ' '.join(unique_parts)
+
+
+def split_upper(name: str) -> str:
+    """
+    Split title glue name
+    """
+    if name == name.upper():
+        return name
+    if name == '':
+        return name
+    parts = re.findall('[A-Z][^A-Z]*', name)
+
+    return ' '.join(parts)
+
+
+def upper_first(name):
+    """
+    Upper first element of name
+    """
+    if name == '':
+        return name
+    return name[0].upper() + name[1:]
+
 
 
 def preprocess_df(

@@ -5,7 +5,6 @@ from time import time
 
 import pandas as pd
 
-from preprocessing_pgp.name.preprocess import get_name_pronoun
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
 from preprocessing_pgp.utils import (
@@ -17,6 +16,7 @@ from preprocessing_pgp.name.const import PRONOUN_GENDER_MAP
 def process_predict_gender(
     data: pd.DataFrame,
     name_col: str = 'name',
+    pronoun_col: str = 'pronoun',
     n_cores: int = 1,
     logging_info: bool = True
 ) -> pd.DataFrame:
@@ -58,18 +58,18 @@ def process_predict_gender(
     # if logging_info:
     #     print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
     # ? Extracting pronoun
-    if logging_info:
-        print(">>> Extracting pronouns: ", end='')
-    start_time = time()
-    name_data['pronoun'] = parallelize_dataframe(
-        name_data,
-        get_name_pronoun,
-        n_cores=n_cores,
-        name_col=name_col
-    )
-    pronoun_time = time() - start_time
-    if logging_info:
-        print(f"{int(pronoun_time)//60}m{int(pronoun_time)%60}s")
+    # if logging_info:
+    #     print(">>> Extracting pronouns: ", end='')
+    # start_time = time()
+    # name_data['pronoun'] = parallelize_dataframe(
+    #     name_data,
+    #     get_name_pronoun,
+    #     n_cores=n_cores,
+    #     name_col=name_col
+    # )
+    # pronoun_time = time() - start_time
+    # if logging_info:
+    #     print(f"{int(pronoun_time)//60}m{int(pronoun_time)%60}s")
 
     # * Get customer type
     cleaned_name_data = process_extract_name_type(
@@ -102,7 +102,7 @@ def process_predict_gender(
     if logging_info:
         print("\t>> Filling pronoun gender")
     predicted_name_data['pronoun_gender'] =\
-        predicted_name_data['pronoun'].map(PRONOUN_GENDER_MAP)
+        predicted_name_data[pronoun_col].map(PRONOUN_GENDER_MAP)
 
     # * Prioritize pronoun gender
     if logging_info:
@@ -115,7 +115,7 @@ def process_predict_gender(
     ] = predicted_name_data['pronoun_gender']
 
     # * Concat to generate final data
-    new_cols = ['gender_predict']
+    new_cols = ['gender_predict', 'gender_score']
     nan_data[new_cols] = None
     final_data = pd.concat(
         [predicted_name_data, nan_data, non_customer_name_data])

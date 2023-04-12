@@ -7,8 +7,12 @@ import logging
 import pandas as pd
 from tensorflow import keras
 from tqdm import tqdm
+from unidecode import unidecode
 
+# from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
 from preprocessing_pgp.name.name_processing import NameProcessor
+from preprocessing_pgp.name.preprocess import get_name_pronoun
+# from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.const import (
@@ -179,9 +183,13 @@ def process_enrich(
     """
     orig_cols = data.columns
 
+
     # * Na names & filter out name col
     na_data = data[data[name_col].isna()][[name_col]]
     cleaned_data = data[data[name_col].notna()][[name_col]]
+
+    # * Split pronoun
+    cleaned_data['pronoun'] = cleaned_data[name_col].apply(get_name_pronoun)
 
     # * Extracting customer type -- Only enrich 'customer' type
     cleaned_data = process_extract_name_type(
@@ -215,7 +223,7 @@ def process_enrich(
 
     # Enrich names
     if logging_info:
-        print(">>> Enriching names: ", end='')
+        print(">>> Enriching names")
     start_time = time()
     enriched_data = parallelize_dataframe(
         customer_data,
@@ -225,7 +233,51 @@ def process_enrich(
     )
     enrich_time = time() - start_time
     if logging_info:
-        print(f"{int(enrich_time)//60}m{int(enrich_time)%60}s")
+        print(f"Time elapsed: {int(enrich_time)//60}m{int(enrich_time)%60}s")
+
+    # if logging_info:
+    #     print(">>> Enrich glue names")
+    # start_time = time()
+
+    # name_extractor = EmailNameExtractor()
+    # name_process = NameProcess()
+    # non_glue_names = enriched_data[enriched_data['final'].notna()]
+    # glue_names = enriched_data[enriched_data['final'].isna()][[name_col]]\
+    #     [name_col].str.lower()\
+    #     .apply(unidecode)
+
+    # glue_multi_names = glue_names[glue_names[name_col].str.split().str.len() > 1]
+    # glue_single_names = glue_names[glue_names[name_col].str.split().str.len() <= 1]
+
+    # glue_single_names = parallelize_dataframe(
+    #     glue_single_names,
+    #     name_extractor.extract_username,
+    #     n_cores=n_cores,
+    #     email_name_col=name_col
+    # ).rename(columns={
+    #     'enrich_name': 'final'
+    # })
+    # glue_single_names['predict'] = glue_single_names['final']
+    # glue_single_names[['last_name', 'middle_name', 'first_name']] =\
+    #     glue_single_names['final'].apply(
+    #         name_process.SplitName
+    #     ).tolist()
+
+    # glue_multi_names = parallelize_dataframe(
+    #     glue_multi_names,
+    #     enrich_clean_data,
+    #     n_cores=n_cores,
+    #     name_col=name_col
+    # )
+
+    # glue_names = pd.concat([
+    #     glue_multi_names,
+    #     glue_single_names
+    # ])
+
+    # glue_name_time = time() - start_time
+    # if logging_info:
+    #     print(f"Time elapsed: {int(glue_name_time)//60}m{int(glue_name_time)%60}s")
 
     # * Concat na data
     new_cols = [
@@ -235,6 +287,7 @@ def process_enrich(
         'last_name',
         'middle_name',
         'first_name',
+        'pronoun'
     ]
     na_data[new_cols] = None
     final_data = pd.concat([
@@ -242,6 +295,26 @@ def process_enrich(
         non_customer_data,
         na_data
     ])
+
+    final_data.loc[
+        final_data['final'].notna(),
+        'n_words'
+    ] = final_data['final'].str.split().str.len()
+
+    final_data.loc[
+        final_data['final'].notna(),
+        'name_len'
+    ] = final_data['final'].str.replace(r'\s+', '', regex=True).str.len()
+
+    final_data.loc[
+        ~((final_data['n_words'].isin([2,3,4])
+        & (final_data['name_len'] >= 4)
+        & (final_data['name_len'] <= 24))
+        | (final_data['n_words'].isin([1])
+            & (final_data['name_len'] >= 2)
+            & (final_data['name_len'] <= 6))),
+        'final'
+    ] = None
 
     # * Concat with original cols
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)

@@ -365,9 +365,18 @@ def parse_gender_from_card(
         '3': 'F'
     }
     # * Gender from new personal's id
-    profile['card_gender'] = None
     new_pid_mask = (profile['is_personal_id'])\
         & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+
+    # * Process for semi-card
+    semi_card_mask = profile[card_col].apply(PersonalIDValidator.is_semi_correct_length)
+    profile.loc[
+        new_pid_mask & semi_card_mask,
+        card_col
+    ] = '0' + profile[card_col]
+
+    # * Map gender by dict
+    profile['gender'] = None
     profile.loc[
         new_pid_mask,
         'gender'
@@ -408,6 +417,13 @@ def parse_birthday_from_card(
     # * Can only get birthday from new personal's id
     new_pid_mask = (profile['is_personal_id'])\
         & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+
+    # * Process for semi-card
+    semi_card_mask = profile[card_col].apply(PersonalIDValidator.is_semi_correct_length)
+    profile.loc[
+        new_pid_mask & semi_card_mask,
+        card_col
+    ] = '0' + profile[card_col]
 
     gender_post_century = {
         '0': '19',
@@ -459,6 +475,13 @@ def parse_city_from_card(
         new_pid_mask,
         'code'
     ] = profile[card_col].str[0:3]
+
+    # * Process for semi-card
+    semi_card_mask = (profile[card_col].apply(PersonalIDValidator.is_semi_correct_length))
+    profile.loc[
+        new_pid_mask & semi_card_mask,
+        card_col
+    ] = '0' + profile[card_col]
 
     # * Driver License
     driver_license_mask = (profile['is_driver_license'])\
@@ -627,7 +650,7 @@ def process_verify_card(
         * `city`: City parsed
     """
     orig_cols = data.columns
-    card_data = data[[card_col]]
+    card_data = data
 
     # ? CLEAN CARD ID
     # * Removing na values
@@ -689,11 +712,6 @@ def process_verify_card(
     final_card_df = pd.concat([parsed_data, na_data], ignore_index=True)
 
     final_card_df[validator_cols] = final_card_df[validator_cols].fillna(False)
-
-    final_card_df = pd.concat([
-        data[orig_cols],
-        final_card_df[new_cols]
-    ], axis=1)
 
     final_card_df = final_card_df[[*orig_cols, *new_cols]]
 

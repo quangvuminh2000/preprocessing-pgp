@@ -16,7 +16,7 @@ __NAME_TYPE_PATH = os.path.join(
 
 _NAME_TYPE_LV1_PATH = os.path.join(
     __NAME_TYPE_PATH,
-    'customer_type_lv1.parquet'
+    'customer_type_extra.parquet'
 )
 
 _NAME_TYPE_LV2_PATH = os.path.join(
