@@ -10,8 +10,8 @@ from preprocessing_pgp.email.utils import (
     clean_email_name,
 )
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
-from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
-from preprocessing_pgp.name.enrich_name import process_enrich
+# from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
+# from preprocessing_pgp.name.enrich_name import process_enrich
 
 pd.options.mode.chained_assignment = None
 
@@ -245,27 +245,6 @@ class EmailNameExtractor:
             name_candidate
         )
 
-        # * Enrich new names
-        proceed_data.drop(columns=['customer_type'], inplace=True)
-        proceed_data = process_enrich(
-            proceed_data,
-            name_col='username_extracted',
-            n_cores=1,
-            logging_info=False
-        )
-
-        # * Predict gender from extracted username
-        proceed_data = process_predict_gender(
-            proceed_data,
-            name_col='final',
-            n_cores=1,
-            logging_info=False
-        )
-        proceed_data.rename(columns={
-            'gender_predict': 'gender_extracted',
-            'final': 'enrich_name'
-        }, inplace=True)
-
         # * Combine to get final data
         final_data = pd.concat([
             proceed_data,
@@ -277,6 +256,4 @@ class EmailNameExtractor:
             f'cleaned_{email_name_col}',
             'customer_type',
             'username_extracted',
-            'enrich_name',
-            'gender_extracted'
         ]]

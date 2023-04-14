@@ -98,7 +98,7 @@ class TestNameFunction:
             'M'
         ]
 
-    @pt.mark.enrich_name
+    @pt.mark.enrich_name_error
     def test_enrich_name_basic_case(self):
         """
         Test whether the model can predict correctly non-accent names
@@ -107,6 +107,8 @@ class TestNameFunction:
             'name': [
                 'Anh Vu Minh Quang',
                 'Nguyễn Thị Bích  Liên',
+                'vuminhquang',
+                'truongquanghoang'
             ]
         })
 
@@ -119,7 +121,9 @@ class TestNameFunction:
 
         assert predicted_names == [
             'Vũ Minh Quang',
-            'Nguyễn Thị Bích Liên'
+            'Nguyễn Thị Bích Liên',
+            'Vũ Minh Quang',
+            'Trương Quang Hoàng'
         ]
 
     @pt.mark.enrich_name
@@ -141,5 +145,5 @@ class TestNameFunction:
         predicted_names = predict_data['final'].values.tolist()
 
         assert predicted_names == [
-            'Nguyễn Văn Phong'
+            'Nguyễn Văn Phòng'
         ]

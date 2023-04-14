@@ -10,10 +10,9 @@ from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.rulebase_name import rule_base_name
 from preprocessing_pgp.name.utils import remove_nicknames, is_name_accented
 from preprocessing_pgp.name.preprocess import (
-    preprocess_df,
+    remove_invalid_base_element,
     remove_invalid_element,
     remove_duplicated_name,
-    get_name_pronoun
 )
 from preprocessing_pgp.utils import replace_trash_string
 
@@ -36,6 +35,9 @@ class NameProcessor:
         raw_name: str,
         enrich_name: str
     ) -> str:
+        """
+        Decide whether the best part to choose from enrich name
+        """
         if raw_name is None or enrich_name is None:
             return None
         raw_components = raw_name.split(' ')
@@ -75,13 +77,18 @@ class NameProcessor:
     ):
         orig_cols = name_df.columns
 
-        # * Clean name before processing
-        name_df[f'clean_{name_col}'] = preprocess_df(
-            name_df,
-            name_col=name_col,
-            clean_name=True,
-            remove_pronoun=True
-        )[name_col]
+        # * Cleansing invalid base element
+        name_df[f'clean_{name_col}'] =\
+            name_df[name_col].apply(
+                remove_invalid_base_element
+        )
+
+        # name_df[f'clean_{name_col}'] = preprocess_df(
+        #     name_df,
+        #     name_col=name_col,
+        #     clean_name=True,
+        #     remove_pronoun=True
+        # )[name_col]
 
         # * Separate 1-word strange name
         one_word_mask = name_df[f'clean_{name_col}'].str.split(
@@ -131,20 +138,22 @@ class NameProcessor:
             axis=1
         )
 
-        # predicted_name['final'] = predicted_name.apply(
-        #     lambda row: self.choose_better_enrich(
-        #         row[f'clean_{name_col}'], row['final']
-        #     ),
-        #     axis=1
-        # )
+        predicted_name['final'] = predicted_name.apply(
+            lambda row: self.choose_better_enrich(
+                row[f'clean_{name_col}'], row['final']
+            ),
+            axis=1
+        )
 
         # * Final postprocess
         predicted_name['final'] = replace_trash_string(
             predicted_name,
             replace_col='final'
         )
-        predicted_name['final'] = predicted_name['final'].apply(remove_duplicated_name)
-        predicted_name['final'] = predicted_name['final'].apply(remove_invalid_element)
+        predicted_name['final'] = predicted_name['final'].apply(
+            remove_duplicated_name)
+        predicted_name['final'] = predicted_name['final'].apply(
+            remove_invalid_element)
 
         # * Full fill the data
         predicted_name = pd.concat([predicted_name, one_word_strange_names])
@@ -152,15 +161,8 @@ class NameProcessor:
         # mean_rb_time = (time() - start_time) / n_names
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
-        # * Extract name element
-        predicted_name[['last_name', 'middle_name', 'first_name']] =\
-            predicted_name['final'].apply(
-                self.name_process.SplitName).tolist()
-
-        # print('\n\n')
         out_cols = [
             'final', 'predict',
-            'last_name', 'middle_name', 'first_name'
         ]
 
         return predicted_name[[*orig_cols, *out_cols]]

@@ -98,7 +98,8 @@ def remove_non_characters(name: str) -> str:
     """
     Remove non-utf8 characters from string
     """
-    clean_name = re.sub(r'(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 ]', '', name)
+    clean_name = re.sub(
+        r'(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 ]', '', name)
     clean_name = re.sub(r'\d+', '', clean_name)
     return clean_name
 
@@ -156,7 +157,8 @@ def basic_preprocess_name(name: str) -> str:
     old_unicode_clean_name = format_caps_word(old_unicode_clean_name)
 
     # Remove glue name
-    non_glue_name = upper_first(split_upper(old_unicode_clean_name))
+    non_glue_name = remove_spare_spaces(
+        upper_first(split_upper(old_unicode_clean_name)))
 
     return non_glue_name
 
@@ -211,11 +213,14 @@ def remove_pronoun_from_name(name: str) -> str:
     Remove pronoun from name
     """
     processed_name = name.lower().strip()
-    processed_name = re.sub(PRONOUN_REGEX, ' ', processed_name)
+    processed_name = remove_spare_spaces(re.sub(PRONOUN_REGEX, ' ', processed_name).title())
     return processed_name
 
 
-def remove_invalid_base_element(name: str) -> str:
+def remove_invalid_base_element(
+    name: str,
+    base_elements: set = None
+) -> str:
     """
     Remove non vietnamese name base part in raw
 
@@ -233,13 +238,19 @@ def remove_invalid_base_element(name: str) -> str:
     if name is None:
         return None
 
+    if base_elements is None:
+        base_elements = WITHOUT_ACCENT_ELEMENTS
+
     return ' '.join(
         part for part in name.lower().split(' ')
-        if unidecode(part) in WITHOUT_ACCENT_ELEMENTS
+        if unidecode(part) in base_elements
     ).title()
 
 
-def remove_invalid_element(name: str) -> str:
+def remove_invalid_element(
+    name: str,
+    base_elements: set = None
+) -> str:
     """
     Remove non vietnamese name element in raw
 
@@ -256,10 +267,15 @@ def remove_invalid_element(name: str) -> str:
     if name is None:
         return None
 
-    return ' '.join(
+    if base_elements is None:
+        base_elements = WITH_ACCENT_ELEMENTS
+
+    final_name = ' '.join(
         part for part in name.lower().split(' ')
-        if part in WITH_ACCENT_ELEMENTS
+        if part in base_elements
     ).title()
+
+    return remove_spare_spaces(final_name)
 
 
 def remove_duplicated_name(name: str) -> str:
@@ -276,7 +292,7 @@ def remove_duplicated_name(name: str) -> str:
         if part not in unique_parts:
             unique_parts.append(part)
 
-    return ' '.join(unique_parts)
+    return remove_spare_spaces(' '.join(unique_parts))
 
 
 def split_upper(name: str) -> str:
@@ -299,7 +315,6 @@ def upper_first(name):
     if name == '':
         return name
     return name[0].upper() + name[1:]
-
 
 
 def preprocess_df(
@@ -340,7 +355,7 @@ def preprocess_df(
     cleaned_data[f'clean_{name_col}'] =\
         cleaned_data[name_col].apply(
             basic_preprocess_name
-        )
+    )
 
     # * Remove nickname
     cleaned_data = remove_nicknames(
@@ -353,7 +368,7 @@ def preprocess_df(
         cleaned_data[f'clean_{name_col}'] =\
             cleaned_data[name_col].apply(
                 remove_pronoun_from_name
-            )
+        )
 
     # * Extra cleansing name
     if clean_name:

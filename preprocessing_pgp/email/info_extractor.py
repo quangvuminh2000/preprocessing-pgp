@@ -12,6 +12,8 @@ from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExt
 from preprocessing_pgp.email.extractors.email_yob_extractor import EmailYOBExtractor
 from preprocessing_pgp.email.extractors.email_phone_extractor import EmailPhoneExtractor
 from preprocessing_pgp.email.extractors.email_address_extractor import EmailAddressExtractor
+from preprocessing_pgp.name.enrich_name import process_enrich
+from preprocessing_pgp.name.gender.predict_gender import process_predict_gender
 
 
 class EmailInfoExtractor:
@@ -25,6 +27,62 @@ class EmailInfoExtractor:
         self.yob_extractor = EmailYOBExtractor()
         self.phone_extractor = EmailPhoneExtractor()
         self.address_extractor = EmailAddressExtractor()
+
+    def enrich_extracted_email_name(
+        self,
+        data: pd.DataFrame,
+        email_name_col: str = 'email_name',
+        ctype_col: str = 'customer_type'
+    ) -> pd.DataFrame:
+        """
+        Process enrich for extracted email name
+        """
+        extracted_data = data
+        orig_cols = data.columns
+
+        proceed_mask =\
+            (extracted_data[email_name_col].notna())\
+            & (extracted_data[ctype_col] == 'customer')
+        proceed_data = extracted_data[proceed_mask]
+        ignored_data = extracted_data[~proceed_mask]
+
+        # * Enrich name
+        proceed_data.drop(columns=['customer_type'], inplace=True)
+        proceed_data = process_enrich(
+            proceed_data,
+            name_col=email_name_col,
+            n_cores=1,
+            logging_info=False
+        )
+
+        # * Predict gender from extracted username
+        proceed_data = process_predict_gender(
+            proceed_data,
+            name_col='final',
+            n_cores=1,
+            logging_info=False
+        )
+
+        # * Re-ordering
+        proceed_data.rename(columns={
+            'gender_predict': 'gender_extracted',
+            'final': 'enrich_name'
+        }, inplace=True)
+
+        final_data = pd.concat([
+            proceed_data,
+            ignored_data
+        ])
+
+        return final_data[[
+            *orig_cols,
+            # f'cleaned_{email_name_col}',
+            # 'customer_type',
+            # 'username_extracted',
+            'enrich_name',
+            'gender_extracted',
+            'gender_score'
+        ]]
 
     def extract_info(
         self,
@@ -56,6 +114,12 @@ class EmailInfoExtractor:
         # * Extracting name & gender
         extracted_data =\
             self.name_extractor.extract_username(data, email_name_col)
+        extracted_data =\
+            self.enrich_extracted_email_name(
+                extracted_data,
+                email_name_col='username_extracted',
+                ctype_col='customer_type'
+            )
 
         # * Extracting yob
         extracted_data =\
@@ -66,9 +130,11 @@ class EmailInfoExtractor:
             self.phone_extractor.extract_phone(extracted_data, email_name_col)
 
         # * Extracting address
-        extracted_data =\
+        extracted_city_mask = extracted_data['enrich_name'].isna()
+        extracted_data['address_extracted'] = None
+        extracted_data[extracted_city_mask] =\
             self.address_extractor.extract_address(
-                extracted_data, email_name_col)
+                extracted_data[extracted_city_mask], email_name_col)
 
         return extracted_data
 
@@ -136,7 +202,13 @@ def process_extract_email_info(
     print(">>> Extracting information from email: ", end='')
     print(f"{int(extract_time)//60}m{int(extract_time)%60}s")
 
-    final_data = pd.concat([extracted_valid_email, invalid_email])
+    if invalid_email.empty:
+        final_data = extracted_valid_email
+    else:
+        final_data = pd.concat([
+            extracted_valid_email,
+            invalid_email
+        ])
 
     # * Generate whether username is certain
     final_data['username_iscertain'] =\

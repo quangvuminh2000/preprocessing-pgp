@@ -7,11 +7,15 @@ import pandas as pd
 
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
+from preprocessing_pgp.name.preprocess import get_name_pronoun
 from preprocessing_pgp.utils import (
     parallelize_dataframe,
 )
-from preprocessing_pgp.name.const import PRONOUN_GENDER_MAP
-
+from preprocessing_pgp.name.const import (
+    PRONOUN_GENDER_MAP,
+    MF_NAME_GENDER_RULE,
+    BEFORE_FNAME_GENDER_RULE
+)
 
 def process_predict_gender(
     data: pd.DataFrame,
@@ -40,9 +44,13 @@ def process_predict_gender(
         Data with additional column:
         * `gender_predict`: predicted gender from name
     """
-    name_data = data[[name_col]].dropna()
-    nan_data = data[data[name_col].isna()][[name_col]]
     orig_cols = data.columns
+    if pronoun_col not in orig_cols:
+        name_data = data[data[name_col].notna()][[name_col]]
+        nan_data = data[data[name_col].isna()][[name_col]]
+    else:
+        name_data = data[data[name_col].notna()][[name_col, pronoun_col]]
+        nan_data = data[data[name_col].isna()][[name_col, pronoun_col]]
 
     # # * Clean name data
     # if logging_info:
@@ -58,18 +66,15 @@ def process_predict_gender(
     # if logging_info:
     #     print(f"{int(clean_time)//60}m{int(clean_time)%60}s")
     # ? Extracting pronoun
-    # if logging_info:
-    #     print(">>> Extracting pronouns: ", end='')
-    # start_time = time()
-    # name_data['pronoun'] = parallelize_dataframe(
-    #     name_data,
-    #     get_name_pronoun,
-    #     n_cores=n_cores,
-    #     name_col=name_col
-    # )
-    # pronoun_time = time() - start_time
-    # if logging_info:
-    #     print(f"{int(pronoun_time)//60}m{int(pronoun_time)%60}s")
+    if pronoun_col not in orig_cols:
+        if logging_info:
+            print("Not find pronoun -- Try extracting from name")
+            print(">>> Extracting pronouns: ", end='')
+        start_time = time()
+        name_data[pronoun_col] = name_data[name_col].apply(get_name_pronoun)
+        pronoun_time = time() - start_time
+        if logging_info:
+            print(f"{int(pronoun_time)//60}m{int(pronoun_time)%60}s")
 
     # * Get customer type
     cleaned_name_data = process_extract_name_type(
@@ -100,19 +105,76 @@ def process_predict_gender(
 
     # * Fill pronoun gender
     if logging_info:
-        print("\t>> Filling pronoun gender")
+        print("\t>> Fill pronoun gender")
     predicted_name_data['pronoun_gender'] =\
         predicted_name_data[pronoun_col].map(PRONOUN_GENDER_MAP)
+
+    predicted_name_data['mf_name_gender'] = None
+    # * MFNAMES Rule
+    mfname_regex_female = MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE['gender']=='F']\
+        ['mfname'] + '$'
+    mfname_regex_female = '|'.join(mfname_regex_female.unique())
+
+    mfname_regex_male = MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE['gender']=='M']\
+        ['mfname'] + '$'
+    mfname_regex_male = '|'.join(mfname_regex_male.unique())
+
+    predicted_name_data.loc[
+        predicted_name_data[name_col]
+            .str.lower()
+            .str.contains(f'(?i){mfname_regex_female}', regex=True, na=False),
+        'mf_name_gender'
+    ] = 'F'
+    predicted_name_data.loc[
+        predicted_name_data[name_col]
+            .str.lower()
+            .str.contains(f'(?i){mfname_regex_male}', regex=True, na=False),
+        'mf_name_gender'
+    ] = 'M'
+
+    # * BEFORE Fnames rule
+    predicted_name_data['before_fname_gender'] = None
+    predicted_name_data['before_fname'] = predicted_name_data[name_col]\
+        .str.split().str.get(-2).str.lower()
+    before_fnames_regex = r'(?i) phương$| anh$| linh$| hà$| ngọc$| thư$| an$| châu$| khánh$| thương$| tú$| hạnh$| hiền$| thanh$| xuân$| minh$| quỳnh$| giang$| nguyên$'
+    predicted_name_data.loc[
+        predicted_name_data[name_col]\
+            .str.lower()
+            .str.contains(f'(?i){before_fnames_regex}', regex=True, na=False)
+        & predicted_name_data['before_fname'].isin(
+            BEFORE_FNAME_GENDER_RULE.query('gender == "F"')['before_fname'].unique()
+        ),
+        'before_fname_gender'
+    ] = 'F'
+
+    predicted_name_data.loc[
+        predicted_name_data[name_col]\
+            .str.lower()
+            .str.contains(f'(?i){before_fnames_regex}', regex=True, na=False)
+        & predicted_name_data['before_fname'].isin(
+            BEFORE_FNAME_GENDER_RULE.query('gender == "M"')['before_fname'].unique()
+        ),
+        'before_fname_gender'
+    ] = 'M'
 
     # * Prioritize pronoun gender
     if logging_info:
         print("\t>> Prioritize pronoun gender")
     predicted_name_data.loc[
-        (predicted_name_data['pronoun_gender']
-         != predicted_name_data['gender_predict'])
-        & predicted_name_data['pronoun_gender'].notna(),
+        predicted_name_data['pronoun_gender'].notna(),
         'gender_predict'
     ] = predicted_name_data['pronoun_gender']
+    predicted_name_data.loc[
+        predicted_name_data['pronoun_gender'].isna()
+        & predicted_name_data['mf_name_gender'].notna(),
+        'gender_predict'
+    ] = predicted_name_data['mf_name_gender']
+    predicted_name_data.loc[
+        predicted_name_data['pronoun_gender'].isna()
+        & predicted_name_data['mf_name_gender'].isna()
+        & predicted_name_data['before_fname_gender'].notna(),
+        'gender_predict'
+    ] = predicted_name_data['before_fname_gender']
 
     # * Concat to generate final data
     new_cols = ['gender_predict', 'gender_score']
@@ -121,5 +183,6 @@ def process_predict_gender(
         [predicted_name_data, nan_data, non_customer_name_data])
     final_data = pd.concat(
         [data[orig_cols], final_data[new_cols]], axis=1)
+
 
     return final_data

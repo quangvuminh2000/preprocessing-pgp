@@ -36,6 +36,7 @@ class EmailYOBExtractor:
              if (date[1] != 'none') | (date[0] == 'none')]
         # Remove case 4 number 2580 -> NOT YOB:1980
         possible_date_formats.remove(('half_day', 'half_month', 'half_year'))
+        possible_date_formats.remove(('none', 'none', 'half_year'))
 
         num_digits = []
         regexps = []

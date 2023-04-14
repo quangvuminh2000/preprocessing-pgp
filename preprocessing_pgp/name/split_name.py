@@ -22,7 +22,7 @@ def BuildLastName(base_path):
         f'{base_path}/stats_lastname_vn.parquet')
 
     last_name_list1 = list(
-        stats_lastname_vn[stats_lastname_vn['No'] <= 50]['Last_Name'].unique())
+        stats_lastname_vn['Last_Name'].unique())
     last_name_list2 = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan',
                        'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý',
                        'Trương', 'Bùi', 'Đinh', 'Lương', 'Tạ', 'Quách', 'Hứa']

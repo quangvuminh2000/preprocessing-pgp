@@ -18,7 +18,7 @@ MODEL_PATH = os.path.join(
     os.pardir,
     'data',
     'transformer_model',
-    'trial-25'
+    'trial-31'
 )
 
 # ? RULE-BASED PATH
@@ -40,6 +40,8 @@ GENDER_MODEL_PATH = os.path.join(
     '../data/gender_model'
 )
 
+GENDER_MODEL_VERSION = '1.0'
+
 PRONOUN_GENDER_RB_PATH = os.path.join(
     os.path.dirname(__file__),
     '../data/gender_model/rule_base/pronoun_gender_dict.parquet'
@@ -53,6 +55,20 @@ PRONOUN_GENDER_MAP = dict(zip(
 NAME_ELEMENT_PATH = os.path.join(
     os.path.dirname(__file__),
     '../data/name_split/name_elements.parquet'
+)
+
+MF_NAME_GENDER_RULE = pd.read_parquet(
+    os.path.join(
+        os.path.dirname(__file__),
+        '../data/rule_base/gender/mfname.parquet'
+    )
+)
+
+BEFORE_FNAME_GENDER_RULE = pd.read_parquet(
+    os.path.join(
+        os.path.dirname(__file__),
+        '../data/rule_base/gender/before_fname.parquet'
+    )
 )
 
 # ? PREPROCESS CONSTANTS

@@ -52,7 +52,12 @@ class TestAddressExtraction:
                 # '39/4/30 Huỳnh Văn Bánh, P17',
                 # 'Q7',
                 # '53/2 Ấp 2, Xã Bình Thắng, Huyện Bình Đại, Bến Tre',
-                'khu phố phú hoà phường hoà lợi thị xã bến cát tỉnh Bình Dương, Phường Hòa Lợi'
+                # '923 Le Van Luong, Xa Phuoc Kien, Huyen Nha Be, Thanh pho Ho Chi Minh',
+                # 'Xa Phuoc Kien, Huyen Nha Be, Thanh pho Ho Chi Minh',
+                # 'Toa Nha Fpt Tan Thuan 2, Duong So 8, Kcx Tan Thuan, Phuong Tan Thuan Dong, Quan 7, Thanh pho Ho Chi Minh'
+                # 'Quan Cau Giay, Thanh pho Ha Noi',
+                'So 216 Thai Ha, Trung Liệt, Quan Dong Da, Thanh pho Ha Noi',
+                '3, Quan 4, Ho Chi Minh'
             ]
         })
 
@@ -61,7 +66,16 @@ class TestAddressExtraction:
             address_col='address',
             logging_info=False
         )
-        print(extracted_address)
+        print()
+        print(extracted_address[[
+            'best_level_1',
+            'level_1_code',
+            'best_level_2',
+            'level_2_code',
+            'best_level_3',
+            'level_3_code',
+            'remained_address'
+        ]])
 
         info_extracted =\
             extracted_address[[
@@ -69,6 +83,7 @@ class TestAddressExtraction:
                 'remained_address'
             ]].values.tolist()
 
+        print("\n\n\n")
         print(info_extracted)
 
         # assert info_extracted == [

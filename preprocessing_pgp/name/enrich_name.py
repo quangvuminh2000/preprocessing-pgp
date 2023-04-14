@@ -9,10 +9,10 @@ from tensorflow import keras
 from tqdm import tqdm
 from unidecode import unidecode
 
-# from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
+from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.preprocess import get_name_pronoun
-# from preprocessing_pgp.name.split_name import NameProcess
+from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
 from preprocessing_pgp.name.const import (
@@ -20,7 +20,7 @@ from preprocessing_pgp.name.const import (
     RULE_BASED_PATH
 )
 from preprocessing_pgp.utils import (
-    sep_display,
+    # sep_display,
     parallelize_dataframe,
 )
 
@@ -155,7 +155,8 @@ def process_enrich(
     data: pd.DataFrame,
     name_col: str = 'name',
     n_cores: int = 1,
-    logging_info: bool = True
+    logging_info: bool = True,
+    process_customer_type: bool = True
 ) -> pd.DataFrame:
     """
     Applying the model of filling accent to non-accent Vietnamese names
@@ -171,6 +172,8 @@ def process_enrich(
         The number of cores used to run parallel, by default 1 core is used
     logging_info : bool
         Whether to log info about run time, by default True
+    skip_customer_type : bool
+        Whether to log info about run time, by default True
 
     Returns
     -------
@@ -183,7 +186,6 @@ def process_enrich(
     """
     orig_cols = data.columns
 
-
     # * Na names & filter out name col
     na_data = data[data[name_col].isna()][[name_col]]
     cleaned_data = data[data[name_col].notna()][[name_col]]
@@ -192,16 +194,20 @@ def process_enrich(
     cleaned_data['pronoun'] = cleaned_data[name_col].apply(get_name_pronoun)
 
     # * Extracting customer type -- Only enrich 'customer' type
-    cleaned_data = process_extract_name_type(
-        cleaned_data,
-        name_col,
-        n_cores=n_cores,
-        logging_info=logging_info
-    )
-    sep_display()
-    customer_data = cleaned_data.query('customer_type == "customer"')
-    #                    | (cleaned_data[name_col].str.split(' ').str.len() > 3))
-    non_customer_data = cleaned_data.query('customer_type != "customer"')
+    if process_customer_type:
+        cleaned_data = process_extract_name_type(
+            cleaned_data,
+            name_col,
+            n_cores=n_cores,
+            logging_info=logging_info
+        )
+        customer_data = cleaned_data.query('customer_type == "customer"')
+        #                    | (cleaned_data[name_col].str.split(' ').str.len() > 3))
+        non_customer_data = cleaned_data.query('customer_type != "customer"')
+    else:
+        customer_data = cleaned_data
+        customer_data['customer_type'] = 'customer'
+        non_customer_data = pd.DataFrame()
 
     # # Clean names -- Not Needed
     # start_time = time()
@@ -235,49 +241,68 @@ def process_enrich(
     if logging_info:
         print(f"Time elapsed: {int(enrich_time)//60}m{int(enrich_time)%60}s")
 
-    # if logging_info:
-    #     print(">>> Enrich glue names")
-    # start_time = time()
+    if logging_info:
+        print(">>> Enrich glue names")
+    start_time = time()
 
     # name_extractor = EmailNameExtractor()
-    # name_process = NameProcess()
+    name_process = NameProcess()
     # non_glue_names = enriched_data[enriched_data['final'].notna()]
-    # glue_names = enriched_data[enriched_data['final'].isna()][[name_col]]\
-    #     [name_col].str.lower()\
-    #     .apply(unidecode)
+    # glue_names = enriched_data[enriched_data['final'].isna()]
 
-    # glue_multi_names = glue_names[glue_names[name_col].str.split().str.len() > 1]
-    # glue_single_names = glue_names[glue_names[name_col].str.split().str.len() <= 1]
+    # if not glue_names.empty:
+    #     glue_names[name_col] = glue_names[name_col]\
+    #         .str.lower()\
+    #         .apply(unidecode)
 
-    # glue_single_names = parallelize_dataframe(
-    #     glue_single_names,
-    #     name_extractor.extract_username,
-    #     n_cores=n_cores,
-    #     email_name_col=name_col
-    # ).rename(columns={
-    #     'enrich_name': 'final'
-    # })
-    # glue_single_names['predict'] = glue_single_names['final']
-    # glue_single_names[['last_name', 'middle_name', 'first_name']] =\
-    #     glue_single_names['final'].apply(
-    #         name_process.SplitName
+    #     glue_multi_names = glue_names[glue_names[name_col].str.split(
+    #     ).str.len() > 1]
+    #     glue_single_names = glue_names[glue_names[name_col].str.split(
+    #     ).str.len() <= 1]
+
+    #     glue_single_names = parallelize_dataframe(
+    #         glue_single_names[[name_col]],
+    #         name_extractor.extract_username,
+    #         n_cores=n_cores,
+    #         email_name_col=name_col
+    #     )\
+    #         .drop(columns=[name_col])\
+    #         .rename(columns={
+    #             'username_extracted': name_col
+    #         })
+
+    #     glue_single_names = parallelize_dataframe(
+    #         glue_single_names[[name_col]],
+    #         enrich_clean_data,
+    #         n_cores=n_cores,
+    #         name_col=name_col
+    #     )
+
+    #     glue_single_names['predict'] = glue_single_names['final']
+    #     glue_single_names[['last_name', 'middle_name', 'first_name']] =\
+    #         glue_single_names['final'].apply(
+    #             name_process.SplitName
     #     ).tolist()
 
-    # glue_multi_names = parallelize_dataframe(
-    #     glue_multi_names,
-    #     enrich_clean_data,
-    #     n_cores=n_cores,
-    #     name_col=name_col
-    # )
+    #     glue_multi_names = parallelize_dataframe(
+    #         glue_multi_names,
+    #         enrich_clean_data,
+    #         n_cores=n_cores,
+    #         name_col=name_col
+    #     )
 
-    # glue_names = pd.concat([
-    #     glue_multi_names,
-    #     glue_single_names
-    # ])
+    #     if glue_multi_names.empty:
+    #         glue_names= glue_multi_names
+    #     else:
+    #         glue_names = pd.concat([
+    #             glue_multi_names,
+    #             glue_single_names
+    #         ])
 
-    # glue_name_time = time() - start_time
-    # if logging_info:
-    #     print(f"Time elapsed: {int(glue_name_time)//60}m{int(glue_name_time)%60}s")
+    #     glue_name_time = time() - start_time
+    #     if logging_info:
+    #         print(
+    #             f"Time elapsed: {int(glue_name_time)//60}m{int(glue_name_time)%60}s")
 
     # * Concat na data
     new_cols = [
@@ -291,6 +316,8 @@ def process_enrich(
     ]
     na_data[new_cols] = None
     final_data = pd.concat([
+        # non_glue_names,
+        # glue_names,
         enriched_data,
         non_customer_data,
         na_data
@@ -307,14 +334,25 @@ def process_enrich(
     ] = final_data['final'].str.replace(r'\s+', '', regex=True).str.len()
 
     final_data.loc[
-        ~((final_data['n_words'].isin([2,3,4])
-        & (final_data['name_len'] >= 4)
-        & (final_data['name_len'] <= 24))
-        | (final_data['n_words'].isin([1])
+        ~(
+            (final_data['n_words'].isin([2, 3, 4, 5])
+            & (final_data['name_len'] >= 4)
+            & (final_data['name_len'] <= 30))
+        |
+            (final_data['n_words'].isin([1])
             & (final_data['name_len'] >= 2)
-            & (final_data['name_len'] <= 6))),
+            & (final_data['name_len'] <= 6))
+        ),
         'final'
     ] = None
+
+    # * Extract name element
+    final_data[['last_name', 'middle_name', 'first_name']] =\
+        final_data['final'].apply(
+            name_process.SplitName
+    ).tolist()
+
+    # ? Split name elements
 
     # * Concat with original cols
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)

@@ -8,7 +8,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-from preprocessing_pgp.name.const import GENDER_MODEL_PATH
+from preprocessing_pgp.name.const import GENDER_MODEL_PATH, GENDER_MODEL_VERSION
 from preprocessing_pgp.utils import suppress_warnings
 
 suppress_warnings()
@@ -51,13 +51,20 @@ class GenderModel:
                                                  self.embed_size,
                                                  name='Embedding')(inputs)
         # Main architecture
-        x = tf.keras.layers.LSTM(
-            units=32, name='LSTM', return_sequences=True)(embed_inputs)
+        x = tf.keras.layers.LSTM(units=128, name='LSTM',
+                                return_sequences=True,
+                                activity_regularizer='l2')(embed_inputs)
         x = tf.keras.layers.Dropout(0.5, name='LSTM_dropout')(x)
         x = tf.keras.layers.GlobalMaxPool1D(name='global_max_pool')(x)
-        x = tf.keras.layers.Dropout(0.4, name='max_pool_dropout')(x)
-        x = tf.keras.layers.Dense(4, activation='relu', name='dense')(x)
-        x = tf.keras.layers.Dropout(0.3, name='dense_dropout')(x)
+        x = tf.keras.layers.Dropout(0.4, name='max_pool_dropout_1')(x)
+        x = tf.keras.layers.Dense(64, activation='relu', name='dense_1')(x)
+        x = tf.keras.layers.Dropout(0.4, name='max_pool_dropout_2')(x)
+        x = tf.keras.layers.Dense(32, activation='relu', name='dense_2')(x)
+        x = tf.keras.layers.Dropout(0.3, name='max_pool_dropout_3')(x)
+        x = tf.keras.layers.Dense(16, activation='relu', name='dense_3')(x)
+        x = tf.keras.layers.Dropout(0.3, name='max_pool_dropout_4')(x)
+        x = tf.keras.layers.Dense(4, activation='relu', name='dense_4')(x)
+        x = tf.keras.layers.Dropout(0.2, name='dense_dropout')(x)
 
         outputs = tf.keras.layers.Dense(
             1, activation='sigmoid', name='Output')(x)
@@ -120,7 +127,7 @@ def predict_gender_from_name(
 
     gender_model = GenderModel(
         f'{GENDER_MODEL_PATH}/lstm/tokenizer.pkl',
-        f'{GENDER_MODEL_PATH}/lstm/gender_lstm.h5'
+        f'{GENDER_MODEL_PATH}/lstm/gender_lstm_v{GENDER_MODEL_VERSION}.h5'
     )
 
     data['gender_predict'], data['gender_score'] = gender_model.predict_gender(

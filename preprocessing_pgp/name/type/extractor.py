@@ -181,7 +181,7 @@ def process_extract_name_type(
 
         * `customer_type` contains type of customer extracted from `name` column
     """
-    orig_cols = data.columns
+    orig_cols = data.columns.difference([name_col])
 
     # ? Preprocess data
     if logging_info:
@@ -236,11 +236,14 @@ def process_extract_name_type(
     extracted_data = extracted_data.drop(columns=[f'de_{name_col}'])
 
     # ? Combined with Na data
-    new_cols = ['customer_type']
+    new_cols = [name_col, 'customer_type']
     na_data[new_cols] = None
     final_data = pd.concat([extracted_data, na_data])
 
     # ? Combined with the origin cols
-    final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
+    final_data = pd.concat([
+        data[orig_cols],
+        final_data[new_cols]
+    ], axis=1)
 
     return final_data
