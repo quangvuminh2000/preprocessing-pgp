@@ -9,12 +9,13 @@ from tensorflow import keras
 from tqdm import tqdm
 from unidecode import unidecode
 
-from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
+# from preprocessing_pgp.email.extractors.email_name_extractor import EmailNameExtractor
 from preprocessing_pgp.name.name_processing import NameProcessor
 from preprocessing_pgp.name.preprocess import get_name_pronoun
 from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
 from preprocessing_pgp.name.type.extractor import process_extract_name_type
+from preprocessing_pgp.name.preprocess import preprocess_df
 from preprocessing_pgp.name.const import (
     MODEL_PATH,
     RULE_BASED_PATH
@@ -189,6 +190,16 @@ def process_enrich(
     # * Na names & filter out name col
     na_data = data[data[name_col].isna()][[name_col]]
     cleaned_data = data[data[name_col].notna()][[name_col]]
+
+    # * Clean name without remove pronoun
+    cleaned_data = parallelize_dataframe(
+        cleaned_data,
+        preprocess_df,
+        n_cores=n_cores,
+        name_col=name_col,
+        clean_name=False,
+        remove_pronoun=False
+    )
 
     # * Split pronoun
     cleaned_data['pronoun'] = cleaned_data[name_col].apply(get_name_pronoun)

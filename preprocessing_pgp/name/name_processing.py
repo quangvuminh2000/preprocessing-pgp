@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 from tqdm import tqdm
-# from unidecode import unidecode
+from unidecode import unidecode
 
 from preprocessing_pgp.name.split_name import NameProcess
 from preprocessing_pgp.name.model.transformers import TransformerModel
@@ -13,6 +13,9 @@ from preprocessing_pgp.name.preprocess import (
     remove_invalid_base_element,
     remove_invalid_element,
     remove_duplicated_name,
+)
+from preprocessing_pgp.name.const import (
+    WITH_ACCENT_ELEMENTS
 )
 from preprocessing_pgp.utils import replace_trash_string
 
@@ -29,6 +32,15 @@ class NameProcessor:
         self.model = model
         self.name_dicts = (firstname_rb, middlename_rb, lastname_rb)
         self.name_process = NameProcess()
+
+    def __is_valid_element(
+        self,
+        name_part: str,
+        base_elements: set = None
+    ) -> bool:
+        if name_part is None:
+            return None
+        return name_part.lower() in base_elements
 
     def choose_better_enrich(
         self,
@@ -50,9 +62,17 @@ class NameProcessor:
         best_name_components = []
         for i, component in enumerate(raw_components):
             if is_name_accented(enrich_components[i]) and not is_name_accented(component):
-                best_name_components.append(enrich_components[i])
+                if self.__is_valid_element(enrich_components[i], WITH_ACCENT_ELEMENTS):
+                    best_name_components.append(enrich_components[i])
+                elif self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
+                    best_name_components.append(component)
+                else:
+                    best_name_components.append(unidecode(component))
             else:
-                best_name_components.append(component)
+                if self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
+                    best_name_components.append(component)
+                else:
+                    best_name_components.append(unidecode(component))
 
         return ' '.join(best_name_components).strip()
 
