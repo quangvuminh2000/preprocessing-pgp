@@ -243,7 +243,8 @@ def remove_invalid_base_element(
 
     return ' '.join(
         part for part in name.lower().split(' ')
-        if unidecode(part) in base_elements
+        if (unidecode(part) in base_elements
+            and unidecode(part) != 'a')
     ).title()
 
 

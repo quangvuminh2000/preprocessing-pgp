@@ -61,34 +61,58 @@ class NameProcessor:
 
         best_name_components = []
         for i, component in enumerate(raw_components):
-            if is_name_accented(enrich_components[i]) and not is_name_accented(component):
-                if self.__is_valid_element(enrich_components[i], WITH_ACCENT_ELEMENTS):
-                    best_name_components.append(enrich_components[i])
-                elif self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
-                    best_name_components.append(component)
-                else:
-                    best_name_components.append(unidecode(component))
+            if self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
+                best_name_components.append(component)
+            elif self.__is_valid_element(enrich_components[i], WITH_ACCENT_ELEMENTS):
+                best_name_components.append(enrich_components[i])
             else:
-                if self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
-                    best_name_components.append(component)
-                else:
-                    best_name_components.append(unidecode(component))
+                continue
+
+            # if is_name_accented(enrich_components[i]) and not is_name_accented(component):
+            #     if self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
+            #         best_name_components.append(component)
+            #     elif self.__is_valid_element(enrich_components[i], WITH_ACCENT_ELEMENTS):
+            #         best_name_components.append(enrich_components[i])
+            #     else:
+            #         # best_name_components.append(unidecode(component))
+            #         continue
+            # else:
+            #     if self.__is_valid_element(component, WITH_ACCENT_ELEMENTS):
+            #         best_name_components.append(component)
+            #     else:
+            #         # best_name_components.append(unidecode(component))
+            #         continue
 
         return ' '.join(best_name_components).strip()
 
     def predict_non_accent(self, name: str):
         if name is None:
             return None
-        # de_name = unidecode(name)
 
+        # # * Skip process for case with valid accent
+        # if np.intersect1d(
+        #         name.split(),
+        #         WITH_ACCENT_ELEMENTS
+        #     ).shape[0] == len(name.split()):
+        #     return name
         # Keep case already have accent
         # if name != de_name:
         #     return name
 
         # Predict name
-        predicted_name = capwords(self.model.predict(name))
+        de_name = unidecode(name)
+        predicted_name = capwords(self.model.predict(de_name))
 
         return predicted_name
+
+    def __is_good_name(
+        self,
+        name: str
+    ) -> bool:
+        return all([
+            self.__is_valid_element(part, WITH_ACCENT_ELEMENTS)
+            for part in name.split()
+        ])
 
     def fill_accent(
         self,
@@ -97,9 +121,14 @@ class NameProcessor:
     ):
         orig_cols = name_df.columns
 
+        # * Filter case not good accent
+        good_name_mask = name_df[name_col].apply(self.__is_good_name)
+        good_accent_name_df = name_df[good_name_mask]
+        bad_accent_name_df = name_df[~good_name_mask]
+
         # * Cleansing invalid base element
-        name_df[f'clean_{name_col}'] =\
-            name_df[name_col].apply(
+        bad_accent_name_df[f'clean_{name_col}'] =\
+            bad_accent_name_df[name_col].apply(
                 remove_invalid_base_element
         )
 
@@ -111,15 +140,15 @@ class NameProcessor:
         # )[name_col]
 
         # * Separate 1-word strange name
-        one_word_mask = name_df[f'clean_{name_col}'].str.split(
+        one_word_mask = bad_accent_name_df[f'clean_{name_col}'].str.split(
             ' ').str.len() == 1
         strange_name_mask = (
             (one_word_mask) &
             (~self.name_process.check_name_valid(
-                name_df[one_word_mask][f'clean_{name_col}']))
+                bad_accent_name_df[one_word_mask][f'clean_{name_col}']))
         )
-        one_word_strange_names = name_df[strange_name_mask]
-        normal_names = name_df[~strange_name_mask]
+        one_word_strange_names = bad_accent_name_df[strange_name_mask]
+        normal_names = bad_accent_name_df[~strange_name_mask]
 
         # * Removing nicknames
         predicted_name = remove_nicknames(
@@ -127,18 +156,18 @@ class NameProcessor:
             name_col=f'clean_{name_col}'
         )
 
-        predicted_name[['last_name', 'middle_name', 'first_name']] =\
-            predicted_name[f'clean_{name_col}'].apply(
-                self.name_process.SplitName).tolist()
+        # predicted_name[['last_name', 'middle_name', 'first_name']] =\
+        #     predicted_name[f'clean_{name_col}'].apply(
+        #         self.name_process.SplitName).tolist()
 
-        predicted_name[f'clean_{name_col}'] =\
-            predicted_name[['last_name', 'middle_name', 'first_name']]\
-            .fillna('').agg(' '.join, axis=1)\
-            .str.strip()
+        # predicted_name[f'clean_{name_col}'] =\
+        #     predicted_name[['last_name', 'middle_name', 'first_name']]\
+        #     .fillna('').agg(' '.join, axis=1)\
+        #     .str.strip()
 
-        predicted_name = predicted_name.drop(
-            columns=['last_name', 'middle_name', 'first_name']
-        )
+        # predicted_name = predicted_name.drop(
+        #     columns=['last_name', 'middle_name', 'first_name']
+        # )
 
         # print("Filling diacritics to names...")
         # start_time = time()
@@ -154,13 +183,17 @@ class NameProcessor:
         # start_time = time()
         predicted_name['final'] = predicted_name.apply(
             lambda row: rule_base_name(
-                row['predict'], row[f'clean_{name_col}'], self.name_dicts),
+                row['predict'],
+                row[f'clean_{name_col}'],
+                self.name_dicts
+            ),
             axis=1
         )
 
         predicted_name['final'] = predicted_name.apply(
             lambda row: self.choose_better_enrich(
-                row[f'clean_{name_col}'], row['final']
+                row[f'clean_{name_col}'],
+                row['final']
             ),
             axis=1
         )
@@ -185,13 +218,23 @@ class NameProcessor:
             'final', 'predict',
         ]
 
-        return predicted_name[[*orig_cols, *out_cols]]
+        for col in out_cols:
+            good_accent_name_df[col] = good_accent_name_df[name_col]
 
-    def unify_name(self,
-                   name_df: pd.DataFrame,
-                   name_col: str,
-                   key_col: str,
-                   keep_cols: List[str]):
+        final_name = pd.concat([
+            good_accent_name_df,
+            predicted_name[[*orig_cols, *out_cols]]
+        ])
+
+        return final_name
+
+    def unify_name(
+        self,
+        name_df: pd.DataFrame,
+        name_col: str,
+        key_col: str,
+        keep_cols: List[str]
+    ):
         name_df[key_col] = name_df[key_col].astype('str')
         best_name_df = self.name_process.CoreBestName(
             name_df,

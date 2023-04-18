@@ -132,12 +132,14 @@ def rule_base_name(name: str, base_name: str, name_dicts: Tuple) -> str:
     if base_name is None or len(base_name.split()) == 0:
         return base_name
 
+    de_base_name = unidecode(base_name)
+
     firstname = name.split()[-1]
-    base_firstname = base_name.split()[-1]
+    base_firstname = de_base_name.split()[-1]
     middlename = ' '.join(name.split()[1:-1])
-    base_middlename = ' '.join(base_name.split()[1:-1])
+    base_middlename = ' '.join(de_base_name.split()[1:-1])
     lastname = name.split()[0]
-    base_lastname = base_name.split()[0]
+    base_lastname = de_base_name.split()[0]
 
     # take firstname when 1 word
     if firstname == lastname and base_firstname == base_lastname and len(name.split()) == 1:
