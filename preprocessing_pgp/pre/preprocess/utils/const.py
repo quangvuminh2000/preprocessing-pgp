@@ -32,8 +32,8 @@ DICT_EMAIL_PRODUCT_PATH = f'{PRODUCT_PATH}/valid_email_latest.parquet'
 DICT_NAME_PRODUCT_PATH = f'{PRODUCT_PATH}/dict_name_latest.parquet'
 
 # * RAW DWH PATH
-OLD_DICT_RAW_PATH = '/data/fpt/ftel/cads/dep_solution/sa/rst/raw'
-OLD_DICT_CLEAN_PATH = '/data/fpt/ftel/cads/dep_solution/sa/rst/clean'
+OLD_DICT_RAW_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core_profile/rst/raw'
+OLD_DICT_CLEAN_PATH = '/data/fpt/ftel/cads/dep_solution/sa/cdp/core_profile/rst/clean'
 
 
 # ? EMAIL DICT
