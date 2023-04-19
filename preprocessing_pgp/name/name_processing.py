@@ -215,7 +215,7 @@ class NameProcessor:
 
         # print(f"\nAVG rb time : {mean_rb_time}s")
         out_cols = [
-            'final', 'predict',
+            f'clean_{name_col}', 'final', 'predict',
         ]
 
         for col in out_cols:

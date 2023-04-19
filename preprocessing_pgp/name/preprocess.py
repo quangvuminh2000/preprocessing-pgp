@@ -11,6 +11,7 @@ from preprocessing_pgp.name.extract_human import replace_non_human_reg
 from preprocessing_pgp.name.utils import remove_nicknames
 from preprocessing_pgp.name.const import (
     PRONOUN_REGEX,
+    PRONOUN_REGEX_W_DOT,
     WITHOUT_ACCENT_ELEMENTS,
     WITH_ACCENT_ELEMENTS
 )
@@ -203,7 +204,12 @@ def get_name_pronoun(name: str) -> str:
         pronouns = re.findall(PRONOUN_REGEX, processed_name)
         pronoun = pronouns[0].strip()
     except:
-        pronoun = None
+        try:
+            processed_name = name.lower().strip()
+            pronouns = re.findall(PRONOUN_REGEX_W_DOT, processed_name)
+            pronoun = ''.join(pronouns[0].strip()[:-1])
+        except:
+            pronoun = None
 
     return pronoun
 
@@ -213,8 +219,9 @@ def remove_pronoun_from_name(name: str) -> str:
     Remove pronoun from name
     """
     processed_name = name.lower().strip()
-    processed_name = remove_spare_spaces(re.sub(PRONOUN_REGEX, ' ', processed_name).title())
-    return processed_name
+    processed_name = remove_spare_spaces(re.sub(PRONOUN_REGEX, ' ', processed_name))
+    processed_name = remove_spare_spaces(re.sub(PRONOUN_REGEX_W_DOT, ' ', processed_name))
+    return processed_name.title()
 
 
 def remove_invalid_base_element(

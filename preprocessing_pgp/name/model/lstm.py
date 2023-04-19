@@ -52,8 +52,8 @@ class GenderModel:
                                                  name='Embedding')(inputs)
         # Main architecture
         x = tf.keras.layers.LSTM(units=128, name='LSTM',
-                                return_sequences=True,
-                                activity_regularizer='l2')(embed_inputs)
+                                 return_sequences=True,
+                                 activity_regularizer='l2')(embed_inputs)
         x = tf.keras.layers.Dropout(0.5, name='LSTM_dropout')(x)
         x = tf.keras.layers.GlobalMaxPool1D(name='global_max_pool')(x)
         x = tf.keras.layers.Dropout(0.4, name='max_pool_dropout_1')(x)
@@ -133,10 +133,14 @@ def predict_gender_from_name(
     data['gender_predict'], data['gender_score'] = gender_model.predict_gender(
         data[name_col].values
     )
-    print(data['gender_score'])
     data['gender_predict'] = data['gender_predict'].map({
         0: 'F',
         1: 'M'
     })
+
+    data.loc[
+        data['gender_predict'] == 'F',
+        'gender_score'
+    ] = 1 - data['gender_score'].fillna(0)
 
     return data

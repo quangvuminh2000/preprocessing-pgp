@@ -191,6 +191,9 @@ def process_enrich(
     na_data = data[data[name_col].isna()][[name_col]]
     cleaned_data = data[data[name_col].notna()][[name_col]]
 
+    # * Split pronoun
+    cleaned_data['pronoun'] = cleaned_data[name_col].apply(get_name_pronoun)
+
     # * Clean name without remove pronoun
     cleaned_data = parallelize_dataframe(
         cleaned_data,
@@ -198,11 +201,8 @@ def process_enrich(
         n_cores=n_cores,
         name_col=name_col,
         clean_name=False,
-        remove_pronoun=False
+        remove_pronoun=True
     )
-
-    # * Split pronoun
-    cleaned_data['pronoun'] = cleaned_data[name_col].apply(get_name_pronoun)
 
     # * Extracting customer type -- Only enrich 'customer' type
     if process_customer_type:
@@ -317,6 +317,7 @@ def process_enrich(
 
     # * Concat na data
     new_cols = [
+        f'clean_{name_col}',
         'customer_type',
         'predict',
         'final',
@@ -347,12 +348,12 @@ def process_enrich(
     final_data.loc[
         ~(
             (final_data['n_words'].isin([2, 3, 4, 5])
-            & (final_data['name_len'] >= 4)
-            & (final_data['name_len'] <= 30))
-        |
+             & (final_data['name_len'] >= 4)
+             & (final_data['name_len'] <= 30))
+            |
             (final_data['n_words'].isin([1])
-            & (final_data['name_len'] >= 2)
-            & (final_data['name_len'] <= 6))
+             & (final_data['name_len'] >= 2)
+             & (final_data['name_len'] <= 6))
         ),
         'final'
     ] = None
@@ -363,7 +364,11 @@ def process_enrich(
             name_process.SplitName
     ).tolist()
 
-    # ? Split name elements
+    final_data['final'] =\
+        final_data[['last_name', 'middle_name', 'first_name']]\
+        .fillna('').agg(' '.join, axis=1)\
+        .str.replace(r'\s+', ' ', regex=True)\
+        .str.strip()
 
     # * Concat with original cols
     final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)

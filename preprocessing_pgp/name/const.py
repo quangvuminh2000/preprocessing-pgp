@@ -84,7 +84,8 @@ NON_HUMAN_REG_LIST = [
     'Ca Bong', 'Ca Chep'
 ]
 
-PRONOUN_REGEX = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b|\ba\.|\bc\.)\s+'
+PRONOUN_REGEX = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b)\s+'
+PRONOUN_REGEX_W_DOT = r'^(?:\bkh\b|\bkhach hang\b|\bchị\b|\bchi\b|\banh\b|\ba\b|\bchij\b|\bc\b|\be\b|\bem\b|\bcô\b|\bco\b|\bchú\b|\bbác\b|\bbac\b|\bme\b|\bdì\b|\bông\b|\bong\b|\bbà\b|\ba|\bc)\.'
 
 '''
 NON-OFFICIAL NAMES : Ref from 'JOURNAL OF ETHNIC MINORITIES RESEARCH - 2019'
