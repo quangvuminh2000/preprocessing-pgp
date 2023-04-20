@@ -3,6 +3,7 @@ Module to preprocess email before proceed more
 """
 
 import re
+
 import pandas as pd
 from preprocessing_pgp.email.const import NAN_EMAIL_LIST
 
@@ -12,10 +13,7 @@ class EmailCleaner:
     Class support cleansing function for Email
     """
 
-    def clean_email(
-        self,
-        email: str
-    ) -> str:
+    def clean_email(self, email: str) -> str:
         """
         Process cleaning email:
         1. Remove spaces
@@ -40,22 +38,16 @@ class EmailCleaner:
 
         return cleaned_email
 
-    def _remove_spaces(
-        self,
-        email: str
-    ) -> str:
+    def _remove_spaces(self, email: str) -> str:
         """
         Function to remove spaces from email
         """
-        cleaned_email = re.sub(' +', '', email)
+        cleaned_email = re.sub(" +", "", email)
 
         return cleaned_email
 
 
-def clean_email(
-    data: pd.DataFrame,
-    email_col: str = 'email'
-) -> pd.DataFrame:
+def clean_email(data: pd.DataFrame, email_col: str = "email") -> pd.DataFrame:
     """
     Process cleansing email from dataframe
     and created `cleaned_<email_col>` column contains the cleaned email
@@ -79,9 +71,8 @@ def clean_email(
 
     cleaned_data = data
 
-    cleaned_data[f'cleaned_{email_col}'] =\
-        cleaned_data[email_col].apply(
-            cleaner.clean_email
+    cleaned_data[f"cleaned_{email_col}"] = cleaned_data[email_col].apply(
+        cleaner.clean_email
     )
 
     return cleaned_data

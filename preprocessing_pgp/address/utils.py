@@ -19,14 +19,14 @@ def number_pad_replace(match: re.Match) -> str:
 
     number = int(match.group(1))
 
-    return format(number, '01d')
+    return format(number, "01d")
 
 
 def is_empty_string(string: str) -> bool:
     """
     Check if the string is empty or not
     """
-    return string == ''
+    return string == ""
 
 
 def create_dependent_query(*dependents) -> str:
@@ -35,13 +35,11 @@ def create_dependent_query(*dependents) -> str:
 
     * `dependents` should be strings of comparison query
     """
-    query = ''
+    query = ""
     if len(dependents) > 0:
         for dep in dependents:
             if len(dep) > 0:
-                query = f'{query} & {dep}'\
-                    if query != ''\
-                    else dep
+                query = f"{query} & {dep}" if query != "" else dep
 
     return query
 

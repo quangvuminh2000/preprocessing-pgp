@@ -30,7 +30,7 @@ def basic_phone_preprocess(phone: str) -> str:
 
     if len(clean_phone) != 9:
         clean_phone = re.sub(r"(?i)^84", "0", clean_phone)
-    if clean_phone[0] != '0':
-        clean_phone = '0' + clean_phone
+    if clean_phone[0] != "0":
+        clean_phone = "0" + clean_phone
 
     return clean_phone

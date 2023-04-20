@@ -4,20 +4,21 @@ Module to format the accent typing to old typing
 import regex as re
 import unidecode as decode
 
-
 # REFORMATING ACCENT
-bang_nguyen_am = [['a', 'à', 'á', 'ả', 'ã', 'ạ', 'a'],
-                  ['ă', 'ằ', 'ắ', 'ẳ', 'ẵ', 'ặ', 'aw'],
-                  ['â', 'ầ', 'ấ', 'ẩ', 'ẫ', 'ậ', 'aa'],
-                  ['e', 'è', 'é', 'ẻ', 'ẽ', 'ẹ', 'e'],
-                  ['ê', 'ề', 'ế', 'ể', 'ễ', 'ệ', 'ee'],
-                  ['i', 'ì', 'í', 'ỉ', 'ĩ', 'ị', 'i'],
-                  ['o', 'ò', 'ó', 'ỏ', 'õ', 'ọ', 'o'],
-                  ['ô', 'ồ', 'ố', 'ổ', 'ỗ', 'ộ', 'oo'],
-                  ['ơ', 'ờ', 'ớ', 'ở', 'ỡ', 'ợ', 'ow'],
-                  ['u', 'ù', 'ú', 'ủ', 'ũ', 'ụ', 'u'],
-                  ['ư', 'ừ', 'ứ', 'ử', 'ữ', 'ự', 'uw'],
-                  ['y', 'ỳ', 'ý', 'ỷ', 'ỹ', 'ỵ', 'y']]
+bang_nguyen_am = [
+    ["a", "à", "á", "ả", "ã", "ạ", "a"],
+    ["ă", "ằ", "ắ", "ẳ", "ẵ", "ặ", "aw"],
+    ["â", "ầ", "ấ", "ẩ", "ẫ", "ậ", "aa"],
+    ["e", "è", "é", "ẻ", "ẽ", "ẹ", "e"],
+    ["ê", "ề", "ế", "ể", "ễ", "ệ", "ee"],
+    ["i", "ì", "í", "ỉ", "ĩ", "ị", "i"],
+    ["o", "ò", "ó", "ỏ", "õ", "ọ", "o"],
+    ["ô", "ồ", "ố", "ổ", "ỗ", "ộ", "oo"],
+    ["ơ", "ờ", "ớ", "ở", "ỡ", "ợ", "ow"],
+    ["u", "ù", "ú", "ủ", "ũ", "ụ", "u"],
+    ["ư", "ừ", "ứ", "ử", "ữ", "ự", "uw"],
+    ["y", "ỳ", "ý", "ỷ", "ỹ", "ỵ", "y"],
+]
 nguyen_am_to_ids = {}
 
 
@@ -75,12 +76,12 @@ def reformat_vi_word_accent(word: str) -> str:
         if x == -1:
             continue
         elif x == 9:  # check qu
-            if index != 0 and chars[index - 1] == 'q':
-                chars[index] = 'u'
+            if index != 0 and chars[index - 1] == "q":
+                chars[index] = "u"
                 qu_or_gi = True
         elif x == 5:  # check gi
-            if index != 0 and chars[index - 1] == 'g':
-                chars[index] = 'i'
+            if index != 0 and chars[index - 1] == "g":
+                chars[index] = "i"
                 qu_or_gi = True
         if y != 0:
             dau_cau = y
@@ -97,8 +98,12 @@ def reformat_vi_word_accent(word: str) -> str:
                 if x != -1:
                     chars[2] = bang_nguyen_am[x][dau_cau]
                 else:
-                    chars[1] = bang_nguyen_am[5][dau_cau] if chars[1] == 'i' else bang_nguyen_am[9][dau_cau]
-            return ''.join(chars)
+                    chars[1] = (
+                        bang_nguyen_am[5][dau_cau]
+                        if chars[1] == "i"
+                        else bang_nguyen_am[9][dau_cau]
+                    )
+            return "".join(chars)
         return word
 
     for index in nguyen_am_index:
@@ -109,7 +114,7 @@ def reformat_vi_word_accent(word: str) -> str:
             #     if index2 != index:
             #         x, y = nguyen_am_to_ids[chars[index]]
             #         chars[index2] = bang_nguyen_am[x][0]
-            return ''.join(chars)
+            return "".join(chars)
 
     if len(nguyen_am_index) == 2:
         if nguyen_am_index[-1] == len(chars) - 1:
@@ -129,7 +134,7 @@ def reformat_vi_word_accent(word: str) -> str:
         chars[nguyen_am_index[1]] = bang_nguyen_am[x][dau_cau]
         # x, y = nguyen_am_to_ids[chars[nguyen_am_index[2]]]
         # chars[nguyen_am_index[2]] = bang_nguyen_am[x][0]
-    return ''.join(chars)
+    return "".join(chars)
 
 
 def reformat_vi_sentence_accent(sentence):
@@ -143,19 +148,20 @@ def reformat_vi_sentence_accent(sentence):
     """
 
     sentence = sentence.lower()
-    words = sentence.split(' ')
+    words = sentence.split(" ")
 
     for index, word in enumerate(words):
-        cw = re.sub(r'(^\p{P}*)([p{L}.]*\p{L}+)(\p{P}*$)',
-                    r'\1/\2/\3', word).split('/')
+        cw = re.sub(
+            r"(^\p{P}*)([p{L}.]*\p{L}+)(\p{P}*$)", r"\1/\2/\3", word
+        ).split("/")
         # print(cw)
 
         if len(cw) == 3:
             cw[1] = reformat_vi_word_accent(cw[1])
 
-        words[index] = ''.join(cw)
+        words[index] = "".join(cw)
 
-    return ' '.join(words)
+    return " ".join(words)
 
 
 def remove_accent_typing(sentence):

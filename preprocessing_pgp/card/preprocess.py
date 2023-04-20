@@ -1,12 +1,10 @@
 """This module meant for preprocessing the card id before validation"""
 
 import re
-from typing import Tuple
 from dataclasses import dataclass
+from typing import Tuple
 
 import pandas as pd
-
-from preprocessing_pgp.utils import sep_display
 
 
 @dataclass
@@ -31,7 +29,7 @@ class CardIDCleaner:
         """
 
         # Remove spaces in between
-        clean_card_id = re.sub(' +', '', card_id)
+        clean_card_id = re.sub(" +", "", card_id)
         clean_card_id = clean_card_id.strip()
 
         return clean_card_id
@@ -55,7 +53,7 @@ class CardIDCleaner:
 
         # clean_card_id = card_id.translate(translator)
 
-        clean_card_id = re.sub(r'\W+', '', card_id)
+        clean_card_id = re.sub(r"\W+", "", card_id)
 
         return clean_card_id
 
@@ -81,8 +79,7 @@ class CardIDCleaner:
 
 
 def extract_null_values(
-    data: pd.DataFrame,
-    by_col: str
+    data: pd.DataFrame, by_col: str
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Extracting NULL values from specific DataFrame
@@ -107,10 +104,7 @@ def extract_null_values(
     return non_null_data, null_data
 
 
-def clean_card_data(
-    data: pd.DataFrame,
-    card_col: str
-) -> pd.DataFrame:
+def clean_card_data(data: pd.DataFrame, card_col: str) -> pd.DataFrame:
     """
     Preprocess card_id to clean format
 
@@ -133,7 +127,8 @@ def clean_card_data(
 
     clean_data = data
 
-    clean_data[f'clean_{card_col}'] =\
-        clean_data[card_col].apply(card_cleaner.clean_card)
+    clean_data[f"clean_{card_col}"] = clean_data[card_col].apply(
+        card_cleaner.clean_card
+    )
 
     return clean_data

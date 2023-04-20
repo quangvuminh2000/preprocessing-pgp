@@ -27,14 +27,19 @@ class TestNameFunction:
                 'Nguyễn Khắc Toàn', 'Trương Quang Hoàng', 'Phạm Minh Quang',
                 'Ngô Hoàng Khôi', 'Võ Ngọc Trăm', 'Trần Ngọc Lan Khanh',
                 'Nguyễn Thị Kim Hà', 'Nguyễn Huỳnh Xuân Mai', 'Nguyễn Quỳnh Sương',
-                'Nguyễn Văn Lành'
+                'Nguyễn Văn Lành',
+                'Lan'
             ]
         })
 
-        predicted_genders = predict_gender_from_name(
+        predict_data = predict_gender_from_name(
             name_data,
             name_col='name'
-        )['gender_predict'].values.tolist()
+        )
+
+        print(predict_data)
+
+        predicted_genders = predict_data['gender_predict'].values.tolist()
 
         assert predicted_genders == [
             'M', 'M', 'M',
@@ -43,7 +48,7 @@ class TestNameFunction:
             'M', 'M', 'M',
             'M', 'F', 'F',
             'F', 'F', 'F',
-            'M'
+            'M', 'F'
         ]
 
     @pt.mark.name2gender
@@ -109,7 +114,23 @@ class TestNameFunction:
                 'Lò A Bình',
                 'Nguyẽn Văn Nam',
                 'Ngo Nam Anh',
-                'Văn Hải tq'
+                'Văn Hải tq',
+                'Thùy Dương',
+                'Đinh Phơn',
+                'Nguyễn Văn Phong',
+                'A.Phong',
+                'C. Hoa',
+                '',
+                '088989483 A.Quang',
+                'A,Quang',
+                'E, Quang',
+                'Bộ Công An',
+                'Trại Tạm Giam',
+                'Vận Tải',
+                'Công An Tỉnh',
+                'Cong An Huyen',
+                'Van Tai',
+                'Văn Tài'
             ]
         })
 

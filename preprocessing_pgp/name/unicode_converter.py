@@ -18,6 +18,6 @@ def minimal_convert_unicode(txt: str) -> str:
     str
         The output sentence converted to NFC format
     """
-    normalized_txt = unicodedata.normalize('NFKC', txt)
+    normalized_txt = unicodedata.normalize("NFKC", txt)
 
     return normalized_txt.encode().decode()

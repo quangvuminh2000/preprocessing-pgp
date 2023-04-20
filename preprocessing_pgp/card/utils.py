@@ -1,9 +1,8 @@
 """Module provides utils functions for card validation"""
 
 import re
+from string import ascii_lowercase, punctuation
 from typing import List
-from string import ascii_lowercase
-from string import punctuation
 
 import pandas as pd
 
@@ -26,7 +25,7 @@ def digit_to_year_string(digit: int) -> str:
     if not 0 <= digit <= 99:
         raise AttributeError("DOB Digit must be in range 0 to 99!")
 
-    birth_str = f'0{digit}' if digit < 10 else str(digit)
+    birth_str = f"0{digit}" if digit < 10 else str(digit)
 
     return birth_str
 
@@ -60,7 +59,7 @@ def remove_spaces(sentence: str) -> str:
     """
 
     # Remove spaces in between
-    sentence = re.sub(' +', '', sentence)
+    sentence = re.sub(" +", "", sentence)
     sentence = sentence.strip()
 
     return sentence
@@ -81,14 +80,12 @@ def remove_special_characters(sentence: str) -> str:
         The clean sentence without any punctuation
     """
 
-    translator = str.maketrans('', '', punctuation)
+    translator = str.maketrans("", "", punctuation)
 
     return sentence.translate(translator)
 
 
-def check_contain_all_digit(
-    card_id: str
-) -> bool:
+def check_contain_all_digit(card_id: str) -> bool:
     """
     Simple function to check if the card_id contains all decimal
 
@@ -105,10 +102,7 @@ def check_contain_all_digit(
     return card_id.isdecimal()
 
 
-def check_non_digit(
-    card_df: pd.DataFrame,
-    card_col: str
-) -> pd.Series:
+def check_non_digit(card_df: pd.DataFrame, card_col: str) -> pd.Series:
     """
     Check if card contains any non_digit or not
 

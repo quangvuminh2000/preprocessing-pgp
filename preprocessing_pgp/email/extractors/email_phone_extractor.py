@@ -3,8 +3,8 @@ Module to extract phone from email using rule-based
 """
 
 import re
-import pandas as pd
 
+import pandas as pd
 from preprocessing_pgp.email.extractors.const import VIETNAMESE_PHONE_REGEX
 from preprocessing_pgp.phone.extractor import process_convert_phone
 
@@ -14,10 +14,7 @@ class EmailPhoneExtractor:
     Class contains logic to extract phone number from email
     """
 
-    def _get_phone(
-        self,
-        email_name: str
-    ) -> str:
+    def _get_phone(self, email_name: str) -> str:
         """
         Extract phone if exist from email name
         """
@@ -30,9 +27,7 @@ class EmailPhoneExtractor:
         return phone_match[0][0]
 
     def extract_phone(
-        self,
-        data: pd.DataFrame,
-        email_name_col: str = 'email_name'
+        self, data: pd.DataFrame, email_name_col: str = "email_name"
     ) -> pd.DataFrame:
         """
         Extract phone number from email name if possible
@@ -52,14 +47,11 @@ class EmailPhoneExtractor:
         """
 
         # * Using regex to search for phone
-        data['phone_extracted'] =\
-            data[email_name_col].apply(self._get_phone)
+        data["phone_extracted"] = data[email_name_col].apply(self._get_phone)
 
         # * Only take valid phone
-        data['phone_extracted'] = process_convert_phone(
-            data,
-            phone_col='phone_extracted',
-            logging_info=False
-        )['phone_convert']
+        data["phone_extracted"] = process_convert_phone(
+            data, phone_col="phone_extracted", logging_info=False
+        )["phone_convert"]
 
         return data

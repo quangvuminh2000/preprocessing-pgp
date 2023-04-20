@@ -4,25 +4,23 @@ Module to predict for gender from name
 from time import time
 
 import pandas as pd
-
-from preprocessing_pgp.name.type.extractor import process_extract_name_type
+from preprocessing_pgp.name.const import (
+    BEFORE_FNAME_GENDER_RULE,
+    MF_NAME_GENDER_RULE,
+    PRONOUN_GENDER_MAP,
+)
 from preprocessing_pgp.name.model.lstm import predict_gender_from_name
 from preprocessing_pgp.name.preprocess import get_name_pronoun
-from preprocessing_pgp.utils import (
-    parallelize_dataframe,
-)
-from preprocessing_pgp.name.const import (
-    PRONOUN_GENDER_MAP,
-    MF_NAME_GENDER_RULE,
-    BEFORE_FNAME_GENDER_RULE
-)
+from preprocessing_pgp.name.type.extractor import process_extract_name_type
+from preprocessing_pgp.utils import parallelize_dataframe
+
 
 def process_predict_gender(
     data: pd.DataFrame,
-    name_col: str = 'name',
-    pronoun_col: str = 'pronoun',
+    name_col: str = "name",
+    pronoun_col: str = "pronoun",
     n_cores: int = 1,
-    logging_info: bool = True
+    logging_info: bool = True,
 ) -> pd.DataFrame:
     """
     Process predict gender from names
@@ -69,7 +67,7 @@ def process_predict_gender(
     if pronoun_col not in orig_cols:
         if logging_info:
             print("Not find pronoun -- Try extracting from name")
-            print(">>> Extracting pronouns: ", end='')
+            print(">>> Extracting pronouns: ", end="")
         start_time = time()
         name_data[pronoun_col] = name_data[name_col].apply(get_name_pronoun)
         pronoun_time = time() - start_time
@@ -78,26 +76,23 @@ def process_predict_gender(
 
     # * Get customer type
     cleaned_name_data = process_extract_name_type(
-        name_data,
-        name_col=name_col,
-        n_cores=n_cores,
-        logging_info=False
+        name_data, name_col=name_col, n_cores=n_cores, logging_info=False
     )
 
     # * Only predict for customer's name
-    customer_mask = cleaned_name_data['customer_type'] == 'customer'
+    customer_mask = cleaned_name_data["customer_type"] == "customer"
     customer_name_data = cleaned_name_data[customer_mask]
     non_customer_name_data = cleaned_name_data[~customer_mask]
 
     # * Predict gender
     if logging_info:
-        print(">>> Predicting gender: ", end='')
+        print(">>> Predicting gender: ", end="")
     start_time = time()
     predicted_name_data = parallelize_dataframe(
         customer_name_data,
         predict_gender_from_name,
         n_cores=n_cores,
-        name_col=name_col
+        name_col=name_col,
     )
     predict_time = time() - start_time
     if logging_info:
@@ -106,83 +101,91 @@ def process_predict_gender(
     # * Fill pronoun gender
     if logging_info:
         print("\t>> Fill pronoun gender")
-    predicted_name_data['pronoun_gender'] =\
-        predicted_name_data[pronoun_col].map(PRONOUN_GENDER_MAP)
+    predicted_name_data["pronoun_gender"] = predicted_name_data[
+        pronoun_col
+    ].map(PRONOUN_GENDER_MAP)
 
-    predicted_name_data['mf_name_gender'] = None
+    predicted_name_data["mf_name_gender"] = None
     # * MFNAMES Rule
-    mfname_regex_female = MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE['gender']=='F']\
-        ['mfname'] + '$'
-    mfname_regex_female = '|'.join(mfname_regex_female.unique())
+    mfname_regex_female = (
+        MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE["gender"] == "F"]["mfname"]
+        + "$"
+    )
+    mfname_regex_female = "|".join(mfname_regex_female.unique())
 
-    mfname_regex_male = MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE['gender']=='M']\
-        ['mfname'] + '$'
-    mfname_regex_male = '|'.join(mfname_regex_male.unique())
+    mfname_regex_male = (
+        MF_NAME_GENDER_RULE[MF_NAME_GENDER_RULE["gender"] == "M"]["mfname"]
+        + "$"
+    )
+    mfname_regex_male = "|".join(mfname_regex_male.unique())
 
     predicted_name_data.loc[
         predicted_name_data[name_col]
-            .str.lower()
-            .str.contains(f'(?i){mfname_regex_female}', regex=True, na=False),
-        'mf_name_gender'
-    ] = 'F'
+        .str.lower()
+        .str.contains(f"(?i){mfname_regex_female}", regex=True, na=False),
+        "mf_name_gender",
+    ] = "F"
     predicted_name_data.loc[
         predicted_name_data[name_col]
-            .str.lower()
-            .str.contains(f'(?i){mfname_regex_male}', regex=True, na=False),
-        'mf_name_gender'
-    ] = 'M'
+        .str.lower()
+        .str.contains(f"(?i){mfname_regex_male}", regex=True, na=False),
+        "mf_name_gender",
+    ] = "M"
 
     # * BEFORE Fnames rule
-    predicted_name_data['before_fname_gender'] = None
-    predicted_name_data['before_fname'] = predicted_name_data[name_col]\
-        .str.split().str.get(-2).str.lower()
-    before_fnames_regex = r'(?i) phương$| anh$| linh$| hà$| ngọc$| thư$| an$| châu$| khánh$| thương$| tú$| hạnh$| hiền$| thanh$| xuân$| minh$| quỳnh$| giang$| nguyên$'
+    predicted_name_data["before_fname_gender"] = None
+    predicted_name_data["before_fname"] = (
+        predicted_name_data[name_col].str.split().str.get(-2).str.lower()
+    )
+    before_fnames_regex = r"(?i) phương$| anh$| linh$| hà$| ngọc$| thư$| an$| châu$| khánh$| thương$| tú$| hạnh$| hiền$| thanh$| xuân$| minh$| quỳnh$| giang$| nguyên$"
     predicted_name_data.loc[
-        predicted_name_data[name_col]\
-            .str.lower()
-            .str.contains(f'(?i){before_fnames_regex}', regex=True, na=False)
-        & predicted_name_data['before_fname'].isin(
-            BEFORE_FNAME_GENDER_RULE.query('gender == "F"')['before_fname'].unique()
+        predicted_name_data[name_col]
+        .str.lower()
+        .str.contains(f"(?i){before_fnames_regex}", regex=True, na=False)
+        & predicted_name_data["before_fname"].isin(
+            BEFORE_FNAME_GENDER_RULE.query('gender == "F"')[
+                "before_fname"
+            ].unique()
         ),
-        'before_fname_gender'
-    ] = 'F'
+        "before_fname_gender",
+    ] = "F"
 
     predicted_name_data.loc[
-        predicted_name_data[name_col]\
-            .str.lower()
-            .str.contains(f'(?i){before_fnames_regex}', regex=True, na=False)
-        & predicted_name_data['before_fname'].isin(
-            BEFORE_FNAME_GENDER_RULE.query('gender == "M"')['before_fname'].unique()
+        predicted_name_data[name_col]
+        .str.lower()
+        .str.contains(f"(?i){before_fnames_regex}", regex=True, na=False)
+        & predicted_name_data["before_fname"].isin(
+            BEFORE_FNAME_GENDER_RULE.query('gender == "M"')[
+                "before_fname"
+            ].unique()
         ),
-        'before_fname_gender'
-    ] = 'M'
+        "before_fname_gender",
+    ] = "M"
 
     # * Prioritize pronoun gender
     if logging_info:
         print("\t>> Prioritize pronoun gender")
     predicted_name_data.loc[
-        predicted_name_data['pronoun_gender'].notna(),
-        'gender_predict'
-    ] = predicted_name_data['pronoun_gender']
+        predicted_name_data["pronoun_gender"].notna(), "gender_predict"
+    ] = predicted_name_data["pronoun_gender"]
     predicted_name_data.loc[
-        predicted_name_data['pronoun_gender'].isna()
-        & predicted_name_data['mf_name_gender'].notna(),
-        'gender_predict'
-    ] = predicted_name_data['mf_name_gender']
+        predicted_name_data["pronoun_gender"].isna()
+        & predicted_name_data["mf_name_gender"].notna(),
+        "gender_predict",
+    ] = predicted_name_data["mf_name_gender"]
     predicted_name_data.loc[
-        predicted_name_data['pronoun_gender'].isna()
-        & predicted_name_data['mf_name_gender'].isna()
-        & predicted_name_data['before_fname_gender'].notna(),
-        'gender_predict'
-    ] = predicted_name_data['before_fname_gender']
+        predicted_name_data["pronoun_gender"].isna()
+        & predicted_name_data["mf_name_gender"].isna()
+        & predicted_name_data["before_fname_gender"].notna(),
+        "gender_predict",
+    ] = predicted_name_data["before_fname_gender"]
 
     # * Concat to generate final data
-    new_cols = ['gender_predict', 'gender_score']
+    new_cols = ["gender_predict", "gender_score"]
     nan_data[new_cols] = None
     final_data = pd.concat(
-        [predicted_name_data, nan_data, non_customer_name_data])
-    final_data = pd.concat(
-        [data[orig_cols], final_data[new_cols]], axis=1)
-
+        [predicted_name_data, nan_data, non_customer_name_data]
+    )
+    final_data = pd.concat([data[orig_cols], final_data[new_cols]], axis=1)
 
     return final_data

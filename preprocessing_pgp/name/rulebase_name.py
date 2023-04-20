@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import pandas as pd
-from unidecode import unidecode
 from tqdm import tqdm
+from unidecode import unidecode
 
 # CONFIG
 tqdm.pandas()
@@ -25,14 +25,16 @@ def find_match_word(base_word: str, name_dict_df: pd.DataFrame) -> str:
         The returned diacritics version or original word if not have
     """
     try:
-        return name_dict_df.loc[name_dict_df['without_accent'] == base_word]['with_accent'].values[0]
+        return name_dict_df.loc[name_dict_df["without_accent"] == base_word][
+            "with_accent"
+        ].values[0]
     except:
         return base_word
 
 
-def rule_base_middlename(middlename: str,
-                         base_middlename: str,
-                         name_dict_df: pd.DataFrame) -> str:
+def rule_base_middlename(
+    middlename: str, base_middlename: str, name_dict_df: pd.DataFrame
+) -> str:
     """
     Rule-base to replace middlename when it is changed by the prediction of the model
 
@@ -53,7 +55,10 @@ def rule_base_middlename(middlename: str,
 
     middle_words = middlename.split()
     base_middle_words = [
-        unidecode(word) for word in base_middlename.split() if unidecode(word) != '']
+        unidecode(word)
+        for word in base_middlename.split()
+        if unidecode(word) != ""
+    ]
     de_middle_words = [unidecode(word) for word in middle_words]
 
     try:
@@ -69,21 +74,23 @@ def rule_base_middlename(middlename: str,
 
                 track_idx.remove(de_idx)
     except:
-        print(base_middlename, middlename)
         return base_middlename
 
     # All track are visited
     if not track_idx:
-        return ' '.join(final_middle_words)
+        return " ".join(final_middle_words)
 
     # Some word in base is not visited
     for idx in track_idx:
         final_middle_words[idx] = find_match_word(
-            base_middle_words[idx], name_dict_df)
-    return ' '.join(final_middle_words)
+            base_middle_words[idx], name_dict_df
+        )
+    return " ".join(final_middle_words)
 
 
-def rule_base_word(word: str, word_base: str, name_dict_df: pd.DataFrame) -> str:
+def rule_base_word(
+    word: str, word_base: str, name_dict_df: pd.DataFrame
+) -> str:
     """
     Apply rule-base to one word
 
@@ -132,30 +139,39 @@ def rule_base_name(name: str, base_name: str, name_dicts: Tuple) -> str:
     if base_name is None or len(base_name.split()) == 0:
         return base_name
 
+    if len(name.split()) == 0:
+        return None
+
     de_base_name = unidecode(base_name)
 
     firstname = name.split()[-1]
     base_firstname = de_base_name.split()[-1]
-    middlename = ' '.join(name.split()[1:-1])
-    base_middlename = ' '.join(de_base_name.split()[1:-1])
+    middlename = " ".join(name.split()[1:-1])
+    base_middlename = " ".join(de_base_name.split()[1:-1])
     lastname = name.split()[0]
     base_lastname = de_base_name.split()[0]
 
     # take firstname when 1 word
-    if firstname == lastname and base_firstname == base_lastname and len(name.split()) == 1:
+    if (
+        firstname == lastname
+        and base_firstname == base_lastname
+        and len(name.split()) == 1
+    ):
         return rule_base_word(firstname, base_firstname, firstname_dict_df)
 
     # applying rule-base
     rule_firstname = rule_base_word(
-        firstname, base_firstname, firstname_dict_df)
+        firstname, base_firstname, firstname_dict_df
+    )
     rule_middlename = rule_base_middlename(
-        middlename, base_middlename, middlename_dict_df)
+        middlename, base_middlename, middlename_dict_df
+    )
     rule_lastname = rule_base_word(lastname, base_lastname, lastname_dict_df)
 
     # joining categories to make full name
-    if rule_middlename == '':
-        fullname = ' '.join([rule_lastname, rule_firstname])
+    if rule_middlename == "":
+        fullname = " ".join([rule_lastname, rule_firstname])
     else:
-        fullname = ' '.join([rule_lastname, rule_middlename, rule_firstname])
-    fullname = fullname.replace(r'\s+', ' ').strip()
+        fullname = " ".join([rule_lastname, rule_middlename, rule_firstname])
+    fullname = fullname.replace(r"\s+", " ").strip()
     return fullname

@@ -4,39 +4,31 @@ from abc import ABC, abstractmethod
 from time import time
 
 import pandas as pd
-from tqdm import tqdm
-
-from preprocessing_pgp.card.preprocess import (
-    clean_card_data
-)
-from preprocessing_pgp.card.utils import is_checker_valid
-from preprocessing_pgp.utils import (
-    sep_display,
-    # apply_multi_process,
-    # apply_progress_bar,
-    extract_null_values,
-    parallelize_dataframe
-)
-from preprocessing_pgp.card.const import (
-    # Personal ID
-    OLD_PID_CODE_LENGTH,
-    NEW_PID_CODE_LENGTH,
-    POSSIBLE_GENDER_NUM,
-    OLD_PID_REGION_CODE_NUMS,
-    NEW_PID_REGION_CODE_NUMS,
-    REGION_CODE_DICT,
+from preprocessing_pgp.card.const import (  # Personal ID; Passport; Driver License
+    DRIVER_LICENSE_ID_REGION_CODES,
+    DRIVER_LICENSE_LENGTH,
     GENDER_NUM_TO_CENTURY,
-    VALID_PID_21_CENTURY_DOB,
-    # Passport
+    INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR,
+    INVALID_DRIVER_LICENSE_PASSING_YEAR,
+    NEW_PID_CODE_LENGTH,
+    NEW_PID_REGION_CODE_NUMS,
+    OLD_PID_CODE_LENGTH,
+    OLD_PID_REGION_CODE_NUMS,
     PASSPORT_LENGTH,
     PASSPORT_PATTERN,
-    # Driver License
-    DRIVER_LICENSE_ID_REGION_CODES,
-    INVALID_DRIVER_LICENSE_PASSING_YEAR,
-    DRIVER_LICENSE_LENGTH,
-    INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR,
-    VALID_DRIVER_LICENSE_LAST_YEAR_CHAR
+    POSSIBLE_GENDER_NUM,
+    REGION_CODE_DICT,
+    VALID_DRIVER_LICENSE_LAST_YEAR_CHAR,
+    VALID_PID_21_CENTURY_DOB,
 )
+from preprocessing_pgp.card.preprocess import clean_card_data
+from preprocessing_pgp.card.utils import is_checker_valid
+from preprocessing_pgp.utils import (  # apply_multi_process,; apply_progress_bar,
+    extract_null_values,
+    parallelize_dataframe,
+    sep_display,
+)
+from tqdm import tqdm
 
 tqdm.pandas()
 PROCESSES = os.cpu_count() // 2
@@ -126,8 +118,12 @@ class PersonalIDValidator(CardValidator):
         """
         if not PersonalIDValidator.is_old_card(card_id):
             return False
-        return any((card in OLD_PID_REGION_CODE_NUMS
-                    for card in [card_id[:2], card_id[:3]]))
+        return any(
+            (
+                card in OLD_PID_REGION_CODE_NUMS
+                for card in [card_id[:2], card_id[:3]]
+            )
+        )
 
     @staticmethod
     def is_valid_new_card(card_id: str) -> bool:
@@ -142,10 +138,9 @@ class PersonalIDValidator(CardValidator):
 
         if card_id[:3] in NEW_PID_REGION_CODE_NUMS:
             gender_code = card_id[3]
-            return (
-                CardValidator.is_valid_gender(gender_code)
-                and PersonalIDValidator.is_valid_range_birth(card_id)
-            )
+            return CardValidator.is_valid_gender(
+                gender_code
+            ) and PersonalIDValidator.is_valid_range_birth(card_id)
 
         return False
 
@@ -154,7 +149,10 @@ class PersonalIDValidator(CardValidator):
         """
         Helper function to check if the card_id length is still acceptable
         """
-        return len(card_id) in (OLD_PID_CODE_LENGTH-1, NEW_PID_CODE_LENGTH-1)
+        return len(card_id) in (
+            OLD_PID_CODE_LENGTH - 1,
+            NEW_PID_CODE_LENGTH - 1,
+        )
 
     @staticmethod
     def is_valid_semi_card(card_id: str) -> bool:
@@ -170,9 +168,10 @@ class PersonalIDValidator(CardValidator):
         if not PersonalIDValidator.is_semi_correct_length(card_id):
             return False
 
-        modified_card_id = '0' + card_id
-        return PersonalIDValidator.is_valid_old_card(modified_card_id)\
-            or PersonalIDValidator.is_valid_new_card(modified_card_id)
+        modified_card_id = "0" + card_id
+        return PersonalIDValidator.is_valid_old_card(
+            modified_card_id
+        ) or PersonalIDValidator.is_valid_new_card(modified_card_id)
 
     @staticmethod
     def is_valid_range_birth(card_id: str) -> bool:
@@ -183,7 +182,7 @@ class PersonalIDValidator(CardValidator):
         birth_year = card_id[4:6]
 
         # Century 21
-        if gender_code in GENDER_NUM_TO_CENTURY['21']:
+        if gender_code in GENDER_NUM_TO_CENTURY["21"]:
             return birth_year in VALID_PID_21_CENTURY_DOB
 
         return True
@@ -208,9 +207,11 @@ class PersonalIDValidator(CardValidator):
         if not CardValidator.is_all_digit_card(card_id):
             return False
 
-        return PersonalIDValidator.is_valid_new_card(card_id)\
-            or PersonalIDValidator.is_valid_old_card(card_id)\
+        return (
+            PersonalIDValidator.is_valid_new_card(card_id)
+            or PersonalIDValidator.is_valid_old_card(card_id)
             or PersonalIDValidator.is_valid_semi_card(card_id)
+        )
 
 
 class PassportValidator(CardValidator):
@@ -253,8 +254,9 @@ class PassportValidator(CardValidator):
         bool
             Whether the card is valid by passport syntax
         """
-        return PassportValidator.is_valid_length(card_id)\
-            and PassportValidator.is_valid_syntax(card_id)
+        return PassportValidator.is_valid_length(
+            card_id
+        ) and PassportValidator.is_valid_syntax(card_id)
 
 
 class DriverLicenseValidator(CardValidator):
@@ -306,10 +308,9 @@ class DriverLicenseValidator(CardValidator):
             first_year_char = card_id[3]
             second_year_char = card_id[4]
 
-            return (first_year_char not in
-                    INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR)\
-                and (second_year_char in
-                     VALID_DRIVER_LICENSE_LAST_YEAR_CHAR)
+            return (
+                first_year_char not in INVALID_DRIVER_LICENSE_FIRST_YEAR_CHAR
+            ) and (second_year_char in VALID_DRIVER_LICENSE_LAST_YEAR_CHAR)
 
         return True
 
@@ -331,16 +332,18 @@ class DriverLicenseValidator(CardValidator):
         if not CardValidator.is_all_digit_card(card_id):
             return False
 
-        return DriverLicenseValidator.is_valid_length(card_id)\
-            and DriverLicenseValidator.is_valid_region_code(card_id)\
-            and DriverLicenseValidator.is_valid_gender_code(card_id)\
-            and DriverLicenseValidator.is_valid_passing_year(card_id)\
+        return (
+            DriverLicenseValidator.is_valid_length(card_id)
+            and DriverLicenseValidator.is_valid_region_code(card_id)
+            and DriverLicenseValidator.is_valid_gender_code(card_id)
+            and DriverLicenseValidator.is_valid_passing_year(card_id)
             and DriverLicenseValidator.is_real_driver_license(card_id)
+        )
 
 
 def parse_gender_from_card(
     profile: pd.DataFrame,
-    card_col: str = 'card_id',
+    card_col: str = "card_id",
 ) -> pd.DataFrame:
     """
     Parsing gender from new pid and driver license
@@ -358,45 +361,41 @@ def parse_gender_from_card(
         Data with extra info:
         * `gender`: Gender extracted from new pid and driver license
     """
-    gender_dict = {
-        '0': 'M',
-        '1': 'F',
-        '2': 'M',
-        '3': 'F'
-    }
+    gender_dict = {"0": "M", "1": "F", "2": "M", "3": "F"}
     # * Gender from new personal's id
-    new_pid_mask = (profile['is_personal_id'])\
-        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+    new_pid_mask = (profile["is_personal_id"]) & (
+        profile[card_col].apply(PersonalIDValidator.is_new_card)
+    )
 
     # * Process for semi-card
-    semi_card_mask = profile[card_col].apply(PersonalIDValidator.is_semi_correct_length)
-    profile.loc[
-        new_pid_mask & semi_card_mask,
-        card_col
-    ] = '0' + profile[card_col]
+    semi_card_mask = profile[card_col].apply(
+        PersonalIDValidator.is_semi_correct_length
+    )
+    profile.loc[new_pid_mask & semi_card_mask, card_col] = (
+        "0" + profile[card_col]
+    )
 
     # * Map gender by dict
-    profile['gender'] = None
-    profile.loc[
-        new_pid_mask,
-        'gender'
-    ] = profile[card_col].str[3].map(gender_dict)
+    profile["gender"] = None
+    profile.loc[new_pid_mask, "gender"] = (
+        profile[card_col].str[3].map(gender_dict)
+    )
 
     # * Gender from driver license
-    driver_license_mask = (profile['is_driver_license'])\
-        & (profile['gender'].notna())
+    driver_license_mask = (profile["is_driver_license"]) & (
+        profile["gender"].notna()
+    )
 
-    profile.loc[
-        driver_license_mask,
-        'gender'
-    ] = profile[card_col].str[2].map(gender_dict)
+    profile.loc[driver_license_mask, "gender"] = (
+        profile[card_col].str[2].map(gender_dict)
+    )
 
     return profile
 
 
 def parse_birthday_from_card(
     profile: pd.DataFrame,
-    card_col: str = 'card_id',
+    card_col: str = "card_id",
 ) -> pd.DataFrame:
     """
     Parsing birthday from new personal id
@@ -415,42 +414,35 @@ def parse_birthday_from_card(
         * `year_of_birth`: YOB extracted from new pid
     """
     # * Can only get birthday from new personal's id
-    new_pid_mask = (profile['is_personal_id'])\
-        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
+    new_pid_mask = (profile["is_personal_id"]) & (
+        profile[card_col].apply(PersonalIDValidator.is_new_card)
+    )
 
     # * Process for semi-card
-    semi_card_mask = profile[card_col].apply(PersonalIDValidator.is_semi_correct_length)
-    profile.loc[
-        new_pid_mask & semi_card_mask,
-        card_col
-    ] = '0' + profile[card_col]
-
-    gender_post_century = {
-        '0': '19',
-        '1': '19',
-        '2': '20',
-        '3': '20'
-    }
-    profile.loc[
-        new_pid_mask,
-        'post_cent'
-    ] = profile[card_col].str[3].map(gender_post_century)
-
-    profile.loc[
-        new_pid_mask,
-        'year_of_birth'
-    ] = profile['post_cent'] + profile[card_col].str[4:6]
-
-    profile = profile.drop(
-        columns=['post_cent']
+    semi_card_mask = profile[card_col].apply(
+        PersonalIDValidator.is_semi_correct_length
     )
+    profile.loc[new_pid_mask & semi_card_mask, card_col] = (
+        "0" + profile[card_col]
+    )
+
+    gender_post_century = {"0": "19", "1": "19", "2": "20", "3": "20"}
+    profile.loc[new_pid_mask, "post_cent"] = (
+        profile[card_col].str[3].map(gender_post_century)
+    )
+
+    profile.loc[new_pid_mask, "year_of_birth"] = (
+        profile["post_cent"] + profile[card_col].str[4:6]
+    )
+
+    profile = profile.drop(columns=["post_cent"])
 
     return profile
 
 
 def parse_city_from_card(
     profile: pd.DataFrame,
-    card_col: str = 'card_id',
+    card_col: str = "card_id",
 ) -> pd.DataFrame:
     """
     Parsing city from new personal id and driver license
@@ -469,45 +461,44 @@ def parse_city_from_card(
         * `city`: City extracted from new pid and driver license
     """
     # * New personal ID
-    new_pid_mask = (profile['is_personal_id'])\
-        & (profile[card_col].apply(PersonalIDValidator.is_new_card))
-    profile.loc[
-        new_pid_mask,
-        'code'
-    ] = profile[card_col].str[0:3]
+    new_pid_mask = (profile["is_personal_id"]) & (
+        profile[card_col].apply(PersonalIDValidator.is_new_card)
+    )
+    profile.loc[new_pid_mask, "code"] = profile[card_col].str[0:3]
 
     # * Process for semi-card
-    semi_card_mask = (profile[card_col].apply(PersonalIDValidator.is_semi_correct_length))
-    profile.loc[
-        new_pid_mask & semi_card_mask,
-        card_col
-    ] = '0' + profile[card_col]
+    semi_card_mask = profile[card_col].apply(
+        PersonalIDValidator.is_semi_correct_length
+    )
+    profile.loc[new_pid_mask & semi_card_mask, card_col] = (
+        "0" + profile[card_col]
+    )
 
     # * Driver License
-    driver_license_mask = (profile['is_driver_license'])\
-        & (~profile['is_personal_id'])
-    profile.loc[
-        driver_license_mask,
-        'code'
-    ] = profile[card_col].str[0:2]
+    driver_license_mask = (profile["is_driver_license"]) & (
+        ~profile["is_personal_id"]
+    )
+    profile.loc[driver_license_mask, "code"] = profile[card_col].str[0:2]
 
     # * Merge to get city
-    profile = pd.merge(
-        profile.set_index('code'),
-        REGION_CODE_DICT.set_index('code'),
-        left_index=True, right_index=True,
-        how='left',
-        sort=False
-    )\
-        .reset_index()\
-        .drop(columns=['code'])
+    profile = (
+        pd.merge(
+            profile.set_index("code"),
+            REGION_CODE_DICT.set_index("code"),
+            left_index=True,
+            right_index=True,
+            how="left",
+            sort=False,
+        )
+        .reset_index()
+        .drop(columns=["code"])
+    )
 
     return profile
 
 
 def extract_card_info(
-    profile: pd.DataFrame,
-    card_col: str = 'card_id'
+    profile: pd.DataFrame, card_col: str = "card_id"
 ) -> pd.DataFrame:
     """
     Parsing information from valid card id
@@ -531,30 +522,19 @@ def extract_card_info(
         return profile
 
     # * Parsing gender from card id
-    verified_data = parse_gender_from_card(
-        profile,
-        card_col=card_col
-    )
+    verified_data = parse_gender_from_card(profile, card_col=card_col)
 
     # * Parsing birthday from card id
-    verified_data = parse_birthday_from_card(
-        verified_data,
-        card_col=card_col
-    )
+    verified_data = parse_birthday_from_card(verified_data, card_col=card_col)
 
     # * Parsing city from card_id
-    verified_data = parse_city_from_card(
-        verified_data,
-        card_col=card_col
-    )
+    verified_data = parse_city_from_card(verified_data, card_col=card_col)
 
     return verified_data
 
 
 def verify_card(
-    data: pd.DataFrame,
-    card_col: str = "card_id",
-    print_info: bool = True
+    data: pd.DataFrame, card_col: str = "card_id", print_info: bool = True
 ) -> pd.DataFrame:
     """
     Verify whether the card ids are valid or not
@@ -577,53 +557,50 @@ def verify_card(
         return data
 
     # * Check for valid personal card id
-    data['is_personal_id'] =\
-        data[f"clean_{card_col}"]\
-            .apply(PersonalIDValidator.is_valid_card)
+    data["is_personal_id"] = data[f"clean_{card_col}"].apply(
+        PersonalIDValidator.is_valid_card
+    )
 
     if print_info:
         print(f"# PERSONAL ID FOUND: {data['is_personal_id'].sum()}")
         sep_display()
 
     # * Check for valid passport id
-    data['is_passport'] =\
-        data[f"clean_{card_col}"]\
-            .apply(PassportValidator.is_valid_card)
+    data["is_passport"] = data[f"clean_{card_col}"].apply(
+        PassportValidator.is_valid_card
+    )
 
     if print_info:
         print(f"# PASSPORT FOUND: {data['is_passport'].sum()}")
         sep_display()
 
     # * Check for valid driver license id
-    data['is_driver_license'] =\
-        data[f"clean_{card_col}"].apply(DriverLicenseValidator.is_valid_card)
+    data["is_driver_license"] = data[f"clean_{card_col}"].apply(
+        DriverLicenseValidator.is_valid_card
+    )
 
     if print_info:
-        print(
-            f"# DRIVER LICENSE FOUND: {data['is_driver_license'].sum()}")
+        print(f"# DRIVER LICENSE FOUND: {data['is_driver_license'].sum()}")
         sep_display()
 
     # * Make a general is_valid column to verify whether the card is generally valid
 
-    data['is_valid'] =\
-        data.apply(
+    data["is_valid"] = data.apply(
         lambda row: is_checker_valid(
             [
-                row['is_personal_id'],
-                row['is_passport'],
-                row['is_driver_license']
+                row["is_personal_id"],
+                row["is_passport"],
+                row["is_driver_license"],
             ]
         ),
-        axis=1
+        axis=1,
     )
 
     return data
 
 
 def process_verify_card(
-    data: pd.DataFrame,
-    card_col: str = "card_id",
-    n_cores: int = 1
+    data: pd.DataFrame, card_col: str = "card_id", n_cores: int = 1
 ) -> pd.DataFrame:
     """
     Verify whether the card ids are valid or not with multi-core
@@ -657,40 +634,37 @@ def process_verify_card(
     clean_data, na_data = extract_null_values(card_data, card_col)
 
     # * Basic cleaning card_id
-    print(">>> Cleansing card id: ", end='')
+    print(">>> Cleansing card id: ", end="")
     start_time = time()
     clean_data = parallelize_dataframe(
-        clean_data,
-        clean_card_data,
-        n_cores=n_cores,
-        card_col=card_col
+        clean_data, clean_card_data, n_cores=n_cores, card_col=card_col
     )
     clean_time = time() - start_time
     print(f"Time takes {int(clean_time)//60}m{int(clean_time)%60}s")
     sep_display()
 
     # ? VALIDATE CARD ID
-    print(">>> Verifying card id: ", end='')
+    print(">>> Verifying card id: ", end="")
     start_time = time()
     validated_data = parallelize_dataframe(
         clean_data,
         verify_card,
         n_cores=n_cores,
         card_col=card_col,
-        print_info=False
+        print_info=False,
     )
     verify_time = time() - start_time
     print(f"Time takes {int(verify_time)//60}m{int(verify_time)%60}s")
     sep_display()
 
     # ? PARSING INFO FROM CARD ID
-    print(">>> Extracting card info: ", end='')
+    print(">>> Extracting card info: ", end="")
     start_time = time()
     parsed_data = parallelize_dataframe(
         validated_data,
         extract_card_info,
         n_cores=n_cores,
-        card_col=f'clean_{card_col}'
+        card_col=f"clean_{card_col}",
     )
     extract_time = time() - start_time
     print(f"Time takes {int(extract_time)//60}m{int(extract_time)%60}s")
@@ -698,15 +672,17 @@ def process_verify_card(
 
     # ? CONCAT ALL SEP CARD IDS
     validator_cols = [
-        'is_valid', 'is_personal_id',
-        'is_passport', 'is_driver_license'
+        "is_valid",
+        "is_personal_id",
+        "is_passport",
+        "is_driver_license",
     ]
     new_cols = [
-        f'clean_{card_col}',
+        f"clean_{card_col}",
         *validator_cols,
-        'gender',
-        'year_of_birth',
-        'city'
+        "gender",
+        "year_of_birth",
+        "city",
     ]
 
     final_card_df = pd.concat([parsed_data, na_data], ignore_index=True)

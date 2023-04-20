@@ -3,32 +3,28 @@ This module meant for preprocessing (cleansing and unifying) the address before 
 """
 
 import re
-from typing import Dict
 from copy import deepcopy
 from string import punctuation
+from typing import Dict
 
 import pandas as pd
-from unidecode import unidecode
-
-from preprocessing_pgp.address.utils import (
-    number_pad_replace
-)
-from preprocessing_pgp.name.preprocess import (
-    remove_spare_spaces,
-)
 from preprocessing_pgp.address.const import (
+    ADDRESS_PUNCTUATIONS,
     DICT_NORM_ABBREV_REGEX_KW,
     DICT_NORM_CITY_DASH_REGEX,
-    ADDRESS_PUNCTUATIONS
 )
+from preprocessing_pgp.address.utils import number_pad_replace
+from preprocessing_pgp.name.preprocess import remove_spare_spaces
 
 
 class VietnameseAddressCleaner:
     """
     Class support cleansing function for Vietnamese Addresses
     """
-    non_address_punctuation = ''.join([pun for pun in punctuation
-                                       if pun not in ADDRESS_PUNCTUATIONS])
+
+    non_address_punctuation = "".join(
+        [pun for pun in punctuation if pun not in ADDRESS_PUNCTUATIONS]
+    )
 
     # * PRIVATE
     def __replace_with_keywords(self, address: str, keywords: Dict) -> str:
@@ -51,11 +47,9 @@ class VietnameseAddressCleaner:
         replaced_address = deepcopy(address)
 
         for replace_txt, target_subs in keywords.items():
-            reg_target = re.compile('|'.join(map(re.escape, target_subs)))
+            reg_target = re.compile("|".join(map(re.escape, target_subs)))
             replaced_address = re.sub(
-                reg_target,
-                replace_txt,
-                replaced_address
+                reg_target, replace_txt, replaced_address
             )
 
             if replaced_address != address:
@@ -72,8 +66,7 @@ class VietnameseAddressCleaner:
         if address_match is not None:
             sub_address = address_match.group(0).strip()
             cleaned_address = address.replace(
-                sub_address,
-                sub_address.replace(' ', '')
+                sub_address, sub_address.replace(" ", "")
             )
         else:
             cleaned_address = address
@@ -86,10 +79,11 @@ class VietnameseAddressCleaner:
 
         * E.g: 'p 7' -> 'p7', and more
         """
-        district_regex = r'[^A|a]p [0-9]+'
+        district_regex = r"[^A|a]p [0-9]+"
 
         cleaned_address = self.__clean_address_with_regex(
-            address, district_regex)
+            address, district_regex
+        )
 
         return cleaned_address
 
@@ -99,7 +93,7 @@ class VietnameseAddressCleaner:
 
         * E.g: 'q 7' -> 'q7', and more
         """
-        ward_regex = r'q [0-9]+'
+        ward_regex = r"q [0-9]+"
 
         cleaned_address = self.__clean_address_with_regex(address, ward_regex)
 
@@ -131,7 +125,7 @@ class VietnameseAddressCleaner:
             Clean address without any spare spaces
         """
 
-        cleaned_address = re.sub(' +', ' ', address)
+        cleaned_address = re.sub(" +", " ", address)
         cleaned_address = cleaned_address.strip()
 
         return cleaned_address
@@ -141,11 +135,11 @@ class VietnameseAddressCleaner:
         Helper function to remove any number in string with padding zeros
         """
 
-        digit_group_regex = r'(\d+)'
+        digit_group_regex = r"(\d+)"
 
-        cleaned_address = re.sub(digit_group_regex,
-                                 number_pad_replace,
-                                 address)
+        cleaned_address = re.sub(
+            digit_group_regex, number_pad_replace, address
+        )
 
         return cleaned_address
 
@@ -197,9 +191,9 @@ class VietnameseAddressCleaner:
         str
             The cleaned address
         """
-        clean_address =\
-            address.translate(str.maketrans(
-                '', '', self.non_address_punctuation))
+        clean_address = address.translate(
+            str.maketrans("", "", self.non_address_punctuation)
+        )
 
         clean_address = remove_spare_spaces(clean_address)
 
@@ -237,10 +231,7 @@ class VietnameseAddressCleaner:
         return cleaned_address
 
 
-def clean_vi_address(
-    data: pd.DataFrame,
-    address_col: str
-) -> pd.DataFrame:
+def clean_vi_address(data: pd.DataFrame, address_col: str) -> pd.DataFrame:
     """
     Function to clean and unify vietnamese address in data
 
@@ -260,9 +251,8 @@ def clean_vi_address(
 
     cleaned_data = data
 
-    cleaned_data[f'cleaned_{address_col}'] =\
-        cleaned_data[address_col].apply(
-            cleaner.clean_address
+    cleaned_data[f"cleaned_{address_col}"] = cleaned_data[address_col].apply(
+        cleaner.clean_address
     )
 
     return cleaned_data

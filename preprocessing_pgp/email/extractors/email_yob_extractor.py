@@ -1,16 +1,15 @@
 """
 Module to extract YOB from email using rule-based
 """
+import re
 from itertools import product
 
-import re
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from preprocessing_pgp.email.extractors.const import (
     DOB_FORMAT_DICT,
+    DOB_NUM_DIGIT_DICT,
     DOB_REGEX_DICT,
-    DOB_NUM_DIGIT_DICT
 )
 
 
@@ -18,25 +17,27 @@ class EmailYOBExtractor:
     """
     Class contains logic to extract YOB from email
     """
+
     def __init__(self):
-        self.yob_formats =\
-            self.__generate_yob_dict()
+        self.yob_formats = self.__generate_yob_dict()
 
     def __generate_yob_dict(self):
         date_list = [
-            ['full_day', 'half_day', 'none'],  # DAY
-            ['full_month', 'half_month', 'none'],  # MONTH
-            ['full_year', 'half_year']  # YEAR
+            ["full_day", "half_day", "none"],  # DAY
+            ["full_month", "half_month", "none"],  # MONTH
+            ["full_year", "half_year"],  # YEAR
         ]
 
         possible_date_formats = list(product(*date_list))
         # Not possible if having day but not month
-        possible_date_formats =\
-            [date for date in possible_date_formats
-             if (date[1] != 'none') | (date[0] == 'none')]
+        possible_date_formats = [
+            date
+            for date in possible_date_formats
+            if (date[1] != "none") | (date[0] == "none")
+        ]
         # Remove case 4 number 2580 -> NOT YOB:1980
-        possible_date_formats.remove(('half_day', 'half_month', 'half_year'))
-        possible_date_formats.remove(('none', 'none', 'half_year'))
+        possible_date_formats.remove(("half_day", "half_month", "half_year"))
+        possible_date_formats.remove(("none", "none", "half_year"))
 
         num_digits = []
         regexps = []
@@ -54,48 +55,28 @@ class EmailYOBExtractor:
         return zip(num_digits, regexps, formats)
 
     # ? HELPER FUNCTION
-    def __get_date_digit(
-        self,
-        date_fm
-    ) -> int:
+    def __get_date_digit(self, date_fm) -> int:
         return sum(DOB_NUM_DIGIT_DICT.get(fm, 0) for fm in date_fm)
 
-    def __get_date_regex(
-        self,
-        date_fm
-    ) -> str:
-        return ''.join([DOB_REGEX_DICT.get(fm, '') for fm in date_fm])
+    def __get_date_regex(self, date_fm) -> str:
+        return "".join([DOB_REGEX_DICT.get(fm, "") for fm in date_fm])
 
-    def __get_date_format(
-        self,
-        date_fm
-    ) -> str:
-        return ''.join(DOB_FORMAT_DICT.get(fm, '') for fm in date_fm)
+    def __get_date_format(self, date_fm) -> str:
+        return "".join(DOB_FORMAT_DICT.get(fm, "") for fm in date_fm)
 
-    def _get_number_digit(
-        self,
-        string: str
-    ) -> int:
+    def _get_number_digit(self, string: str) -> int:
         """
         Retrieve number of digit in string
         """
         return sum(c.isdigit() for c in string)
 
-    def _extract_yob_regex(
-        self,
-        email_name: str,
-        regex: str
-    ) -> float:
+    def _extract_yob_regex(self, email_name: str, regex: str) -> float:
         found_dates = re.findall(regex, email_name)
 
         if len(found_dates) == 0:
             return np.nan
 
-    def _get_yob_with_format(
-        self,
-        email_name: str,
-        yob_fm
-    ) -> float:
+    def _get_yob_with_format(self, email_name: str, yob_fm) -> float:
         """
         Extract yob in email name with specific format
         """
@@ -122,40 +103,32 @@ class EmailYOBExtractor:
             return 2000.0
 
         # 1980 -> 1980, 8 -> 2008, 98 -> 1998
-        yob = 1900+yob if 9<yob<100 else 2000+yob if yob <= 9 else yob
+        yob = 1900 + yob if 9 < yob < 100 else 2000 + yob if yob <= 9 else yob
 
         return yob
 
     def _get_yob(
-        self,
-        data: pd.DataFrame,
-        email_name_col: str = 'email_name'
+        self, data: pd.DataFrame, email_name_col: str = "email_name"
     ) -> pd.DataFrame:
         """
         Generate an yob_extracted columns
         """
-        data['yob_extracted'] = np.nan
+        data["yob_extracted"] = np.nan
         for yob_fm in self.yob_formats:
-            not_found_mask = data['yob_extracted'].isna()
-            data.loc[
-                not_found_mask,
-                'yob_extracted'
-            ] = data.loc[
-                not_found_mask,
-                email_name_col
+            not_found_mask = data["yob_extracted"].isna()
+            data.loc[not_found_mask, "yob_extracted"] = data.loc[
+                not_found_mask, email_name_col
             ].apply(
-                lambda email_name, fm=yob_fm:
-                self._get_yob_with_format(email_name, fm)
+                lambda email_name, fm=yob_fm: self._get_yob_with_format(
+                    email_name, fm
+                )
             )
 
         return data
 
-
     # ? MAIN FUNCTION
     def extract_yob(
-        self,
-        data: pd.DataFrame,
-        email_name_col: str = 'email_name'
+        self, data: pd.DataFrame, email_name_col: str = "email_name"
     ) -> pd.DataFrame:
         """
         Extract YOB from email name
@@ -174,9 +147,6 @@ class EmailYOBExtractor:
             * `yob_extracted` : The yob extracted from email
         """
         # * Extracting yob
-        extracted_data = self._get_yob(
-            data,
-            email_name_col
-        )
+        extracted_data = self._get_yob(data, email_name_col)
 
         return extracted_data

@@ -1,11 +1,11 @@
 from abc import abstractmethod
 
 from preprocessing_pgp.phone.const import (
+    PHONE_LENGTH,
     SUB_PHONE_10NUM,
     SUB_PHONE_11NUM,
     SUB_TELEPHONE_10NUM,
     SUB_TELEPHONE_11NUM,
-    PHONE_LENGTH
 )
 
 
@@ -43,8 +43,8 @@ class MobiPhoneValidator(PhoneValidator):
     """
 
     def __init__(self):
-        self.old_length = PHONE_LENGTH['old_mobi']
-        self.new_length = PHONE_LENGTH['new_mobi']
+        self.old_length = PHONE_LENGTH["old_mobi"]
+        self.new_length = PHONE_LENGTH["new_mobi"]
 
     def _is_new_sub_phone(self, phone: str) -> bool:
         return phone[:3] in SUB_PHONE_10NUM
@@ -73,8 +73,9 @@ class MobiPhoneValidator(PhoneValidator):
             Whether the phone is `new mobi` phone
         """
 
-        return self._is_new_phone_length(phone)\
-            and self._is_new_sub_phone(phone)
+        return self._is_new_phone_length(phone) and self._is_new_sub_phone(
+            phone
+        )
 
     def is_old_phone(self, phone: str) -> bool:
         """
@@ -91,8 +92,9 @@ class MobiPhoneValidator(PhoneValidator):
             Whether the phone is `old mobi` phone
         """
 
-        return self._is_old_phone_length(phone)\
-            and self._is_old_sub_phone(phone)
+        return self._is_old_phone_length(phone) and self._is_old_sub_phone(
+            phone
+        )
 
     def is_valid_phone(self, phone: str) -> bool:
         """
@@ -108,8 +110,7 @@ class MobiPhoneValidator(PhoneValidator):
         bool
             Whether the phone is valid phone
         """
-        return self.is_new_phone(phone)\
-            or self.is_old_phone(phone)
+        return self.is_new_phone(phone) or self.is_old_phone(phone)
 
 
 class LandlinePhoneValidator(PhoneValidator):
@@ -118,17 +119,21 @@ class LandlinePhoneValidator(PhoneValidator):
     """
 
     def __init__(self):
-        self.old_length = PHONE_LENGTH['old_landline']
-        self.new_length = PHONE_LENGTH['new_landline']
+        self.old_length = PHONE_LENGTH["old_landline"]
+        self.new_length = PHONE_LENGTH["new_landline"]
 
     def _is_new_sub_phone(self, phone: str) -> bool:
-        return phone[:3] in SUB_TELEPHONE_11NUM\
+        return (
+            phone[:3] in SUB_TELEPHONE_11NUM
             or phone[:4] in SUB_TELEPHONE_11NUM
+        )
 
     def _is_old_sub_phone(self, phone: str) -> bool:
-        return phone[:2] in SUB_TELEPHONE_10NUM\
-            or phone[:3] in SUB_TELEPHONE_10NUM\
+        return (
+            phone[:2] in SUB_TELEPHONE_10NUM
+            or phone[:3] in SUB_TELEPHONE_10NUM
             or phone[:4] in SUB_TELEPHONE_10NUM
+        )
 
     def _is_new_phone_length(self, phone: str) -> bool:
         return len(phone) == self.new_length
@@ -151,8 +156,9 @@ class LandlinePhoneValidator(PhoneValidator):
             Whether the phone is `new mobi` phone
         """
 
-        return self._is_new_phone_length(phone)\
-            and self._is_new_sub_phone(phone)
+        return self._is_new_phone_length(phone) and self._is_new_sub_phone(
+            phone
+        )
 
     def is_old_phone(self, phone: str) -> bool:
         """
@@ -169,8 +175,9 @@ class LandlinePhoneValidator(PhoneValidator):
             Whether the phone is `old mobi` phone
         """
 
-        return self._is_old_phone_length(phone)\
-            and self._is_old_sub_phone(phone)
+        return self._is_old_phone_length(phone) and self._is_old_sub_phone(
+            phone
+        )
 
     def is_valid_phone(self, phone: str) -> bool:
         """
@@ -186,5 +193,4 @@ class LandlinePhoneValidator(PhoneValidator):
         bool
             Whether the phone is valid phone
         """
-        return self.is_new_phone(phone)\
-            or self.is_old_phone(phone)
+        return self.is_new_phone(phone) or self.is_old_phone(phone)

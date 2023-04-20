@@ -3,20 +3,19 @@ file containing code that related to n-level extraction of address
 """
 
 import re
-from typing import List, Tuple, Dict
 from copy import deepcopy
+from typing import Dict, List, Tuple
 
 import pandas as pd
 from flashtext import KeywordProcessor
-
+from preprocessing_pgp.address.const import (
+    LOCATION_ENRICH_DICT,
+    METHOD_REFER_DICT,
+)
 from preprocessing_pgp.address.utils import (
+    create_dependent_query,
     flatten_list,
     remove_substr,
-    create_dependent_query
-)
-from preprocessing_pgp.address.const import (
-    METHOD_REFER_DICT,
-    LOCATION_ENRICH_DICT,
 )
 
 
@@ -32,12 +31,15 @@ class LevelExtractor:
     def __init__(self) -> None:
         self.avail_levels = METHOD_REFER_DICT.keys()
         self.avail_methods = flatten_list(METHOD_REFER_DICT.values())
-        self.keyword_refer_dict =\
-            dict(zip(
+        self.keyword_refer_dict = dict(
+            zip(
                 self.avail_methods,
-                [self._generate_keyword_processor(method)
-                 for method in self.avail_methods]
-            ))
+                [
+                    self._generate_keyword_processor(method)
+                    for method in self.avail_methods
+                ],
+            )
+        )
 
     def _get_level_methods(self, level) -> List:
         """
@@ -70,8 +72,7 @@ class LevelExtractor:
         """
         level_kws = []
         for method in self._get_level_methods(level):
-            method_kw =\
-                self._generate_keyword_processor(method)
+            method_kw = self._generate_keyword_processor(method)
             level_kws.append(method_kw)
 
         return level_kws
@@ -92,8 +93,7 @@ class LevelExtractor:
         KeywordProcessor
             `KeywordProcessor` object that contains all the keywords of the method
         """
-        unique_method_kws =\
-            LOCATION_ENRICH_DICT[method].unique().tolist()
+        unique_method_kws = LOCATION_ENRICH_DICT[method].unique().tolist()
 
         keyword_processor = KeywordProcessor(case_sensitive=True)
         keyword_processor.add_keywords_from_list(unique_method_kws)
@@ -101,9 +101,7 @@ class LevelExtractor:
         return keyword_processor
 
     def _get_match_keyword(
-        self,
-        query: str,
-        kw_processor: KeywordProcessor
+        self, query: str, kw_processor: KeywordProcessor
     ) -> str:
         """
         Function to get the last keyword found in `query` string
@@ -148,20 +146,19 @@ class LevelExtractor:
         """
 
         remained_address = deepcopy(address)
-        found_patterns =\
-            dict(zip(
-                self.avail_levels,
-                [None]*len(self.avail_levels)
-            ))
+        found_patterns = dict(
+            zip(self.avail_levels, [None] * len(self.avail_levels))
+        )
         best_patterns = deepcopy(found_patterns)
 
         dependents = []
         for level in self.avail_levels:
-            (level_pattern,
-             remained_address,
-             level_method,
-             level_best_pattern) =\
-                self._extract_by_level(remained_address, level, *dependents)
+            (
+                level_pattern,
+                remained_address,
+                level_method,
+                level_best_pattern,
+            ) = self._extract_by_level(remained_address, level, *dependents)
 
             found_patterns[level] = level_pattern
             best_patterns[level] = level_best_pattern
@@ -171,48 +168,44 @@ class LevelExtractor:
         if best_patterns[1] is None:
             if best_patterns[2] is None:
                 best_patterns[1] = self.__relation_filtering(
-                    'lv1',
-                    (best_patterns[3], 'lv3'),
+                    "lv1",
+                    (best_patterns[3], "lv3"),
                 )
                 best_patterns[2] = self.__relation_filtering(
-                    'lv2',
-                    (best_patterns[3], 'lv3'),
-                    (best_patterns[1], 'lv1'),
+                    "lv2",
+                    (best_patterns[3], "lv3"),
+                    (best_patterns[1], "lv1"),
                 )
             else:
                 best_patterns[1] = self.__relation_filtering(
-                    'lv1',
-                    (best_patterns[2], 'lv2'),
-                    (best_patterns[3], 'lv3'),
+                    "lv1",
+                    (best_patterns[2], "lv2"),
+                    (best_patterns[3], "lv3"),
                 )
         if best_patterns[2] is None:
             if best_patterns[1] is not None:
                 best_patterns[2] = self.__relation_filtering(
-                    'lv2',
-                    (best_patterns[1], 'lv1'),
-                    (best_patterns[3], 'lv3'),
+                    "lv2",
+                    (best_patterns[1], "lv1"),
+                    (best_patterns[3], "lv3"),
                 )
 
         # * Remove non-street characters
         remained_address = re.sub(
-            r'(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 /-]',
-            '',
-            remained_address
+            r"(?i)[^\u0030-\u0039\u0061-\u007A\u00C0-\u1EF8 /-]",
+            "",
+            remained_address,
         )
-        remained_address = re.sub(r'\s+', ' ', remained_address).strip()
+        remained_address = re.sub(r"\s+", " ", remained_address).strip()
 
         return found_patterns, remained_address, best_patterns
 
-    def __relation_filtering(
-        self,
-        level: str,
-        *dependents
-    ) -> str:
+    def __relation_filtering(self, level: str, *dependents) -> str:
         """
         Relation filtering to track back for higher level
         """
         dep_query = self.__make_dependent_query(*dependents)
-        if dep_query == '':
+        if dep_query == "":
             return None
 
         pattern_result = LOCATION_ENRICH_DICT.query(dep_query)[level].unique()
@@ -222,11 +215,7 @@ class LevelExtractor:
 
         return pattern_result[0]
 
-
-    def __is_query_exist(
-        self,
-        query: str
-    ) -> bool:
+    def __is_query_exist(self, query: str) -> bool:
         """
         Helper function to check whether the query is possibly found in location data
         """
@@ -234,14 +223,11 @@ class LevelExtractor:
 
         return n_result > 0
 
-    def __make_dependent_query(
-        self,
-        *dependents
-    ) -> str:
+    def __make_dependent_query(self, *dependents) -> str:
         """
         Helper to make search query from dependents
         """
-        query = ''
+        query = ""
         # Making dependent queries
         if len(dependents) > 0:
             dependent_queries = []
@@ -254,25 +240,19 @@ class LevelExtractor:
 
         return query
 
-    def __is_correct_dependent(
-        self,
-        *dependents
-    ) -> bool:
+    def __is_correct_dependent(self, *dependents) -> bool:
         """
         Helper function to check whether the dependencies are all correct
         """
         query = self.__make_dependent_query(*dependents)
 
-        if query != '':
+        if query != "":
             return self.__is_query_exist(query)
 
         return False
 
     def _extract_by_level(
-        self,
-        address: str,
-        level: int,
-        *dependents
+        self, address: str, level: int, *dependents
     ) -> Tuple[str, str, str, str]:
         """
         Extract address with list of `method`
@@ -298,29 +278,30 @@ class LevelExtractor:
         level_methods = self._get_level_methods(level)
 
         for method in level_methods:
-            pattern_found, remained_address =\
-                self._extract_by_method(address, method)
+            pattern_found, remained_address = self._extract_by_method(
+                address, method
+            )
             # if remained_address:
             #     print(remained_address)
 
             # Found something then return
-            if (pattern_found is not None)\
-                    and (len(pattern_found) > 0):
-                if self.__is_correct_dependent(*dependents, (pattern_found, method)):
+            if (pattern_found is not None) and (len(pattern_found) > 0):
+                if self.__is_correct_dependent(
+                    *dependents, (pattern_found, method)
+                ):
                     best_pattern = self.__trace_match_pattern(
-                        pattern_found,
-                        method,
-                        *dependents
+                        pattern_found, method, *dependents
                     )
-                    return pattern_found, remained_address, method, best_pattern
+                    return (
+                        pattern_found,
+                        remained_address,
+                        method,
+                        best_pattern,
+                    )
 
         return None, address, None, None
 
-    def _extract_by_method(
-        self,
-        address: str,
-        method: str
-    ) -> Tuple[str, str]:
+    def _extract_by_method(self, address: str, method: str) -> Tuple[str, str]:
         """
         Extract the address with `keywords` of the specific method
 
@@ -345,10 +326,7 @@ class LevelExtractor:
         return match_pattern, remained_address
 
     def __trace_match_pattern(
-        self,
-        pattern: str,
-        method: str,
-        *dependents
+        self, pattern: str, method: str, *dependents
     ) -> str:
         """
         Helper function to trace back best pattern found
@@ -364,11 +342,7 @@ class LevelExtractor:
 
         return best_match
 
-    def __trace_best_match(
-        self,
-        query: str,
-        level_col: str
-    ) -> str:
+    def __trace_best_match(self, query: str, level_col: str) -> str:
         """
         Helper to get the best match consist of:
 
@@ -385,8 +359,7 @@ class LevelExtractor:
 
 
 def extract_vi_address_by_level(
-    data:  pd.DataFrame,
-    address_col: str
+    data: pd.DataFrame, address_col: str
 ) -> pd.DataFrame:
     """
     Function to extract vietnamese address into each specific level found by pattern
@@ -416,22 +389,21 @@ def extract_vi_address_by_level(
 
     extracted_data = data
 
-    extracted_results =\
-        extracted_data[address_col].apply(
-            extractor.extract_all_levels
-        )
+    extracted_results = extracted_data[address_col].apply(
+        extractor.extract_all_levels
+    )
 
     for level in extractor.avail_levels:
-        extracted_data[f'level_{level}'] =\
-            [result[0][level]
-             for result in extracted_results]
+        extracted_data[f"level_{level}"] = [
+            result[0][level] for result in extracted_results
+        ]
 
-        extracted_data[f'best_level_{level}'] =\
-            [result[-1][level]
-             for result in extracted_results]
+        extracted_data[f"best_level_{level}"] = [
+            result[-1][level] for result in extracted_results
+        ]
 
-    extracted_data['remained_address'] =\
-        [result[1]
-         for result in extracted_results]
+    extracted_data["remained_address"] = [
+        result[1] for result in extracted_results
+    ]
 
     return extracted_data

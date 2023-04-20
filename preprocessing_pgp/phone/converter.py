@@ -1,8 +1,8 @@
 from preprocessing_pgp.phone.const import (
+    DICT_4_SUB_PHONE,
+    DICT_4_SUB_TELEPHONE,
     SUB_PHONE_11NUM,
     SUB_TELEPHONE_10NUM,
-    DICT_4_SUB_PHONE,
-    DICT_4_SUB_TELEPHONE
 )
 
 

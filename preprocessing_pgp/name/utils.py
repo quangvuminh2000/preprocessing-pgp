@@ -3,15 +3,11 @@ Module contains tools for processing name
 """
 
 import pandas as pd
+from preprocessing_pgp.name.const import NICKNAME_REGEX
 from unidecode import unidecode
 
-from preprocessing_pgp.name.const import NICKNAME_REGEX
 
-
-def remove_nicknames(
-    name_df: pd.DataFrame,
-    name_col: str
-) -> pd.DataFrame:
+def remove_nicknames(name_df: pd.DataFrame, name_col: str) -> pd.DataFrame:
     """
     Remove nicknames in name column given the data
 
@@ -27,9 +23,11 @@ def remove_nicknames(
     pd.DataFrame
         Cleaned data without nickname -- added new column `clean_name_col`
     """
-    name_df[name_col] =\
-        name_df[name_col].str.replace(NICKNAME_REGEX, '', regex=True)\
+    name_df[name_col] = (
+        name_df[name_col]
+        .str.replace(NICKNAME_REGEX, "", regex=True)
         .str.strip()
+    )
 
     return name_df
 

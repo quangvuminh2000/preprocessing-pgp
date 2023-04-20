@@ -1,27 +1,17 @@
 """
 Module contains package utils
 """
-import os
 import logging
 import multiprocessing as mp
+import os
 from functools import partial
-from typing import (
-    Callable,
-    List,
-    Union,
-    Tuple
-)
+from typing import Callable, List, Tuple, Union
 
-import pandas as pd
 import numpy as np
-from unidecode import unidecode
+import pandas as pd
+from preprocessing_pgp.const import DICT_TRASH_STRING, N_PROCESSES
 from tqdm import tqdm
-
-from preprocessing_pgp.const import (
-    N_PROCESSES,
-    DICT_TRASH_STRING
-)
-
+from unidecode import unidecode
 
 tqdm.pandas()
 
@@ -30,8 +20,8 @@ def suppress_warnings():
     """
     Function to suppress all possible warnings
     """
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
 def sentence_length(sentence: str) -> int:
@@ -55,10 +45,7 @@ def is_empty_dataframe(data: pd.DataFrame) -> bool:
     return data.shape[0] == 0
 
 
-def replace_trash_string(
-    data: pd.DataFrame,
-    replace_col: str
-) -> pd.DataFrame:
+def replace_trash_string(data: pd.DataFrame, replace_col: str) -> pd.DataFrame:
     """
     Replace all trash value with None
 
@@ -78,8 +65,7 @@ def replace_trash_string(
 
 
 def extract_null_values(
-    data: pd.DataFrame,
-    by_col: str
+    data: pd.DataFrame, by_col: str
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Extracting NULL values from specific DataFrame
@@ -107,7 +93,7 @@ def extract_null_values(
 def apply_multi_process(
     func: Callable,
     series: Union[pd.Series, str, np.ndarray],
-    n_cores: int = N_PROCESSES
+    n_cores: int = N_PROCESSES,
 ) -> List:
     """
     Process multi-processing on every items of series with provided func
@@ -135,10 +121,7 @@ def apply_multi_process(
 
 
 def parallelize_dataframe(
-    data: pd.DataFrame,
-    func: Callable,
-    n_cores: int = N_PROCESSES,
-    **kwargs
+    data: pd.DataFrame, func: Callable, n_cores: int = N_PROCESSES, **kwargs
 ) -> pd.DataFrame:
     """
     Multi-processing on dataframe with provided function and additional function arguments
@@ -172,10 +155,7 @@ def parallelize_dataframe(
     return final_data
 
 
-def apply_progress_bar(
-    func: Callable,
-    series: pd.Series
-) -> pd.Series:
+def apply_progress_bar(func: Callable, series: pd.Series) -> pd.Series:
     """
     Process apply with progress bar on every items of series with provided func
 
@@ -196,9 +176,7 @@ def apply_progress_bar(
 
 
 def remove_non_accent_names(
-    names_df: pd.DataFrame,
-    name_col='name',
-    remove_single_name=True
+    names_df: pd.DataFrame, name_col="name", remove_single_name=True
 ) -> pd.DataFrame:
     """
     Remove non accent names inside the DF
@@ -232,10 +210,9 @@ def remove_non_accent_names(
         clean_names = names[with_accent_mask | one_word_mask]
         clean_de_names = de_names[with_accent_mask | one_word_mask]
 
-    clean_names_df = pd.DataFrame({
-        'without_accent': clean_de_names,
-        'with_accent': clean_names
-    })
+    clean_names_df = pd.DataFrame(
+        {"without_accent": clean_de_names, "with_accent": clean_names}
+    )
 
     without_accent_names_df = names_df[~with_accent_mask].copy()
 

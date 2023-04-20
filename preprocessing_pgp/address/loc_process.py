@@ -1,19 +1,18 @@
 """
 File support extracting code for each location extracted in extractor
 """
-from typing import List, Dict
+from typing import Dict, List
 
 import pandas as pd
-
 from preprocessing_pgp.address.const import (
-    LOCATION_CODE_DICT,
-    LEVEL_VI_COLUMN_DICT,
+    AVAIL_LEVELS,
     LEVEL_CODE_COLUMN_DICT,
-    AVAIL_LEVELS
+    LEVEL_VI_COLUMN_DICT,
+    LOCATION_CODE_DICT,
 )
 from preprocessing_pgp.address.utils import (
     create_dependent_query,
-    is_empty_string
+    is_empty_string,
 )
 
 
@@ -33,19 +32,13 @@ class LocationCode:
     #         self.loc_code_dict[level_col] = self.loc_code_dict[level_col].str.title(
     #         )
 
-    def __get_level_col(
-        self,
-        level: int
-    ) -> str:
+    def __get_level_col(self, level: int) -> str:
         """
         Helper to get back the level column
         """
         return LEVEL_VI_COLUMN_DICT[level]
 
-    def __get_level_code_col(
-        self,
-        level: int
-    ) -> str:
+    def __get_level_code_col(self, level: int) -> str:
         """
         Helper to get back the level code column
         """
@@ -87,8 +80,7 @@ class LocationCode:
 
         # * Trace back location id
         level_codes = dict(
-            zip(self.avail_levels,
-                [None]*len(self.avail_levels))
+            zip(self.avail_levels, [None] * len(self.avail_levels))
         )
         if is_empty_string(trace_loc_id_query):
             return level_codes
@@ -118,8 +110,7 @@ class LocationCode:
 
 
 def generate_loc_code(
-    data: pd.DataFrame,
-    best_lvl_cols: List[str]
+    data: pd.DataFrame, best_lvl_cols: List[str]
 ) -> pd.DataFrame:
     """
     Function to retrieve location code for each level:
@@ -146,16 +137,14 @@ def generate_loc_code(
 
     row_codes = generated_data.apply(
         lambda row: code_generator.get_level_code(
-            dict(zip(
-                AVAIL_LEVELS,
-                [row[col] for col in best_lvl_cols]
-            ))
+            dict(zip(AVAIL_LEVELS, [row[col] for col in best_lvl_cols]))
         ),
-        axis='columns'
+        axis="columns",
     )
 
     for level in AVAIL_LEVELS:
-        generated_data[f'level_{level}_code'] = [
-            code[level] for code in row_codes]
+        generated_data[f"level_{level}_code"] = [
+            code[level] for code in row_codes
+        ]
 
     return generated_data

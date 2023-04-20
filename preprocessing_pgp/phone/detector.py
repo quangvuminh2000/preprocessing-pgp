@@ -4,7 +4,7 @@ Module to detect for special phones and meanings in phones
 from preprocessing_pgp.phone.const import (
     DICT_NEW_MOBI_PHONE_VENDOR,
     DICT_NEW_TELEPHONE_VENDOR,
-    DICT_PHONE_TAIL_TYPE
+    DICT_PHONE_TAIL_TYPE,
 )
 
 
@@ -52,10 +52,7 @@ def detect_tele_phone_vendor(phone: str) -> str:
     return None
 
 
-def get_phone_tail_type(
-    phone: str,
-    tail_size: int
-) -> str:
+def get_phone_tail_type(phone: str, tail_size: int) -> str:
     """
     Get the tail type of phone with the given size
 
