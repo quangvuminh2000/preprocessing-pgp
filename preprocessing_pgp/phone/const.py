@@ -1,18 +1,14 @@
-import os
-
 import pandas as pd
 
-mobi_phone_path = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "mobi_head_code.parquet"
-)
-telephone_path = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "tele_head_code.parquet"
-)
+from preprocessing_pgp.const import HDFS_BASE_PTH, hdfs
+
+mobi_phone_path = f"{HDFS_BASE_PTH}/mobi_head_code.parquet"
+telephone_path = f"{HDFS_BASE_PTH}/tele_head_code.parquet"
 
 # ? PHONE EXTRACTION
-sub_mobi_phone = pd.read_parquet(mobi_phone_path).reset_index()
+sub_mobi_phone = pd.read_parquet(mobi_phone_path, filesystem=hdfs).reset_index()
 
-sub_telephone = pd.read_parquet(telephone_path).reset_index()
+sub_telephone = pd.read_parquet(telephone_path, filesystem=hdfs).reset_index()
 
 SUB_PHONE_10NUM = sorted(sub_mobi_phone["NewSubPhone"].unique())
 SUB_PHONE_11NUM = [
@@ -44,9 +40,7 @@ DICT_NEW_MOBI_PHONE_VENDOR = sub_mobi_phone.set_index("NewSubPhone").to_dict()[
     "PhoneVendor"
 ]
 
-DICT_NEW_TELEPHONE_VENDOR = sub_telephone.set_index("ma_vung_moi").to_dict()[
-    "tinh"
-]
+DICT_NEW_TELEPHONE_VENDOR = sub_telephone.set_index("ma_vung_moi").to_dict()["tinh"]
 
 # ? PHONE LENGTH
 PHONE_LENGTH = {

@@ -1,30 +1,27 @@
-import os
-
 import numpy as np
 import pandas as pd
+
+from preprocessing_pgp.const import HDFS_BASE_PTH, hdfs
 from preprocessing_pgp.card.utils import digit_to_year_string
 
 # * IMPORTANT CONSTANTS
 CURRENT_YEAR = 22
 OLDEST_YEAR_DRIVER_LICENSE = 45
 
-
 # * PERSONAL IDENTIFICATION CARD
-__OLD_PID_CODE_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "old_codes.parquet"
-)
-__NEW_PID_CODE_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "new_codes.parquet"
-)
-__REGION_PID_CODE_PATH = os.path.join(
-    os.path.dirname(__file__), "../data/new_region_code.parquet"
-)
+__OLD_PID_CODE_PATH = f"{HDFS_BASE_PTH}/old_codes.parquet"
+__NEW_PID_CODE_PATH = f"{HDFS_BASE_PTH}/new_codes.parquet"
+__REGION_PID_CODE_PATH = f"{HDFS_BASE_PTH}/new_region_code.parquet"
 
 POSSIBLE_GENDER_NUM = ["0", "1", "2", "3"]
 GENDER_NUM_TO_CENTURY = {"20": ["0", "1"], "21": ["2", "3"]}
-OLD_PID_REGION_CODE_NUMS = pd.read_parquet(__OLD_PID_CODE_PATH)["code"].values
-NEW_PID_REGION_CODE_NUMS = pd.read_parquet(__NEW_PID_CODE_PATH)["code"].values
-_REGION_PID_CODE = pd.read_parquet(__REGION_PID_CODE_PATH)
+OLD_PID_REGION_CODE_NUMS = pd.read_parquet(__OLD_PID_CODE_PATH, filesystem=hdfs)[
+    "code"
+].values
+NEW_PID_REGION_CODE_NUMS = pd.read_parquet(__NEW_PID_CODE_PATH, filesystem=hdfs)[
+    "code"
+].values
+_REGION_PID_CODE = pd.read_parquet(__REGION_PID_CODE_PATH, filesystem=hdfs)
 _DRIVER_LICENSE_CODE = _REGION_PID_CODE.copy()
 _DRIVER_LICENSE_CODE["code"] = _DRIVER_LICENSE_CODE["code"].str[1:]
 REGION_CODE_DICT = pd.concat(
@@ -34,8 +31,7 @@ OLD_PID_CODE_LENGTH = 9
 NEW_PID_CODE_LENGTH = 12
 LIMIT_DOB_PID = 14
 VALID_PID_21_CENTURY_DOB = [
-    digit_to_year_string(dob)
-    for dob in range(0, CURRENT_YEAR - LIMIT_DOB_PID + 1)
+    digit_to_year_string(dob) for dob in range(0, CURRENT_YEAR - LIMIT_DOB_PID + 1)
 ]
 
 # * PASSPORT CARD

@@ -2,9 +2,9 @@
 File containing constants that are necessary for processing address extraction
 """
 
-import os
-
 import pandas as pd
+
+from preprocessing_pgp.const import HDFS_BASE_PTH, hdfs
 
 # ? REGEX FOR ADDRESS
 DICT_NORM_ABBREV_REGEX_KW = {
@@ -68,19 +68,12 @@ LV3_METHODS = [
 METHOD_REFER_DICT = {1: LV1_METHODS, 2: LV2_METHODS, 3: LV3_METHODS}
 
 # ? LOCATION ENRICH DICTIONARY
-__LOCATION_ENRICH_PATH = os.path.join(
-    os.path.dirname(__file__),
-    os.pardir,
-    "data",
-    "location_dict_enrich_address.parquet",
-)
-LOCATION_ENRICH_DICT = pd.read_parquet(__LOCATION_ENRICH_PATH)
+__LOCATION_ENRICH_PATH = f"{HDFS_BASE_PTH}/location_dict_enrich_address.parquet"
+LOCATION_ENRICH_DICT = pd.read_parquet(__LOCATION_ENRICH_PATH, filesystem=hdfs)
 
 # ? LOCATION CODE DICTIONARY
-__LOCATION_CODE_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "location_dict_code.parquet"
-)
-LOCATION_CODE_DICT = pd.read_parquet(__LOCATION_CODE_PATH)
+__LOCATION_CODE_PATH = f"{HDFS_BASE_PTH}/location_dict_code.parquet"
+LOCATION_CODE_DICT = pd.read_parquet(__LOCATION_CODE_PATH, filesystem=hdfs)
 
 LEVEL_VI_COLUMN_DICT = {1: "city_vi", 2: "district_vi", 3: "ward_vi"}
 LEVEL_CODE_COLUMN_DICT = {1: "city_id", 2: "district_id", 3: "ward_id"}
